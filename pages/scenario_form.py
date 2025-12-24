@@ -1,13 +1,13 @@
 """
 K-Stay Scenario Form Page
-Phase 2-3: Variable Fact + Narrative Collection
+Phase 1-2: Variable Fact + AI Chat Interview
+Clean White/Blue Theme
 """
 
 import streamlit as st
 from datetime import date
 from config.settings import SCENARIOS
-from services.ai_service import AIService, NarrativeValidator
-from services.document_service import DocumentService
+from services.ai_service import AIService, RAGService
 
 
 def render():
@@ -27,128 +27,49 @@ def render():
         st.error("유효하지 않은 시나리오입니다.")
         return
     
-    # 헤더
-    render_header(scenario)
-    
-    # 진행 단계
     current_step = st.session_state.get('form_step', 1)
-    render_progress(current_step)
     
-    # 단계별 렌더링
     if current_step == 1:
-        render_variable_fact_form(scenario)
+        render_phase1_form(scenario)
     elif current_step == 2:
-        render_narrative_form(scenario)
-    elif current_step == 3:
-        render_review_and_generate(scenario)
+        render_phase2_chat(scenario)
 
 
-def render_header(scenario):
-    """헤더 렌더링"""
+def render_phase1_form(scenario):
+    """Phase 1: 기본 정보 입력 (Smart Form)"""
     
+    # 진행 단계 표시
     st.markdown(f"""
         <div style="
-            background: linear-gradient(135deg, rgba(201,162,39,0.1) 0%, rgba(10,22,40,0.8) 100%);
-            border-radius: 20px;
-            padding: 2rem;
-            margin-bottom: 2rem;
-            border: 1px solid rgba(201,162,39,0.2);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+            font-weight: 500;
+            margin-bottom: 0.75rem;
         ">
-            <div style="display: flex; align-items: center; gap: 1rem;">
-                <div style="font-size: 3rem;">{scenario.icon}</div>
-                <div>
-                    <h1 style="
-                        color: white;
-                        font-family: 'Noto Sans KR', sans-serif;
-                        margin: 0;
-                    ">{scenario.name}</h1>
-                    <p style="
-                        color: #C9A227;
-                        margin: 0.3rem 0 0 0;
-                    ">{scenario.visa_type}</p>
-                </div>
-            </div>
-            <p style="color: #a0aec0; margin-top: 1rem;">
-                {scenario.description}
-            </p>
+            <span style="color: #2563eb !important;">Step 1. 기본 정보</span>
+            <span style="color: #cbd5e1 !important;">›</span>
+            <span style="color: #64748b !important;">Step 2. AI 인터뷰</span>
         </div>
+        <h2 style="
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #1e293b !important;
+            margin: 0 0 0.5rem 0;
+        ">{scenario.visa_type} 비자 - 기본 정보 입력</h2>
+        <p style="color: #475569 !important; margin-bottom: 1.5rem;">
+            여권 정보와 기본적인 인적 사항을 입력해주세요.
+        </p>
     """, unsafe_allow_html=True)
     
-    # 뒤로가기 버튼
+    # 뒤로가기
     if st.button("← 다른 시나리오 선택"):
         st.session_state.selected_scenario = None
         st.session_state.form_step = 1
         st.session_state.form_data = {}
-        st.session_state.narrative_data = {}
         st.session_state.current_page = 'dashboard'
         st.rerun()
-
-
-def render_progress(current_step):
-    """진행 단계 표시"""
-    
-    steps = [
-        ("1", "상황 정보", "variable"),
-        ("2", "사연 작성", "narrative"),
-        ("3", "검토 및 생성", "generate")
-    ]
-    
-    cols = st.columns(len(steps))
-    
-    for i, (num, label, key) in enumerate(steps):
-        with cols[i]:
-            is_active = (i + 1) == current_step
-            is_completed = (i + 1) < current_step
-            
-            if is_completed:
-                color = "#4CAF50"
-                icon = "✓"
-            elif is_active:
-                color = "#C9A227"
-                icon = num
-            else:
-                color = "#6c757d"
-                icon = num
-            
-            st.markdown(f"""
-                <div style="text-align: center; padding: 0.5rem;">
-                    <div style="
-                        width: 36px;
-                        height: 36px;
-                        border-radius: 50%;
-                        background: {'rgba(201,162,39,0.2)' if is_active else 'rgba(255,255,255,0.05)'};
-                        border: 2px solid {color};
-                        display: inline-flex;
-                        align-items: center;
-                        justify-content: center;
-                        color: {color};
-                        font-weight: 700;
-                    ">{icon}</div>
-                    <p style="color: {color}; font-size: 0.85rem; margin: 0.5rem 0 0 0;">{label}</p>
-                </div>
-            """, unsafe_allow_html=True)
-    
-    st.markdown("<br>", unsafe_allow_html=True)
-
-
-def render_variable_fact_form(scenario):
-    """Phase 2: Variable Fact 폼"""
-    
-    st.markdown("""
-        <div style="
-            background: rgba(255,255,255,0.02);
-            border: 1px solid rgba(201,162,39,0.15);
-            border-radius: 16px;
-            padding: 2rem;
-        ">
-            <h3 style="color: #C9A227; margin-bottom: 0.5rem;">
-                📝 상황별 정보 입력
-            </h3>
-            <p style="color: #a0aec0; font-size: 0.9rem;">
-                이 시나리오에 필요한 구체적인 정보를 입력해주세요.
-            </p>
-        </div>
-    """, unsafe_allow_html=True)
     
     st.markdown("<br>", unsafe_allow_html=True)
     
@@ -156,280 +77,325 @@ def render_variable_fact_form(scenario):
     if 'form_data' not in st.session_state:
         st.session_state.form_data = {}
     
-    # 동적 폼 필드 생성
-    with st.form("variable_fact_form"):
-        form_data = {}
+    user_data = st.session_state.get('user_data', {})
+    
+    # 폼 컨테이너
+    with st.container():
+        st.markdown("""
+            <div style="
+                background: white;
+                border: 1px solid #e2e8f0;
+                border-radius: 0.75rem;
+                padding: 1.5rem;
+                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            "></div>
+        """, unsafe_allow_html=True)
         
-        # 2열 레이아웃
-        fields = scenario.smart_form_fields
-        
-        for i in range(0, len(fields), 2):
-            cols = st.columns(2)
+        with st.form("phase1_form"):
+            col1, col2 = st.columns(2)
             
-            for j, col in enumerate(cols):
-                if i + j < len(fields):
-                    field = fields[i + j]
-                    with col:
-                        form_data[field['name']] = render_form_field(field)
-        
-        st.markdown("<br>", unsafe_allow_html=True)
-        
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            if st.form_submit_button("← 이전", use_container_width=True):
-                st.session_state.form_step = 1
-                st.session_state.current_page = 'dashboard'
-                st.rerun()
-        
-        with col2:
-            if st.form_submit_button("다음 →", type="primary", use_container_width=True):
-                # 필수 필드 검증
-                required_fields = [f for f in fields if f.get('required', True)]
-                missing = [f['label'] for f in required_fields if not form_data.get(f['name'])]
-                
-                if missing:
-                    st.error(f"다음 항목을 입력해주세요: {', '.join(missing)}")
+            with col1:
+                name = st.text_input(
+                    "성명 (Full Name)",
+                    value=f"{user_data.get('surname', '')} {user_data.get('given_name', '')}".strip(),
+                    placeholder="HONG GIL DONG"
+                )
+            
+            with col2:
+                passport = st.text_input(
+                    "여권번호",
+                    value=user_data.get('passport_no', ''),
+                    placeholder="M12345678"
+                )
+            
+            col3, col4 = st.columns(2)
+            
+            with col3:
+                nationality = st.selectbox(
+                    "국적",
+                    options=["USA", "Vietnam", "China", "Uzbekistan", "기타"],
+                    index=0
+                )
+            
+            with col4:
+                job_category = st.selectbox(
+                    "희망 직무",
+                    options=["IT/SW 개발", "마케팅/영업", "무역/유통", "디자인", "기타"]
+                )
+            
+            st.markdown("<br>", unsafe_allow_html=True)
+            
+            submitted = st.form_submit_button(
+                "다음: AI 인터뷰 시작 →",
+                type="primary",
+                use_container_width=True
+            )
+            
+            if submitted:
+                if not name or not passport:
+                    st.error("필수 정보(성명, 여권번호)를 입력해주세요.")
                 else:
-                    st.session_state.form_data = form_data
+                    st.session_state.form_data = {
+                        'name': name,
+                        'passport': passport,
+                        'nationality': nationality,
+                        'job_category': job_category
+                    }
+                    
+                    initial_greeting = {
+                        'role': 'assistant',
+                        'content': f"안녕하세요! {job_category} 분야 구직을 희망하시는군요. 구직활동계획서 작성을 도와드리겠습니다. 구체적으로 어떤 회사나 직무를 목표로 하고 계신가요?"
+                    }
+                    st.session_state.chat_history = [initial_greeting]
                     st.session_state.form_step = 2
                     st.rerun()
 
 
-def render_form_field(field):
-    """개별 폼 필드 렌더링"""
+def render_phase2_chat(scenario):
+    """Phase 2: AI 인터뷰 (Chat Interface)"""
     
-    field_type = field.get('type', 'text')
-    label = field.get('label', field['name'])
-    key = f"field_{field['name']}"
-    default = st.session_state.get('form_data', {}).get(field['name'], '')
-    
-    if field_type == 'text':
-        return st.text_input(label, value=default, key=key)
-    
-    elif field_type == 'textarea':
-        return st.text_area(label, value=default, key=key, height=100)
-    
-    elif field_type == 'number':
-        return st.number_input(label, value=int(default) if default else 0, key=key)
-    
-    elif field_type == 'select':
-        options = field.get('options', [])
-        index = options.index(default) if default in options else 0
-        return st.selectbox(label, options=[''] + options, key=key)
-    
-    elif field_type == 'date':
-        return st.date_input(label, key=key)
-    
-    elif field_type == 'checkbox':
-        return st.checkbox(label, value=bool(default), key=key)
-    
-    return st.text_input(label, value=default, key=key)
-
-
-def render_narrative_form(scenario):
-    """Phase 3: Narrative 폼 (AI 검토 포함)"""
-    
-    ai_prompts = scenario.ai_prompts
-    
-    st.markdown(f"""
-        <div style="
-            background: rgba(255,255,255,0.02);
-            border: 1px solid rgba(201,162,39,0.15);
-            border-radius: 16px;
-            padding: 2rem;
-        ">
-            <h3 style="color: #C9A227; margin-bottom: 0.5rem;">
-                ✍️ {ai_prompts.get('narrative_label', '사연 작성')}
-            </h3>
-            <p style="color: #a0aec0; font-size: 0.9rem;">
-                AI가 실시간으로 내용을 검토하여 피드백을 제공합니다.
-            </p>
-        </div>
-    """, unsafe_allow_html=True)
-    
-    st.markdown("<br>", unsafe_allow_html=True)
-    
-    # 사연 입력
-    narrative_field = ai_prompts.get('narrative_field', 'narrative')
-    placeholder = ai_prompts.get('narrative_placeholder', '내용을 입력해주세요...')
-    
-    narrative = st.text_area(
-        "내용 입력",
-        placeholder=placeholder,
-        height=300,
-        key="narrative_input",
-        value=st.session_state.get('narrative_data', {}).get(narrative_field, '')
-    )
-    
-    # AI 검토 버튼
-    col1, col2 = st.columns([3, 1])
-    
-    with col2:
-        if st.button("🤖 AI 검토", use_container_width=True):
-            if len(narrative) < 50:
-                st.warning("내용이 너무 짧습니다. 최소 50자 이상 작성해주세요.")
-            else:
-                with st.spinner("AI가 검토 중입니다..."):
-                    ai_service = AIService()
-                    result = ai_service.validate_narrative(
-                        narrative,
-                        ai_prompts.get('validation_prompt', ''),
-                        st.session_state.get('form_data', {})
-                    )
-                    
-                    st.session_state.ai_feedback = result
-    
-    # AI 피드백 표시
-    if 'ai_feedback' in st.session_state and st.session_state.ai_feedback:
-        st.markdown("<br>", unsafe_allow_html=True)
-        NarrativeValidator.render_validation_result(st.session_state.ai_feedback)
-    
-    # AI 자동 생성 옵션
-    st.markdown("<br>", unsafe_allow_html=True)
-    
-    with st.expander("🤖 AI가 대신 작성해주기"):
-        st.markdown("""
-            <p style="color: #a0aec0; font-size: 0.9rem;">
-                입력한 정보를 바탕으로 AI가 초안을 작성합니다.
-            </p>
-        """, unsafe_allow_html=True)
-        
-        if st.button("AI 초안 생성", use_container_width=True):
-            with st.spinner("AI가 초안을 작성 중입니다..."):
-                ai_service = AIService()
-                
-                generation_prompt = ai_prompts.get('generation_prompt', '')
-                combined_data = {
-                    **st.session_state.get('user_data', {}),
-                    **st.session_state.get('form_data', {}),
-                    'narrative_content': narrative
-                }
-                
-                generated = ai_service.generate_narrative(generation_prompt, combined_data)
-                st.session_state.generated_narrative = generated
-                st.text_area("생성된 초안", value=generated, height=200, key="generated_preview")
-                
-                if st.button("이 초안 사용하기"):
-                    st.session_state.narrative_data = {narrative_field: generated}
-                    st.rerun()
-    
-    # 네비게이션
-    st.markdown("<br>", unsafe_allow_html=True)
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        if st.button("← 이전", use_container_width=True):
-            st.session_state.form_step = 1
-            st.rerun()
-    
-    with col2:
-        if st.button("다음 →", type="primary", use_container_width=True):
-            if len(narrative) < 50:
-                st.error("내용을 충분히 작성해주세요. (최소 50자)")
-            else:
-                st.session_state.narrative_data = {narrative_field: narrative}
-                st.session_state.form_step = 3
-                st.rerun()
-
-
-def render_review_and_generate(scenario):
-    """Phase 4: 검토 및 문서 생성"""
-    
+    # 진행 단계 표시
     st.markdown("""
         <div style="
-            background: rgba(255,255,255,0.02);
-            border: 1px solid rgba(201,162,39,0.15);
-            border-radius: 16px;
-            padding: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+            font-weight: 500;
+            margin-bottom: 1rem;
         ">
-            <h3 style="color: #C9A227; margin-bottom: 0.5rem;">
-                ✅ 최종 검토
-            </h3>
-            <p style="color: #a0aec0; font-size: 0.9rem;">
-                입력한 정보를 확인하고 문서를 생성합니다.
-            </p>
+            <span style="color: #22c55e !important;">✓ Step 1. 기본 정보</span>
+            <span style="color: #cbd5e1 !important;">›</span>
+            <span style="color: #2563eb !important;">Step 2. AI 인터뷰</span>
         </div>
     """, unsafe_allow_html=True)
     
-    st.markdown("<br>", unsafe_allow_html=True)
+    # 2단 레이아웃
+    chat_col, info_col = st.columns([2, 1])
     
-    # 데이터 요약
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.markdown("#### 👤 기본 정보")
-        user_data = st.session_state.get('user_data', {})
-        st.write(f"성명: {user_data.get('surname', '')} {user_data.get('given_name', '')}")
-        st.write(f"국적: {user_data.get('nationality', '')}")
-        st.write(f"여권번호: {user_data.get('passport_no', '')}")
-    
-    with col2:
-        st.markdown("#### 📝 상황 정보")
-        form_data = st.session_state.get('form_data', {})
-        for key, value in list(form_data.items())[:5]:
-            if value:
-                label = key.replace('_', ' ').title()
-                st.write(f"{label}: {value}")
-    
-    st.markdown("---")
-    
-    # 생성될 문서 목록
-    st.markdown("#### 📦 생성될 문서 패키지")
-    
-    for i, doc in enumerate(scenario.required_docs, 1):
-        st.markdown(f"""
+    with chat_col:
+        # 채팅 헤더
+        st.markdown("""
             <div style="
+                background: white;
+                border: 1px solid #e2e8f0;
+                border-radius: 0.75rem 0.75rem 0 0;
+                padding: 1rem;
                 display: flex;
                 align-items: center;
-                padding: 0.8rem;
-                background: rgba(255,255,255,0.02);
-                border-radius: 8px;
-                margin-bottom: 0.5rem;
+                justify-content: space-between;
+                border-bottom: none;
             ">
-                <span style="
-                    background: rgba(201,162,39,0.2);
-                    color: #C9A227;
-                    width: 28px;
-                    height: 28px;
-                    border-radius: 50%;
-                    display: inline-flex;
-                    align-items: center;
-                    justify-content: center;
-                    margin-right: 1rem;
-                    font-size: 0.85rem;
-                    font-weight: 600;
-                ">{i}</span>
-                <span style="color: white;">{doc}</span>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <div style="
+                        width: 8px;
+                        height: 8px;
+                        background: #22c55e;
+                        border-radius: 50%;
+                    "></div>
+                    <span style="font-weight: 600; color: #1e293b !important;">AI 행정사 인터뷰</span>
+                </div>
             </div>
         """, unsafe_allow_html=True)
-    
-    st.markdown("<br>", unsafe_allow_html=True)
-    
-    # 네비게이션 및 생성
-    col1, col2, col3 = st.columns([1, 1, 2])
-    
-    with col1:
-        if st.button("← 이전", use_container_width=True):
-            st.session_state.form_step = 2
-            st.rerun()
-    
-    with col3:
-        if st.button("📄 문서 패키지 생성", type="primary", use_container_width=True):
-            with st.spinner("문서를 생성하는 중입니다..."):
-                doc_service = DocumentService()
+        
+        # 채팅 메시지 영역
+        chat_area = st.container()
+        
+        with chat_area:
+            for msg in st.session_state.get('chat_history', []):
+                if msg['role'] == 'user':
+                    st.markdown(f"""
+                        <div style="
+                            display: flex;
+                            justify-content: flex-end;
+                            margin-bottom: 0.75rem;
+                            padding: 0 1rem;
+                        ">
+                            <div style="
+                                background: #2563eb;
+                                color: white !important;
+                                padding: 0.75rem 1rem;
+                                border-radius: 1rem;
+                                border-top-right-radius: 0.25rem;
+                                max-width: 80%;
+                                font-size: 0.9rem;
+                                line-height: 1.5;
+                            ">{msg['content']}</div>
+                        </div>
+                    """, unsafe_allow_html=True)
+                else:
+                    st.markdown(f"""
+                        <div style="
+                            display: flex;
+                            justify-content: flex-start;
+                            margin-bottom: 0.75rem;
+                            padding: 0 1rem;
+                        ">
+                            <div style="
+                                background: white;
+                                border: 1px solid #e2e8f0;
+                                color: #1e293b !important;
+                                padding: 0.75rem 1rem;
+                                border-radius: 1rem;
+                                border-top-left-radius: 0.25rem;
+                                max-width: 80%;
+                                font-size: 0.9rem;
+                                line-height: 1.5;
+                                box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+                            ">{msg['content']}</div>
+                        </div>
+                    """, unsafe_allow_html=True)
+        
+        # 입력 영역
+        with st.form("chat_form", clear_on_submit=True):
+            col_input, col_btn = st.columns([5, 1])
+            
+            with col_input:
+                user_message = st.text_input(
+                    "메시지",
+                    placeholder="계획을 편하게 이야기해주세요...",
+                    label_visibility="collapsed"
+                )
+            
+            with col_btn:
+                send_btn = st.form_submit_button("전송", type="primary", use_container_width=True)
+            
+            if send_btn and user_message:
+                st.session_state.chat_history.append({
+                    'role': 'user',
+                    'content': user_message
+                })
                 
-                zip_bytes = doc_service.generate_full_package(
-                    scenario.id,
-                    st.session_state.get('user_data', {}),
-                    st.session_state.get('form_data', {}),
-                    st.session_state.get('narrative_data', {})
+                ai_service = AIService()
+                response = ai_service.chat_response(
+                    user_message,
+                    st.session_state.chat_history,
+                    ""
                 )
                 
-                if zip_bytes:
-                    st.session_state.generated_zip = zip_bytes
-                    st.session_state.current_page = 'document_preview'
-                    st.rerun()
-                else:
-                    st.error("문서 생성에 실패했습니다.")
+                st.session_state.chat_history.append({
+                    'role': 'assistant',
+                    'content': response
+                })
+                
+                st.rerun()
+        
+        st.markdown("<br>", unsafe_allow_html=True)
+        
+        if st.button("✓ 인터뷰 종료 및 문서 생성", use_container_width=True, type="primary"):
+            # 문서 생성 및 미리보기 페이지로 이동
+            from services.document_service import DocumentService
+            
+            doc_service = DocumentService()
+            zip_bytes = doc_service.generate_full_package(
+                scenario.id,
+                st.session_state.get('user_data', {}),
+                st.session_state.get('form_data', {}),
+                {'chat_history': st.session_state.get('chat_history', [])}
+            )
+            
+            if zip_bytes:
+                st.session_state.generated_zip = zip_bytes
+                st.session_state.current_page = 'document_preview'
+                st.rerun()
+    
+    with info_col:
+        form_data = st.session_state.get('form_data', {})
+        
+        # 정보 요약 패널
+        st.markdown(f"""
+            <div style="
+                background: white;
+                border: 1px solid #e2e8f0;
+                border-radius: 0.75rem;
+                padding: 1.25rem;
+                margin-bottom: 1rem;
+            ">
+                <h4 style="
+                    font-weight: 700;
+                    color: #1e293b !important;
+                    font-size: 0.9rem;
+                    margin: 0 0 0.75rem 0;
+                ">📄 실시간 정보 요약</h4>
+                
+                <div style="
+                    display: flex;
+                    justify-content: space-between;
+                    padding: 0.5rem 0;
+                    border-bottom: 1px solid #f1f5f9;
+                    font-size: 0.85rem;
+                ">
+                    <span style="color: #64748b !important;">신청자</span>
+                    <span style="font-weight: 500; color: #1e293b !important;">{form_data.get('name', 'N/A')}</span>
+                </div>
+                
+                <div style="
+                    display: flex;
+                    justify-content: space-between;
+                    padding: 0.5rem 0;
+                    border-bottom: 1px solid #f1f5f9;
+                    font-size: 0.85rem;
+                ">
+                    <span style="color: #64748b !important;">비자 타입</span>
+                    <span style="
+                        font-weight: 500;
+                        color: #2563eb !important;
+                        background: #dbeafe;
+                        padding: 0.125rem 0.5rem;
+                        border-radius: 0.25rem;
+                        font-size: 0.75rem;
+                    ">{scenario.visa_type}</span>
+                </div>
+                
+                <div style="
+                    display: flex;
+                    justify-content: space-between;
+                    padding: 0.5rem 0;
+                    font-size: 0.85rem;
+                ">
+                    <span style="color: #64748b !important;">목표</span>
+                    <span style="font-weight: 500; color: #1e293b !important;">{form_data.get('job_category', 'N/A')}</span>
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
+        
+        # RAG 가이드 패널
+        st.markdown(f"""
+            <div style="
+                background: #dbeafe;
+                border: 1px solid rgba(37, 99, 235, 0.2);
+                border-radius: 0.75rem;
+                padding: 1.25rem;
+            ">
+                <h4 style="
+                    font-weight: 700;
+                    color: #1e40af !important;
+                    font-size: 0.9rem;
+                    margin: 0 0 0.75rem 0;
+                ">📚 하이코리아 심사 기준</h4>
+                
+                <ul style="
+                    font-size: 0.8rem;
+                    color: #1e40af !important;
+                    padding-left: 1rem;
+                    margin: 0;
+                    line-height: 1.8;
+                ">
+                    <li style="color: #1e40af !important;">구직활동계획서 작성 시 월별 계획이 구체적이어야 함</li>
+                    <li style="color: #1e40af !important;">단순 어학연수는 불허될 가능성 높음</li>
+                    <li style="color: #1e40af !important;">지난 6개월간 구직 활동 증빙 필수</li>
+                    <li style="color: #1e40af !important;">예금 잔고 증명 480만원 이상 필요</li>
+                </ul>
+                
+                <div style="
+                    margin-top: 1rem;
+                    padding: 0.75rem;
+                    background: rgba(255,255,255,0.6);
+                    border-radius: 0.5rem;
+                    font-size: 0.75rem;
+                    color: #1e40af !important;
+                ">
+                    ℹ️ AI가 위 규정을 바탕으로 사용자 답변을 분석하고 있습니다.
+                </div>
+            </div>
+        """, unsafe_allow_html=True)

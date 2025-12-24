@@ -1,6 +1,6 @@
 """
 K-Stay Main Dashboard
-시나리오 선택 및 메인 화면
+Light Mode Compatible - All text colors fixed
 """
 
 import streamlit as st
@@ -11,324 +11,445 @@ from services.payment_service import PaymentGateway
 def render():
     """메인 대시보드 렌더링"""
     
-    # 헤더
-    render_header()
-    
-    # 시나리오 선택
-    render_scenario_selection()
-    
-    # 최근 활동 (옵션)
-    render_recent_activity()
-
-
-def render_header():
-    """헤더 섹션"""
-    
     user_data = st.session_state.get('user_data', {})
     name = f"{user_data.get('given_name', 'Guest')}"
+    nationality = user_data.get('nationality', '')
+    passport = user_data.get('passport_no', '')
+    passport_masked = passport[:3] + '****' if passport else ''
     
+    # 환영 배너 (밝은 파란색 그라데이션)
     st.markdown(f"""
         <div style="
-            background: linear-gradient(135deg, rgba(201,162,39,0.1) 0%, rgba(10,22,40,0.8) 100%);
-            border-radius: 24px;
-            padding: 3rem;
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            border-radius: 1rem;
+            padding: 2rem;
             margin-bottom: 2rem;
-            border: 1px solid rgba(201,162,39,0.2);
+            color: white;
         ">
             <h1 style="
-                font-family: 'Playfair Display', serif;
-                font-size: 2.5rem;
-                color: white;
-                margin-bottom: 0.5rem;
-            ">
-                Welcome back, {name}! 👋
-            </h1>
+                font-size: 2rem;
+                font-weight: 700;
+                color: white !important;
+                margin: 0 0 0.5rem 0;
+            ">Welcome back, {name}! 👋</h1>
             <p style="
-                color: #a0aec0;
-                font-size: 1.1rem;
-                margin-bottom: 1.5rem;
-            ">
-                어떤 비자 업무를 도와드릴까요?
-            </p>
-            <div style="
-                display: flex;
-                gap: 1rem;
-                flex-wrap: wrap;
-            ">
-                <div style="
-                    background: rgba(255,255,255,0.05);
-                    padding: 0.8rem 1.5rem;
-                    border-radius: 12px;
-                    display: inline-block;
-                ">
-                    <span style="color: #6c757d;">국적</span>
-                    <span style="color: white; margin-left: 0.5rem; font-weight: 600;">
-                        {user_data.get('nationality', 'N/A')}
-                    </span>
+                color: rgba(255,255,255,0.9) !important;
+                font-size: 1rem;
+                margin: 0 0 1.5rem 0;
+            ">어떤 비자 업무를 도와드릴까요?</p>
+            <div style="display: flex; gap: 2rem;">
+                <div>
+                    <span style="color: rgba(255,255,255,0.7) !important; font-size: 0.85rem;">국적</span>
+                    <span style="color: white !important; font-weight: 600; margin-left: 0.5rem;">{nationality}</span>
                 </div>
-                <div style="
-                    background: rgba(255,255,255,0.05);
-                    padding: 0.8rem 1.5rem;
-                    border-radius: 12px;
-                    display: inline-block;
-                ">
-                    <span style="color: #6c757d;">여권</span>
-                    <span style="color: white; margin-left: 0.5rem; font-weight: 600;">
-                        {user_data.get('passport_no', 'N/A')[:4]}****
-                    </span>
+                <div>
+                    <span style="color: rgba(255,255,255,0.7) !important; font-size: 0.85rem;">여권</span>
+                    <span style="color: white !important; font-weight: 600; margin-left: 0.5rem;">{passport_masked}</span>
                 </div>
             </div>
         </div>
     """, unsafe_allow_html=True)
-
-
-def render_scenario_selection():
-    """시나리오 선택 섹션"""
     
+    # 시나리오 선택 섹션
     st.markdown("""
-        <h2 style="
-            font-family: 'Noto Sans KR', sans-serif;
-            color: white;
-            margin-bottom: 1.5rem;
-        ">
-            📋 시나리오 선택
-        </h2>
+        <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem;">
+            <span style="font-size: 1.5rem;">📋</span>
+            <h2 style="
+                font-size: 1.25rem;
+                font-weight: 700;
+                color: #ffffff !important;
+                margin: 0;
+            ">시나리오 선택</h2>
+        </div>
     """, unsafe_allow_html=True)
     
-    # Track 1: High Volume
+    # Track 1 - High Volume
     st.markdown("""
         <div style="
+            background: #f1f5f9;
             display: inline-block;
-            background: rgba(201,162,39,0.1);
-            padding: 0.4rem 1rem;
-            border-radius: 8px;
+            padding: 0.375rem 0.75rem;
+            border-radius: 0.375rem;
             margin-bottom: 1rem;
         ">
-            <span style="
-                color: #C9A227;
-                font-size: 0.85rem;
-                font-weight: 600;
-                letter-spacing: 2px;
-            ">💼 TRACK 1 — HIGH VOLUME</span>
+            <span style="font-size: 0.8rem; font-weight: 600; color: #475569 !important;">
+                💼 TRACK 1 — HIGH VOLUME
+            </span>
         </div>
     """, unsafe_allow_html=True)
     
     col1, col2 = st.columns(2)
     
     with col1:
-        render_scenario_card("A")
+        # D-10 구직 준비 카드
+        st.markdown("""
+            <div style="
+                background: white;
+                border: 1px solid #e2e8f0;
+                border-radius: 0.75rem;
+                padding: 1.5rem;
+                height: 180px;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            ">
+                <div style="
+                    width: 40px;
+                    height: 40px;
+                    background: #fef3c7;
+                    border-radius: 0.5rem;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 1.25rem;
+                    margin-bottom: 1rem;
+                ">💼</div>
+                <h3 style="
+                    font-size: 1.1rem;
+                    font-weight: 700;
+                    color: #1e293b !important;
+                    margin: 0 0 0.25rem 0;
+                ">구직 준비</h3>
+                <p style="
+                    font-size: 0.8rem;
+                    color: #2563eb !important;
+                    margin: 0 0 0.5rem 0;
+                    font-weight: 500;
+                ">D-10</p>
+                <p style="
+                    font-size: 0.85rem;
+                    color: #64748b !important;
+                    margin: 0 0 0.75rem 0;
+                    line-height: 1.4;
+                ">구직 활동을 위한 비자 연장 및 체류자격 변경</p>
+                <div style="
+                    display: inline-block;
+                    background: #dbeafe;
+                    color: #1e40af !important;
+                    font-size: 0.75rem;
+                    font-weight: 500;
+                    padding: 0.25rem 0.5rem;
+                    border-radius: 0.25rem;
+                ">📄 5개 문서</div>
+            </div>
+        """, unsafe_allow_html=True)
+        if st.button("시작하기 →", key="start_A", use_container_width=True):
+            start_scenario("A")
+    
     with col2:
-        render_scenario_card("B")
+        # 시간제 취업 카드
+        st.markdown("""
+            <div style="
+                background: white;
+                border: 1px solid #e2e8f0;
+                border-radius: 0.75rem;
+                padding: 1.5rem;
+                height: 180px;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            ">
+                <div style="
+                    width: 40px;
+                    height: 40px;
+                    background: #fce7f3;
+                    border-radius: 0.5rem;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 1.25rem;
+                    margin-bottom: 1rem;
+                ">⏰</div>
+                <h3 style="
+                    font-size: 1.1rem;
+                    font-weight: 700;
+                    color: #1e293b !important;
+                    margin: 0 0 0.25rem 0;
+                ">아르바이트</h3>
+                <p style="
+                    font-size: 0.8rem;
+                    color: #2563eb !important;
+                    margin: 0 0 0.5rem 0;
+                    font-weight: 500;
+                ">시간제 취업</p>
+                <p style="
+                    font-size: 0.85rem;
+                    color: #64748b !important;
+                    margin: 0 0 0.75rem 0;
+                    line-height: 1.4;
+                ">유학생/연수생 시간제 취업 허가 신청</p>
+                <div style="
+                    display: inline-block;
+                    background: #dbeafe;
+                    color: #1e40af !important;
+                    font-size: 0.75rem;
+                    font-weight: 500;
+                    padding: 0.25rem 0.5rem;
+                    border-radius: 0.25rem;
+                ">📄 5개 문서</div>
+            </div>
+        """, unsafe_allow_html=True)
+        if st.button("시작하기 →", key="start_B", use_container_width=True):
+            start_scenario("B")
     
     st.markdown("<br>", unsafe_allow_html=True)
     
-    # Track 2: High Margin
+    # Track 2 - High Margin
     st.markdown("""
         <div style="
+            background: #fef3c7;
             display: inline-block;
-            background: rgba(255,107,107,0.1);
-            padding: 0.4rem 1rem;
-            border-radius: 8px;
+            padding: 0.375rem 0.75rem;
+            border-radius: 0.375rem;
             margin-bottom: 1rem;
         ">
-            <span style="
-                color: #FF6B6B;
-                font-size: 0.85rem;
-                font-weight: 600;
-                letter-spacing: 2px;
-            ">💍 TRACK 2 — HIGH MARGIN</span>
+            <span style="font-size: 0.8rem; font-weight: 600; color: #92400e !important;">
+                💎 TRACK 2 — HIGH MARGIN
+            </span>
         </div>
     """, unsafe_allow_html=True)
     
     col3, col4 = st.columns(2)
     
     with col3:
-        render_scenario_card("C")
+        # F-6 결혼 이민 카드
+        st.markdown("""
+            <div style="
+                background: white;
+                border: 1px solid #e2e8f0;
+                border-radius: 0.75rem;
+                padding: 1.5rem;
+                height: 180px;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            ">
+                <div style="
+                    width: 40px;
+                    height: 40px;
+                    background: #fce7f3;
+                    border-radius: 0.5rem;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 1.25rem;
+                    margin-bottom: 1rem;
+                ">💍</div>
+                <h3 style="
+                    font-size: 1.1rem;
+                    font-weight: 700;
+                    color: #1e293b !important;
+                    margin: 0 0 0.25rem 0;
+                ">결혼 이민</h3>
+                <p style="
+                    font-size: 0.8rem;
+                    color: #2563eb !important;
+                    margin: 0 0 0.5rem 0;
+                    font-weight: 500;
+                ">F-6</p>
+                <p style="
+                    font-size: 0.85rem;
+                    color: #64748b !important;
+                    margin: 0 0 0.75rem 0;
+                    line-height: 1.4;
+                ">한국인 배우자와의 결혼을 통한 비자 신청</p>
+                <div style="
+                    display: inline-block;
+                    background: #dbeafe;
+                    color: #1e40af !important;
+                    font-size: 0.75rem;
+                    font-weight: 500;
+                    padding: 0.25rem 0.5rem;
+                    border-radius: 0.25rem;
+                ">📄 5개 문서</div>
+            </div>
+        """, unsafe_allow_html=True)
+        if st.button("시작하기 →", key="start_C", use_container_width=True):
+            start_scenario("C")
+    
     with col4:
-        render_scenario_card("D")
+        # 가족 초청 카드
+        st.markdown("""
+            <div style="
+                background: white;
+                border: 1px solid #e2e8f0;
+                border-radius: 0.75rem;
+                padding: 1.5rem;
+                height: 180px;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            ">
+                <div style="
+                    width: 40px;
+                    height: 40px;
+                    background: #d1fae5;
+                    border-radius: 0.5rem;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 1.25rem;
+                    margin-bottom: 1rem;
+                ">👨‍👩‍👧</div>
+                <h3 style="
+                    font-size: 1.1rem;
+                    font-weight: 700;
+                    color: #1e293b !important;
+                    margin: 0 0 0.25rem 0;
+                ">가족 초청</h3>
+                <p style="
+                    font-size: 0.8rem;
+                    color: #2563eb !important;
+                    margin: 0 0 0.5rem 0;
+                    font-weight: 500;
+                ">F-1-5</p>
+                <p style="
+                    font-size: 0.85rem;
+                    color: #64748b !important;
+                    margin: 0 0 0.75rem 0;
+                    line-height: 1.4;
+                ">부모님 방문/체류를 위한 초청장 발급</p>
+                <div style="
+                    display: inline-block;
+                    background: #dbeafe;
+                    color: #1e40af !important;
+                    font-size: 0.75rem;
+                    font-weight: 500;
+                    padding: 0.25rem 0.5rem;
+                    border-radius: 0.25rem;
+                ">📄 4개 문서</div>
+            </div>
+        """, unsafe_allow_html=True)
+        if st.button("시작하기 →", key="start_D", use_container_width=True):
+            start_scenario("D")
     
     st.markdown("<br>", unsafe_allow_html=True)
     
-    # Track 3: Recurring
+    # Track 3 - Recurring
     st.markdown("""
         <div style="
+            background: #e0e7ff;
             display: inline-block;
-            background: rgba(102,126,234,0.1);
-            padding: 0.4rem 1rem;
-            border-radius: 8px;
+            padding: 0.375rem 0.75rem;
+            border-radius: 0.375rem;
             margin-bottom: 1rem;
         ">
-            <span style="
-                color: #667eea;
-                font-size: 0.85rem;
-                font-weight: 600;
-                letter-spacing: 2px;
-            ">🏛️ TRACK 3 — RECURRING</span>
+            <span style="font-size: 0.8rem; font-weight: 600; color: #3730a3 !important;">
+                🔄 TRACK 3 — RECURRING
+            </span>
         </div>
     """, unsafe_allow_html=True)
     
     col5, col6 = st.columns(2)
     
     with col5:
-        render_scenario_card("E")
-    with col6:
-        render_scenario_card("F")
-
-
-def render_scenario_card(scenario_id: str):
-    """시나리오 카드 렌더링"""
-    
-    scenario = SCENARIOS.get(scenario_id)
-    if not scenario:
-        return
-    
-    # 트랙별 색상
-    track_colors = {
-        "high_volume": ("#C9A227", "rgba(201,162,39,0.1)"),
-        "high_margin": ("#FF6B6B", "rgba(255,107,107,0.1)"),
-        "recurring": ("#667eea", "rgba(102,126,234,0.1)")
-    }
-    
-    accent_color, bg_color = track_colors.get(scenario.track, ("#C9A227", "rgba(201,162,39,0.1)"))
-    
-    # 문서 수
-    doc_count = len(scenario.required_docs)
-    
-    st.markdown(f"""
-        <div style="
-            background: rgba(255,255,255,0.02);
-            border: 1px solid rgba(201,162,39,0.15);
-            border-radius: 16px;
-            padding: 1.5rem;
-            margin-bottom: 1rem;
-            transition: all 0.3s ease;
-            cursor: pointer;
-        " onmouseover="this.style.borderColor='{accent_color}'; this.style.transform='translateY(-4px)';"
-           onmouseout="this.style.borderColor='rgba(201,162,39,0.15)'; this.style.transform='translateY(0)';">
-            <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">{scenario.icon}</div>
-            <h3 style="
-                color: white;
-                font-family: 'Noto Sans KR', sans-serif;
-                font-weight: 700;
-                margin-bottom: 0.3rem;
-            ">{scenario.name}</h3>
-            <p style="
-                color: {accent_color};
-                font-size: 0.85rem;
-                margin-bottom: 0.5rem;
-            ">{scenario.visa_type}</p>
-            <p style="
-                color: #8892a0;
-                font-size: 0.9rem;
-                line-height: 1.5;
-                margin-bottom: 1rem;
-            ">{scenario.description}</p>
-            <div style="
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-            ">
-                <span style="
-                    background: {bg_color};
-                    color: {accent_color};
-                    padding: 0.3rem 0.8rem;
-                    border-radius: 20px;
-                    font-size: 0.75rem;
-                ">📄 {doc_count}개 문서</span>
-            </div>
-        </div>
-    """, unsafe_allow_html=True)
-    
-    if st.button(f"시작하기 →", key=f"start_{scenario_id}", use_container_width=True):
-        # 결제 확인
-        if not st.session_state.get('is_paid', False) and not st.session_state.get('is_admin', False):
-            st.warning("이 기능을 사용하려면 Premium 구매가 필요합니다.")
-            PaymentGateway.render_payment_modal()
-            return
-        
-        # 시나리오 선택 및 폼 페이지로 이동
-        st.session_state.selected_scenario = scenario_id
-        st.session_state.current_page = 'scenario_form'
-        st.rerun()
-
-
-def render_recent_activity():
-    """최근 활동 섹션"""
-    
-    st.markdown("<br><br>", unsafe_allow_html=True)
-    
-    st.markdown("""
-        <h3 style="
-            font-family: 'Noto Sans KR', sans-serif;
-            color: #a0aec0;
-            margin-bottom: 1rem;
-        ">
-            📊 최근 활동
-        </h3>
-    """, unsafe_allow_html=True)
-    
-    # 최근 생성된 문서가 있는 경우
-    generated_docs = st.session_state.get('generated_documents', [])
-    
-    if generated_docs:
-        for doc in generated_docs[-3:]:  # 최근 3개만
-            st.markdown(f"""
-                <div style="
-                    background: rgba(255,255,255,0.02);
-                    border-left: 3px solid #C9A227;
-                    padding: 1rem;
-                    margin-bottom: 0.5rem;
-                    border-radius: 0 8px 8px 0;
-                ">
-                    <p style="color: white; margin: 0;">{doc.get('name', 'Document')}</p>
-                    <p style="color: #6c757d; font-size: 0.8rem; margin: 0;">
-                        {doc.get('created_at', 'N/A')}
-                    </p>
-                </div>
-            """, unsafe_allow_html=True)
-    else:
+        # E-7 전문 인력 카드
         st.markdown("""
             <div style="
-                background: rgba(255,255,255,0.02);
-                border: 1px dashed rgba(201,162,39,0.3);
-                border-radius: 12px;
-                padding: 2rem;
-                text-align: center;
+                background: white;
+                border: 1px solid #e2e8f0;
+                border-radius: 0.75rem;
+                padding: 1.5rem;
+                height: 180px;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.08);
             ">
-                <p style="color: #6c757d; margin: 0;">
-                    아직 생성된 문서가 없습니다.<br>
-                    위에서 시나리오를 선택하여 시작하세요!
-                </p>
+                <div style="
+                    width: 40px;
+                    height: 40px;
+                    background: #e0e7ff;
+                    border-radius: 0.5rem;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 1.25rem;
+                    margin-bottom: 1rem;
+                ">🎓</div>
+                <h3 style="
+                    font-size: 1.1rem;
+                    font-weight: 700;
+                    color: #1e293b !important;
+                    margin: 0 0 0.25rem 0;
+                ">전문 인력</h3>
+                <p style="
+                    font-size: 0.8rem;
+                    color: #2563eb !important;
+                    margin: 0 0 0.5rem 0;
+                    font-weight: 500;
+                ">E-7</p>
+                <p style="
+                    font-size: 0.85rem;
+                    color: #64748b !important;
+                    margin: 0 0 0.75rem 0;
+                    line-height: 1.4;
+                ">특정 분야 전문 인력 채용을 위한 비자 신청</p>
+                <div style="
+                    display: inline-block;
+                    background: #dbeafe;
+                    color: #1e40af !important;
+                    font-size: 0.75rem;
+                    font-weight: 500;
+                    padding: 0.25rem 0.5rem;
+                    border-radius: 0.25rem;
+                ">📄 3개 문서</div>
             </div>
         """, unsafe_allow_html=True)
-
-
-def render_stats_banner():
-    """통계 배너"""
+        if st.button("시작하기 →", key="start_E", use_container_width=True):
+            start_scenario("E")
     
-    col1, col2, col3, col4 = st.columns(4)
-    
-    stats = [
-        ("📄", "생성된 문서", st.session_state.get('total_docs', 0)),
-        ("✅", "완료된 신청", st.session_state.get('completed', 0)),
-        ("💬", "AI 상담", st.session_state.get('ai_chats', 0)),
-        ("⭐", "성공률", "98%")
-    ]
-    
-    for col, (icon, label, value) in zip([col1, col2, col3, col4], stats):
-        with col:
-            st.markdown(f"""
+    with col6:
+        # 국적 귀화 카드
+        st.markdown("""
+            <div style="
+                background: white;
+                border: 1px solid #e2e8f0;
+                border-radius: 0.75rem;
+                padding: 1.5rem;
+                height: 180px;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            ">
                 <div style="
-                    background: rgba(255,255,255,0.02);
-                    border: 1px solid rgba(201,162,39,0.1);
-                    border-radius: 12px;
-                    padding: 1rem;
-                    text-align: center;
-                ">
-                    <div style="font-size: 1.5rem;">{icon}</div>
-                    <div style="color: white; font-size: 1.5rem; font-weight: 700;">
-                        {value}
-                    </div>
-                    <div style="color: #6c757d; font-size: 0.8rem;">{label}</div>
-                </div>
-            """, unsafe_allow_html=True)
+                    width: 40px;
+                    height: 40px;
+                    background: #fef3c7;
+                    border-radius: 0.5rem;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 1.25rem;
+                    margin-bottom: 1rem;
+                ">🏛️</div>
+                <h3 style="
+                    font-size: 1.1rem;
+                    font-weight: 700;
+                    color: #1e293b !important;
+                    margin: 0 0 0.25rem 0;
+                ">국적 귀화</h3>
+                <p style="
+                    font-size: 0.8rem;
+                    color: #2563eb !important;
+                    margin: 0 0 0.5rem 0;
+                    font-weight: 500;
+                ">귀화</p>
+                <p style="
+                    font-size: 0.85rem;
+                    color: #64748b !important;
+                    margin: 0 0 0.75rem 0;
+                    line-height: 1.4;
+                ">대한민국 국적 취득을 위한 귀화 신청</p>
+                <div style="
+                    display: inline-block;
+                    background: #dbeafe;
+                    color: #1e40af !important;
+                    font-size: 0.75rem;
+                    font-weight: 500;
+                    padding: 0.25rem 0.5rem;
+                    border-radius: 0.25rem;
+                ">📄 4개 문서</div>
+            </div>
+        """, unsafe_allow_html=True)
+        if st.button("시작하기 →", key="start_F", use_container_width=True):
+            start_scenario("F")
+
+
+def start_scenario(scenario_id: str):
+    """시나리오 시작"""
+    if not st.session_state.get('is_paid', False) and not st.session_state.get('is_admin', False):
+        st.warning("이 기능을 사용하려면 Premium 구매가 필요합니다.")
+        return
+    
+    st.session_state.selected_scenario = scenario_id
+    st.session_state.current_page = 'scenario_form'
+    st.session_state.form_step = 1
+    st.rerun()

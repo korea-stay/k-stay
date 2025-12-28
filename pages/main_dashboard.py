@@ -1,6 +1,6 @@
 """
 K-Stay Main Dashboard
-Light Mode Compatible - All text colors fixed
+Light Mode Compatible - Fixed card layout and spacing
 """
 
 import streamlit as st
@@ -57,7 +57,7 @@ def render():
             <h2 style="
                 font-size: 1.25rem;
                 font-weight: 700;
-                color: #ffffff !important;
+                color: #1e293b !important;
                 margin: 0;
             ">시나리오 선택</h2>
         </div>
@@ -81,112 +81,26 @@ def render():
     col1, col2 = st.columns(2)
     
     with col1:
-        # D-10 구직 준비 카드
-        st.markdown("""
-            <div style="
-                background: white;
-                border: 1px solid #e2e8f0;
-                border-radius: 0.75rem;
-                padding: 1.5rem;
-                height: 180px;
-                box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-            ">
-                <div style="
-                    width: 40px;
-                    height: 40px;
-                    background: #fef3c7;
-                    border-radius: 0.5rem;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    font-size: 1.25rem;
-                    margin-bottom: 1rem;
-                ">💼</div>
-                <h3 style="
-                    font-size: 1.1rem;
-                    font-weight: 700;
-                    color: #1e293b !important;
-                    margin: 0 0 0.25rem 0;
-                ">구직 준비</h3>
-                <p style="
-                    font-size: 0.8rem;
-                    color: #2563eb !important;
-                    margin: 0 0 0.5rem 0;
-                    font-weight: 500;
-                ">D-10</p>
-                <p style="
-                    font-size: 0.85rem;
-                    color: #64748b !important;
-                    margin: 0 0 0.75rem 0;
-                    line-height: 1.4;
-                ">구직 활동을 위한 비자 연장 및 체류자격 변경</p>
-                <div style="
-                    display: inline-block;
-                    background: #dbeafe;
-                    color: #1e40af !important;
-                    font-size: 0.75rem;
-                    font-weight: 500;
-                    padding: 0.25rem 0.5rem;
-                    border-radius: 0.25rem;
-                ">📄 5개 문서</div>
-            </div>
-        """, unsafe_allow_html=True)
-        if st.button("시작하기 →", key="start_A", use_container_width=True):
-            start_scenario("A")
+        render_scenario_card(
+            icon="💼",
+            icon_bg="#fef3c7",
+            title="구직 준비",
+            visa_type="D-10",
+            description="구직 활동을 위한 비자 연장 및 체류자격 변경",
+            doc_count=5,
+            key="A"
+        )
     
     with col2:
-        # 시간제 취업 카드
-        st.markdown("""
-            <div style="
-                background: white;
-                border: 1px solid #e2e8f0;
-                border-radius: 0.75rem;
-                padding: 1.5rem;
-                height: 180px;
-                box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-            ">
-                <div style="
-                    width: 40px;
-                    height: 40px;
-                    background: #fce7f3;
-                    border-radius: 0.5rem;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    font-size: 1.25rem;
-                    margin-bottom: 1rem;
-                ">⏰</div>
-                <h3 style="
-                    font-size: 1.1rem;
-                    font-weight: 700;
-                    color: #1e293b !important;
-                    margin: 0 0 0.25rem 0;
-                ">아르바이트</h3>
-                <p style="
-                    font-size: 0.8rem;
-                    color: #2563eb !important;
-                    margin: 0 0 0.5rem 0;
-                    font-weight: 500;
-                ">시간제 취업</p>
-                <p style="
-                    font-size: 0.85rem;
-                    color: #64748b !important;
-                    margin: 0 0 0.75rem 0;
-                    line-height: 1.4;
-                ">유학생/연수생 시간제 취업 허가 신청</p>
-                <div style="
-                    display: inline-block;
-                    background: #dbeafe;
-                    color: #1e40af !important;
-                    font-size: 0.75rem;
-                    font-weight: 500;
-                    padding: 0.25rem 0.5rem;
-                    border-radius: 0.25rem;
-                ">📄 5개 문서</div>
-            </div>
-        """, unsafe_allow_html=True)
-        if st.button("시작하기 →", key="start_B", use_container_width=True):
-            start_scenario("B")
+        render_scenario_card(
+            icon="⏰",
+            icon_bg="#fce7f3",
+            title="아르바이트",
+            visa_type="시간제 취업",
+            description="유학생/연수생 시간제 취업 허가 신청",
+            doc_count=5,
+            key="B"
+        )
     
     st.markdown("<br>", unsafe_allow_html=True)
     
@@ -208,112 +122,26 @@ def render():
     col3, col4 = st.columns(2)
     
     with col3:
-        # F-6 결혼 이민 카드
-        st.markdown("""
-            <div style="
-                background: white;
-                border: 1px solid #e2e8f0;
-                border-radius: 0.75rem;
-                padding: 1.5rem;
-                height: 180px;
-                box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-            ">
-                <div style="
-                    width: 40px;
-                    height: 40px;
-                    background: #fce7f3;
-                    border-radius: 0.5rem;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    font-size: 1.25rem;
-                    margin-bottom: 1rem;
-                ">💍</div>
-                <h3 style="
-                    font-size: 1.1rem;
-                    font-weight: 700;
-                    color: #1e293b !important;
-                    margin: 0 0 0.25rem 0;
-                ">결혼 이민</h3>
-                <p style="
-                    font-size: 0.8rem;
-                    color: #2563eb !important;
-                    margin: 0 0 0.5rem 0;
-                    font-weight: 500;
-                ">F-6</p>
-                <p style="
-                    font-size: 0.85rem;
-                    color: #64748b !important;
-                    margin: 0 0 0.75rem 0;
-                    line-height: 1.4;
-                ">한국인 배우자와의 결혼을 통한 비자 신청</p>
-                <div style="
-                    display: inline-block;
-                    background: #dbeafe;
-                    color: #1e40af !important;
-                    font-size: 0.75rem;
-                    font-weight: 500;
-                    padding: 0.25rem 0.5rem;
-                    border-radius: 0.25rem;
-                ">📄 5개 문서</div>
-            </div>
-        """, unsafe_allow_html=True)
-        if st.button("시작하기 →", key="start_C", use_container_width=True):
-            start_scenario("C")
+        render_scenario_card(
+            icon="💍",
+            icon_bg="#fce7f3",
+            title="결혼 이민",
+            visa_type="F-6",
+            description="한국인 배우자와의 결혼을 통한 비자 신청",
+            doc_count=5,
+            key="C"
+        )
     
     with col4:
-        # 가족 초청 카드
-        st.markdown("""
-            <div style="
-                background: white;
-                border: 1px solid #e2e8f0;
-                border-radius: 0.75rem;
-                padding: 1.5rem;
-                height: 180px;
-                box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-            ">
-                <div style="
-                    width: 40px;
-                    height: 40px;
-                    background: #d1fae5;
-                    border-radius: 0.5rem;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    font-size: 1.25rem;
-                    margin-bottom: 1rem;
-                ">👨‍👩‍👧</div>
-                <h3 style="
-                    font-size: 1.1rem;
-                    font-weight: 700;
-                    color: #1e293b !important;
-                    margin: 0 0 0.25rem 0;
-                ">가족 초청</h3>
-                <p style="
-                    font-size: 0.8rem;
-                    color: #2563eb !important;
-                    margin: 0 0 0.5rem 0;
-                    font-weight: 500;
-                ">F-1-5</p>
-                <p style="
-                    font-size: 0.85rem;
-                    color: #64748b !important;
-                    margin: 0 0 0.75rem 0;
-                    line-height: 1.4;
-                ">부모님 방문/체류를 위한 초청장 발급</p>
-                <div style="
-                    display: inline-block;
-                    background: #dbeafe;
-                    color: #1e40af !important;
-                    font-size: 0.75rem;
-                    font-weight: 500;
-                    padding: 0.25rem 0.5rem;
-                    border-radius: 0.25rem;
-                ">📄 4개 문서</div>
-            </div>
-        """, unsafe_allow_html=True)
-        if st.button("시작하기 →", key="start_D", use_container_width=True):
-            start_scenario("D")
+        render_scenario_card(
+            icon="👨‍👩‍👧",
+            icon_bg="#d1fae5",
+            title="가족 초청",
+            visa_type="F-1-5",
+            description="부모님 방문/체류를 위한 초청장 발급",
+            doc_count=4,
+            key="D"
+        )
     
     st.markdown("<br>", unsafe_allow_html=True)
     
@@ -335,112 +163,85 @@ def render():
     col5, col6 = st.columns(2)
     
     with col5:
-        # E-7 전문 인력 카드
-        st.markdown("""
-            <div style="
-                background: white;
-                border: 1px solid #e2e8f0;
-                border-radius: 0.75rem;
-                padding: 1.5rem;
-                height: 180px;
-                box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-            ">
-                <div style="
-                    width: 40px;
-                    height: 40px;
-                    background: #e0e7ff;
-                    border-radius: 0.5rem;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    font-size: 1.25rem;
-                    margin-bottom: 1rem;
-                ">🎓</div>
-                <h3 style="
-                    font-size: 1.1rem;
-                    font-weight: 700;
-                    color: #1e293b !important;
-                    margin: 0 0 0.25rem 0;
-                ">전문 인력</h3>
-                <p style="
-                    font-size: 0.8rem;
-                    color: #2563eb !important;
-                    margin: 0 0 0.5rem 0;
-                    font-weight: 500;
-                ">E-7</p>
-                <p style="
-                    font-size: 0.85rem;
-                    color: #64748b !important;
-                    margin: 0 0 0.75rem 0;
-                    line-height: 1.4;
-                ">특정 분야 전문 인력 채용을 위한 비자 신청</p>
-                <div style="
-                    display: inline-block;
-                    background: #dbeafe;
-                    color: #1e40af !important;
-                    font-size: 0.75rem;
-                    font-weight: 500;
-                    padding: 0.25rem 0.5rem;
-                    border-radius: 0.25rem;
-                ">📄 3개 문서</div>
-            </div>
-        """, unsafe_allow_html=True)
-        if st.button("시작하기 →", key="start_E", use_container_width=True):
-            start_scenario("E")
+        render_scenario_card(
+            icon="🎓",
+            icon_bg="#e0e7ff",
+            title="전문 인력",
+            visa_type="E-7",
+            description="특정 분야 전문 인력 채용을 위한 비자 신청",
+            doc_count=3,
+            key="E"
+        )
     
     with col6:
-        # 국적 귀화 카드
-        st.markdown("""
+        render_scenario_card(
+            icon="🏛️",
+            icon_bg="#fef3c7",
+            title="국적 귀화",
+            visa_type="귀화",
+            description="대한민국 국적 취득을 위한 귀화 신청",
+            doc_count=4,
+            key="F"
+        )
+
+
+def render_scenario_card(icon, icon_bg, title, visa_type, description, doc_count, key):
+    """시나리오 카드 렌더링"""
+    
+    # 카드 컨테이너
+    st.markdown(f"""
+        <div style="
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.75rem;
+            padding: 1.25rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            margin-bottom: 0.5rem;
+        ">
             <div style="
-                background: white;
-                border: 1px solid #e2e8f0;
-                border-radius: 0.75rem;
-                padding: 1.5rem;
-                height: 180px;
-                box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-            ">
-                <div style="
-                    width: 40px;
-                    height: 40px;
-                    background: #fef3c7;
-                    border-radius: 0.5rem;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    font-size: 1.25rem;
-                    margin-bottom: 1rem;
-                ">🏛️</div>
-                <h3 style="
-                    font-size: 1.1rem;
-                    font-weight: 700;
-                    color: #1e293b !important;
-                    margin: 0 0 0.25rem 0;
-                ">국적 귀화</h3>
-                <p style="
-                    font-size: 0.8rem;
-                    color: #2563eb !important;
-                    margin: 0 0 0.5rem 0;
-                    font-weight: 500;
-                ">귀화</p>
-                <p style="
-                    font-size: 0.85rem;
-                    color: #64748b !important;
-                    margin: 0 0 0.75rem 0;
-                    line-height: 1.4;
-                ">대한민국 국적 취득을 위한 귀화 신청</p>
-                <div style="
-                    display: inline-block;
-                    background: #dbeafe;
-                    color: #1e40af !important;
-                    font-size: 0.75rem;
-                    font-weight: 500;
-                    padding: 0.25rem 0.5rem;
-                    border-radius: 0.25rem;
-                ">📄 4개 문서</div>
-            </div>
-        """, unsafe_allow_html=True)
-        if st.button("시작하기 →", key="start_F", use_container_width=True):
-            start_scenario("F")
+                width: 40px;
+                height: 40px;
+                background: {icon_bg};
+                border-radius: 0.5rem;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 1.25rem;
+                margin-bottom: 0.75rem;
+            ">{icon}</div>
+            <h3 style="
+                font-size: 1.1rem;
+                font-weight: 700;
+                color: #1e293b !important;
+                margin: 0 0 0.25rem 0;
+            ">{title}</h3>
+            <p style="
+                font-size: 0.8rem;
+                color: #2563eb !important;
+                margin: 0 0 0.5rem 0;
+                font-weight: 500;
+            ">{visa_type}</p>
+            <p style="
+                font-size: 0.85rem;
+                color: #64748b !important;
+                margin: 0 0 0.75rem 0;
+                line-height: 1.4;
+            ">{description}</p>
+            <div style="
+                display: inline-block;
+                background: #dbeafe;
+                color: #1e40af !important;
+                font-size: 0.75rem;
+                font-weight: 500;
+                padding: 0.25rem 0.5rem;
+                border-radius: 0.25rem;
+            ">📄 {doc_count}개 문서</div>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    # 시작하기 버튼 (카드 밖, 바로 아래)
+    if st.button(f"🚀 시작하기", key=f"start_{key}", use_container_width=True, type="primary"):
+        start_scenario(key)
 
 
 def start_scenario(scenario_id: str):
@@ -451,5 +252,5 @@ def start_scenario(scenario_id: str):
     
     st.session_state.selected_scenario = scenario_id
     st.session_state.current_page = 'scenario_form'
-    st.session_state.form_step = 1
+    st.session_state.form_step = 1  # Phase 1 (Universal Fact 확인)부터 시작
     st.rerun()

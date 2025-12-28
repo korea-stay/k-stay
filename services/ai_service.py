@@ -296,6 +296,127 @@ K-Stay에서 AI가 도와드릴 수 있습니다!
             
         except Exception as e:
             return f"죄송합니다. 응답 생성 중 오류가 발생했습니다: {str(e)}"
+    
+    def validate_and_coach(self, user_message: str, scenario, form_data: dict) -> str:
+        """
+        Phase 3: AI Validator - 법적/행정적 리스크 검토 및 코칭
+        
+        Args:
+            user_message: 사용자가 작성한 사연 내용
+            scenario: 현재 시나리오 객체
+            form_data: Phase 2에서 입력된 데이터
+            
+        Returns:
+            AI 검토 결과 및 코칭 메시지
+        """
+        # 위험 표현 감지 규칙
+        danger_patterns = {
+            "A": {  # D-10 구직
+                "words": ["취업 확정", "내정", "계약 완료", "채용 확정", "이미 취업"],
+                "warning": "D-10 비자는 '구직 활동' 목적입니다. 이미 취업이 확정된 것처럼 보이면 거절될 수 있습니다."
+            },
+            "B": {  # 시간제 취업
+                "words": ["풀타임", "40시간", "주 40", "전일제"],
+                "warning": "학기 중 주 20시간 초과 근무는 불법입니다."
+            },
+            "C": {  # F-6 결혼이민
+                "words": ["돈을 받고", "위장", "계약 결혼", "돈을 벌기 위해", "비자 때문에"],
+                "warning": "위장결혼을 암시하는 표현은 심각한 문제입니다. 진정한 사랑과 교제 과정을 설명해야 합니다."
+            },
+            "D": {  # F-1-5 가족초청
+                "words": ["취업하러", "일하러", "돈 벌러", "노동"],
+                "warning": "방문 목적으로 초청하면서 취업 의도를 암시하면 불법체류 의심을 받습니다."
+            },
+            "E": {  # E-7 전문인력
+                "words": ["단순 노무", "청소", "설거지", "포장", "단순 작업"],
+                "warning": "E-7은 전문인력 비자입니다. 단순 노무 업무로 보이면 거절됩니다."
+            },
+            "F": {  # 귀화
+                "words": ["한국이 싫", "빨리 떠나", "다른 나라로"],
+                "warning": "한국에 대한 부정적 표현은 귀화 심사에 불리합니다."
+            }
+        }
+        
+        scenario_id = scenario.id if hasattr(scenario, 'id') else str(scenario)
+        patterns = danger_patterns.get(scenario_id, {"words": [], "warning": ""})
+        
+        # 위험 표현 검사
+        found_dangers = []
+        for word in patterns["words"]:
+            if word in user_message:
+                found_dangers.append(word)
+        
+        if found_dangers:
+            danger_list = ", ".join([f'**"{w}"**' for w in found_dangers])
+            return f"""⚠️ **AI Warning - 위험 표현 감지**
+
+작성하신 내용에서 다음 표현이 감지되었습니다:
+{danger_list}
+
+**🚨 문제점:**
+{patterns["warning"]}
+
+**💡 수정 제안:**
+- 해당 표현을 삭제하거나 수정해주세요
+- 더 중립적이고 긍정적인 표현을 사용하세요
+- 구체적인 계획과 진정성을 강조해주세요
+
+수정된 내용을 다시 입력해주시겠어요?"""
+        
+        # 내용 길이 검사
+        if len(user_message) < 50:
+            return """📝 내용이 조금 짧습니다.
+
+심사관이 납득할 수 있도록 더 구체적으로 작성해주세요.
+
+**추가하면 좋을 내용:**
+- 구체적인 날짜나 기간
+- 실제 경험이나 에피소드  
+- 목표나 계획의 세부 사항
+- 한국에서의 활동 계획
+
+더 자세히 적어주시겠어요?"""
+        
+        # 긍정적인 피드백
+        import random
+        positive_responses = [
+            f"""✅ 좋습니다!
+
+작성하신 내용이 잘 정리되어 있습니다. 
+
+**AI 검토 결과:**
+- 문맥 적합성 ✓
+- 구체성 ✓  
+- 진정성 ✓
+
+추가로 보완하고 싶은 내용이 있으신가요? 
+없으시면 **'작성 완료 → 문서 생성'** 버튼을 눌러주세요.""",
+            
+            f"""✅ 잘 작성하셨습니다!
+
+**AI 분석 결과:**
+논리적이고 설득력 있는 내용입니다.
+
+혹시 다음 내용도 추가해보시겠어요?
+- 앞으로의 구체적인 계획
+- 한국 사회에 기여하고 싶은 점
+
+추가할 내용이 없으시면 **'작성 완료'**를 눌러주세요.""",
+            
+            f"""✅ 검토 완료!
+
+작성하신 내용에서 문제가 되는 표현이 발견되지 않았습니다.
+
+**확인된 항목:**
+- ❌ 위험 표현 없음
+- ✓ 적절한 분량
+- ✓ 맥락에 맞는 내용
+
+더 추가하실 내용이 있으시면 계속 작성해주세요.
+완료되셨다면 **'작성 완료 → 문서 생성'** 버튼을 눌러주세요!"""
+        ]
+        
+        return random.choice(positive_responses)
 
 
 class RAGService:

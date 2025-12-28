@@ -425,6 +425,13 @@ def render_step4_contact():
 def render_step5_confirm():
     """Step 5: 정보 확인 및 가입 완료"""
     
+    # Supabase 연결 상태 확인 (디버그용)
+    auth_service = AuthService()
+    if auth_service.is_supabase_connected():
+        st.success("✅ Supabase 연결됨")
+    else:
+        st.warning("⚠️ Mock 모드 (Supabase 미연결 - secrets.toml 확인 필요)")
+    
     st.markdown("""
         <div style="
             background: rgba(255,255,255,0.02);
@@ -487,6 +494,10 @@ def render_step5_confirm():
             
             # 회원가입 처리
             auth_service = AuthService()
+            
+            # 디버그: 연결 상태 표시
+            st.info(f"🔍 Supabase 연결 상태: {'연결됨' if auth_service.is_supabase_connected() else 'Mock 모드'}")
+            
             success, message, user_id = auth_service.sign_up(data)
             
             if success:
@@ -507,4 +518,4 @@ def render_step5_confirm():
                 
                 st.rerun()
             else:
-                st.error(message)
+                st.error(f"❌ 회원가입 실패: {message}")

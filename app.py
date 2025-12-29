@@ -15,7 +15,41 @@ init_page_config()
 # 세션 상태 초기화
 init_session_state()
 
-# CSS 스타일 적용 (React 스타일 기반 - 클린 화이트/블루 테마)
+
+def restore_session():
+    """Supabase 세션 자동 복원"""
+    # 이미 인증된 경우 스킵
+    if st.session_state.get('authenticated', False):
+        return
+    
+    auth_service = AuthService()
+    
+    # Supabase 연결된 경우 세션 복원 시도
+    if auth_service.is_supabase_connected() and auth_service.supabase:
+        try:
+            # 현재 세션 확인
+            session = auth_service.supabase.auth.get_session()
+            
+            if session and session.user:
+                user_id = session.user.id
+                
+                # 사용자 프로필 가져오기
+                profile_response = auth_service.supabase.table('users').select('*').eq('id', user_id).single().execute()
+                
+                if profile_response.data:
+                    user_data = profile_response.data
+                    SessionManager.login_user(user_data)
+                    st.toast("✅ 자동 로그인되었습니다!", icon="👋")
+        except Exception as e:
+            # 세션 복원 실패 시 무시
+            pass
+
+
+# 세션 복원 시도
+restore_session()
+
+
+# CSS 스타일 적용
 def load_css():
     st.markdown("""
     <style>
@@ -48,7 +82,6 @@ def load_css():
         background-color: #f8fafc !important;
     }
     
-    /* 기본 텍스트 색상 강제 - 라이트 모드 대응 */
     .stApp, .stApp p, .stApp span, .stApp div, .stApp label {
         color: #1e293b !important;
     }
@@ -65,71 +98,6 @@ def load_css():
         padding: 2rem 1rem;
     }
     
-    /* 로그인 카드 */
-    .login-card {
-        background: white;
-        padding: 2.5rem;
-        border-radius: 1rem;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        border: 1px solid var(--slate-100);
-        max-width: 400px;
-        margin: 0 auto;
-    }
-    
-    .login-logo {
-        width: 64px;
-        height: 64px;
-        background: var(--primary-blue);
-        border-radius: 1rem;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin: 0 auto 1rem;
-        font-size: 2rem;
-        box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3);
-    }
-    
-    /* 시나리오 카드 */
-    .scenario-card {
-        background: white;
-        padding: 1.5rem;
-        border-radius: 0.75rem;
-        border: 1px solid var(--slate-200);
-        transition: all 0.2s ease;
-        cursor: pointer;
-        position: relative;
-        overflow: hidden;
-    }
-    
-    .scenario-card:hover {
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        transform: translateY(-2px);
-    }
-    
-    .scenario-badge {
-        position: absolute;
-        top: 0;
-        right: 0;
-        background: var(--primary-blue);
-        color: white;
-        font-size: 0.7rem;
-        font-weight: 600;
-        padding: 0.25rem 0.75rem;
-        border-radius: 0 0.75rem 0 0.5rem;
-    }
-    
-    .scenario-icon {
-        width: 48px;
-        height: 48px;
-        border-radius: 0.75rem;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-bottom: 1rem;
-        font-size: 1.5rem;
-    }
-    
-    /* 버튼 스타일 */
     .stButton > button {
         font-family: 'Inter', sans-serif !important;
         font-weight: 500;
@@ -149,7 +117,6 @@ def load_css():
         background: var(--primary-blue-dark);
     }
     
-    /* 입력 필드 */
     .stTextInput > div > div > input,
     .stSelectbox > div > div,
     .stTextArea > div > div > textarea {
@@ -165,52 +132,11 @@ def load_css():
         box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1) !important;
     }
     
-    /* 폼 컨테이너 */
-    .form-container {
-        background: white;
-        border: 1px solid var(--slate-200);
-        border-radius: 0.75rem;
-        padding: 1.5rem;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-    }
-    
-    /* 채팅 스타일 */
-    .chat-container {
-        background: white;
-        border: 1px solid var(--slate-200);
-        border-radius: 0.75rem;
-        overflow: hidden;
-    }
-    
-    .message-user {
-        background: var(--primary-blue);
-        color: white;
-        padding: 0.75rem 1rem;
-        border-radius: 1rem;
-        border-top-right-radius: 0.25rem;
-        margin-left: 20%;
-        margin-bottom: 0.75rem;
-    }
-    
-    .message-assistant {
-        background: white;
-        border: 1px solid var(--slate-200);
-        color: var(--slate-700);
-        padding: 0.75rem 1rem;
-        border-radius: 1rem;
-        border-top-left-radius: 0.25rem;
-        margin-right: 20%;
-        margin-bottom: 0.75rem;
-        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-    }
-    
-    /* 사이드바 */
     [data-testid="stSidebar"] {
         background: white;
         border-right: 1px solid var(--slate-200);
     }
     
-    /* 탭 스타일 */
     .stTabs [data-baseweb="tab-list"] {
         gap: 0;
         background: var(--slate-100);
@@ -228,25 +154,14 @@ def load_css():
         background: white;
         box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
     }
-    
-    /* 애니메이션 */
-    @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(10px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
-    
-    .animate-fade-in {
-        animation: fadeIn 0.3s ease-out;
-    }
     </style>
     """, unsafe_allow_html=True)
 
 load_css()
 
-# 라우팅 로직
+
 def main():
-    # 인증 상태 확인
-    auth_service = AuthService()
+    """메인 라우팅"""
     
     if not st.session_state.get('authenticated', False):
         # 로그인/회원가입 페이지
@@ -261,14 +176,13 @@ def main():
         # 메인 대시보드
         render_authenticated_app()
 
+
 def render_authenticated_app():
-    """인증된 사용자를 위한 메인 앱 렌더링"""
+    """인증된 사용자를 위한 메인 앱"""
     
-    # 사이드바
     with st.sidebar:
         render_sidebar()
     
-    # 현재 페이지에 따라 렌더링
     current_page = st.session_state.get('current_page', 'dashboard')
     
     if current_page == 'dashboard':
@@ -279,6 +193,7 @@ def render_authenticated_app():
         ai_chat.render()
     elif current_page == 'document_preview':
         document_preview.render()
+
 
 def render_sidebar():
     """사이드바 렌더링"""
@@ -322,6 +237,7 @@ def render_sidebar():
     
     if st.button("🏠 대시보드", use_container_width=True):
         st.session_state.current_page = 'dashboard'
+        st.session_state.dashboard_mode = 'scenarios'
         st.rerun()
     
     if st.button("💬 AI 상담", use_container_width=True):
@@ -352,25 +268,23 @@ def render_sidebar():
                 border-radius: 0.5rem;
                 border: 1px solid #fde68a;
                 text-align: center;
-                margin-bottom: 0.5rem;
             ">
                 <span style="color: #92400e; font-size: 0.85rem; font-weight: 500;">🔒 결제 필요</span>
             </div>
         """, unsafe_allow_html=True)
-        
-        if st.button("💳 Premium ($9.90)", use_container_width=True, type="primary"):
-            payment_service = PaymentService()
-            payment_service.create_checkout_session(
-                st.session_state.get('user_id'),
-                st.session_state.get('user_email')
-            )
     
     st.markdown("<br><br>", unsafe_allow_html=True)
     
     # 로그아웃
-    if st.button("로그아웃", use_container_width=True):
+    if st.button("🚪 로그아웃", use_container_width=True):
+        # Supabase 로그아웃
+        auth_service = AuthService()
+        auth_service.sign_out()
+        
+        # 세션 초기화
         SessionManager.logout_user()
         st.rerun()
+
 
 if __name__ == "__main__":
     main()

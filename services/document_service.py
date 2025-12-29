@@ -1,108 +1,376 @@
 """
 K-Stay Document Service
-Word 문서 생성 및 매핑
+Word 문서 생성 및 매핑 - DocumentProcessor 엔진 적용
+(.docx 파일만 지원 - LibreOffice 불필요)
 """
 
 import streamlit as st
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Any
 from datetime import datetime
 import io
 import zipfile
 import os
-import json
+import re
+import tempfile
 
-# python-docx (실제 배포 시 활성화)
-# from docx import Document
-# from docx.shared import Pt, Inches, Cm
-# from docx.enum.text import WD_ALIGN_PARAGRAPH
+# python-docx
+try:
+    from docx import Document
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+    DOCX_AVAILABLE = True
+    print("✅ python-docx 로드 성공")
+except ImportError as e:
+    DOCX_AVAILABLE = False
+    print(f"⚠️ python-docx 미설치 - pip install python-docx 실행 필요")
+    print(f"   오류 상세: {e}")
+except Exception as e:
+    DOCX_AVAILABLE = False
+    print(f"⚠️ python-docx 로드 실패: {e}")
 
+
+# =============================================================================
+# 성별 체크박스 매핑 (공통)
+# =============================================================================
+
+GENDER_CHECKBOX_MAP = {
+    "Male": ["남", "Male", "M", "Man"],
+    "M": ["남", "Male", "M", "Man"],
+    "남": ["남", "Male", "M", "Man"],
+    "Female": ["여", "Female", "F", "Woman"],
+    "F": ["여", "Female", "F", "Woman"],
+    "여": ["여", "Female", "F", "Woman"],
+}
+
+
+# =============================================================================
+# DocumentProcessor 클래스
+# =============================================================================
+
+class DocumentProcessor:
+    """
+    문서 처리 엔진
+    - 앵커 텍스트 기반 데이터 매핑
+    - 다양한 전략 지원: BELOW_CELL, NEXT_CELL, CHECKBOX, SPLIT_CELLS, APPEND_TO_SAME_CELL
+    """
+    
+    def __init__(self, data: Dict[str, Any]):
+        """
+        Args:
+            data: Layer 1 + Layer 2 + Layer 3 통합 데이터
+        """
+        self.data = data
+        self.logs = []
+    
+    def normalize_text(self, text: str) -> str:
+        """텍스트 정규화 (공백 제거, 소문자)"""
+        return re.sub(r'\s+', '', text).lower()
+    
+    def process_file(self, mapping_config: Dict, input_path: str, output_path: str) -> bool:
+        """
+        문서 파일 처리
+        
+        Args:
+            mapping_config: 매핑 설정 (fields 포함)
+            input_path: 입력 템플릿 경로 (.docx)
+            output_path: 출력 파일 경로
+            
+        Returns:
+            성공 여부
+        """
+        if not DOCX_AVAILABLE:
+            self._log("❌ python-docx 미설치 - pip install python-docx 실행 필요")
+            return False
+        
+        if not os.path.exists(input_path):
+            self._log(f"❌ 파일을 찾을 수 없습니다: {input_path}")
+            return False
+        
+        if not input_path.lower().endswith('.docx'):
+            self._log(f"❌ .docx 파일만 지원합니다: {input_path}")
+            return False
+        
+        try:
+            doc = Document(input_path)
+            self._log(f"🔄 [분석 시작] {os.path.basename(input_path)}")
+            
+            for field in mapping_config.get('fields', []):
+                self._apply_field(doc, field)
+            
+            doc.save(output_path)
+            self._log(f"✅ [저장 완료] {output_path}")
+            return True
+            
+        except Exception as e:
+            self._log(f"❌ 오류 발생: {e}")
+            return False
+    
+    def _log(self, message: str):
+        """로그 기록"""
+        self.logs.append(message)
+        print(message)
+    
+    def _apply_field(self, doc, field: Dict):
+        """개별 필드 적용"""
+        data_key = field['data_key']
+        value = self.data.get(data_key, "")
+        
+        if not value:
+            return
+        
+        # anchor_text 처리 (문자열 또는 리스트)
+        anchors = field.get('anchor_text', [])
+        if isinstance(anchors, str):
+            anchors = [anchors]
+        
+        strategy = field.get('strategy', 'NEXT_CELL')
+        target_index = field.get('index', 0)
+        
+        found_count = 0
+        processed = False
+        
+        # 테이블 전체 순회
+        for t_idx, table in enumerate(doc.tables):
+            for r_idx, row in enumerate(table.rows):
+                try:
+                    row_cells = row.cells
+                except:
+                    continue
+                
+                for c_idx, cell in enumerate(row_cells):
+                    cell_text_clean = self.normalize_text(cell.text)
+                    
+                    # 앵커 텍스트 매칭
+                    if any(self.normalize_text(a) in cell_text_clean for a in anchors):
+                        if found_count == target_index:
+                            self._log(f"   🔎 [발견] '{anchors[0]}' (Table{t_idx}, R{r_idx}, C{c_idx})")
+                            
+                            # 전략 실행
+                            self._execute_strategy(
+                                strategy, table, r_idx, c_idx, 
+                                value, field, cell, row_cells
+                            )
+                            processed = True
+                            break
+                        found_count += 1
+                
+                if processed:
+                    break
+            if processed:
+                break
+        
+        if not processed:
+            self._log(f"   ⚠️ [Skip] 앵커를 찾지 못함: {anchors}")
+    
+    def _execute_strategy(self, strategy: str, table, r_idx: int, c_idx: int, 
+                         value: Any, field: Dict, current_cell, row_cells):
+        """전략별 실행"""
+        try:
+            # -----------------------------------------------------------------
+            # [전략 A] CHECKBOX - 체크박스 선택
+            # -----------------------------------------------------------------
+            if strategy == "CHECKBOX":
+                value_map = field.get('value_map', GENDER_CHECKBOX_MAP)
+                target_candidates = value_map.get(str(value), [str(value)])
+                
+                scan_targets = []
+                
+                # 1. 현재 칸 확인
+                scan_targets.append(("현재칸", current_cell))
+                
+                # 2. 오른쪽으로 끝까지 스캔
+                for i in range(c_idx + 1, len(row_cells)):
+                    scan_targets.append((f"오른쪽+{i-c_idx}", row_cells[i]))
+                
+                # 3. 아래 줄도 확인
+                if r_idx + 1 < len(table.rows):
+                    try:
+                        below_row_cells = table.rows[r_idx + 1].cells
+                        start = max(0, c_idx - 1)
+                        end = min(len(below_row_cells), c_idx + 3)
+                        for k in range(start, end):
+                            scan_targets.append((f"아래쪽(C{k})", below_row_cells[k]))
+                    except:
+                        pass
+                
+                checked_success = False
+                
+                for pos_name, cell in scan_targets:
+                    original_text = cell.text
+                    if not original_text.strip():
+                        continue
+                    
+                    for target in target_candidates:
+                        # 체크박스 패턴: [ ] 남, ( ) M, □ Male
+                        pattern = fr"(\[\s*\]|□|☐|\(\s*\))(\s*)({re.escape(target)})"
+                        match = re.search(pattern, original_text)
+                        
+                        if match:
+                            # [V] 체크
+                            new_text = re.sub(pattern, fr"[V]\2\3", original_text, count=1)
+                            cell.text = new_text
+                            self._log(f"      ✅ [성공] {pos_name}에서 '{target}' 체크박스 선택!")
+                            checked_success = True
+                            break
+                    
+                    if checked_success:
+                        break
+                
+                if not checked_success:
+                    self._log(f"      ⚠️ [실패] 체크박스를 찾지 못함: {target_candidates}")
+            
+            # -----------------------------------------------------------------
+            # [전략 B] SPLIT_CELLS - 문자열 분할 (주민번호 등)
+            # -----------------------------------------------------------------
+            elif strategy == "SPLIT_CELLS":
+                options = field.get('options', {})
+                skip_chars = options.get('skip_chars', [])
+                val_str = str(value)
+                
+                for char in skip_chars:
+                    val_str = val_str.replace(char, "")
+                
+                candidates = []
+                for i in range(c_idx + 1, len(row_cells)):
+                    cell = row_cells[i]
+                    if (cell._tc != current_cell._tc) and ("-" not in cell.text):
+                        candidates.append(cell)
+                
+                self._log(f"      ℹ️ [분할] '{val_str}' -> {len(candidates)}칸에 입력")
+                
+                for i, char in enumerate(val_str):
+                    if i < len(candidates):
+                        candidates[i].text = char
+                        for p in candidates[i].paragraphs:
+                            p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            
+            # -----------------------------------------------------------------
+            # [전략 C] NEXT_CELL - 오른쪽 셀에 입력
+            # -----------------------------------------------------------------
+            elif strategy == "NEXT_CELL":
+                for i in range(c_idx + 1, len(row_cells)):
+                    cell = row_cells[i]
+                    if cell._tc != current_cell._tc:
+                        cell.text = str(value)
+                        self._log(f"      ✅ [입력] 옆({i-c_idx}칸 뒤)에 '{value}' 입력")
+                        return
+            
+            # -----------------------------------------------------------------
+            # [전략 D] BELOW_CELL - 아래 셀에 입력
+            # -----------------------------------------------------------------
+            elif strategy == "BELOW_CELL":
+                if r_idx + 1 < len(table.rows):
+                    table.rows[r_idx + 1].cells[c_idx].text = str(value)
+                    self._log(f"      ✅ [입력] 아래 칸에 '{value}' 입력")
+            
+            # -----------------------------------------------------------------
+            # [전략 E] APPEND_TO_SAME_CELL - 같은 셀에 추가
+            # -----------------------------------------------------------------
+            elif strategy == "APPEND_TO_SAME_CELL":
+                if str(value) not in current_cell.text:
+                    current_cell.text += f"  {value}"
+                    self._log(f"      ✅ [추가] 같은 칸에 '{value}' 덧붙임")
+            
+            # -----------------------------------------------------------------
+            # [전략 F] INSERT_IMAGE - 이미지 삽입 (추후 구현)
+            # -----------------------------------------------------------------
+            elif strategy == "INSERT_IMAGE":
+                self._log(f"      ℹ️ [이미지] 이미지 삽입 기능은 추후 구현 예정")
+        
+        except Exception as e:
+            self._log(f"      ❌ 처리 중 에러: {e}")
+
+
+# =============================================================================
+# DocumentService 클래스
+# =============================================================================
 
 class DocumentService:
     """문서 서비스 클래스"""
     
-    def __init__(self):
-        """초기화"""
-        self.templates_dir = "templates"
+    def __init__(self, templates_dir: str = "templates"):
+        """
+        초기화
+        
+        Args:
+            templates_dir: 템플릿 파일이 있는 디렉토리
+        """
+        self.templates_dir = templates_dir
+        
+        if DOCX_AVAILABLE:
+            print("✅ python-docx 사용 가능 - .docx 파일 처리 지원")
+        else:
+            print("❌ python-docx 미설치 - pip install python-docx 실행 필요")
     
-    def parse_document_structure(self, template_path: str) -> Dict:
-        """Word 템플릿의 구조를 파싱"""
-        try:
-            # 개발용 목업
-            return {
-                "paragraphs": [
-                    {"index": 0, "text": "통합신청서", "style": "Title"}
-                ],
-                "tables": [
-                    {
-                        "index": 0,
-                        "rows": [
-                            [{"cell_index": 0, "text": "성명"}, {"cell_index": 1, "text": ""}],
-                            [{"cell_index": 0, "text": "생년월일"}, {"cell_index": 1, "text": ""}]
-                        ]
-                    }
-                ]
-            }
-        except Exception as e:
-            return {"error": str(e)}
+    def merge_all_data(self, user_data: Dict, form_data: Dict, narrative_data: Dict) -> Dict:
+        """
+        모든 레이어 데이터 병합
+        
+        Args:
+            user_data: Layer 1 (Universal) - DB에서 로드
+            form_data: Layer 2 (Variable) - 폼 입력
+            narrative_data: Layer 3 (Narrative) - 서술형
+            
+        Returns:
+            병합된 데이터
+        """
+        merged = {}
+        
+        # Layer 1: Universal (DB 데이터)
+        if user_data:
+            merged.update(user_data)
+        
+        # Layer 2: Variable (폼 데이터)
+        if form_data:
+            merged.update(form_data)
+        
+        # Layer 3: Narrative (서술형 데이터)
+        if narrative_data:
+            merged.update(narrative_data)
+        
+        # 파생 데이터 생성
+        if merged.get('surname') and merged.get('given_name'):
+            merged['full_name'] = f"{merged['surname']} {merged['given_name']}"
+        
+        # 생년월일 분리
+        if merged.get('birth_date'):
+            birth_str = str(merged['birth_date'])
+            if '-' in birth_str:
+                parts = birth_str.split('-')
+                if len(parts) == 3:
+                    merged['dob_year'] = parts[0]
+                    merged['dob_month'] = parts[1]
+                    merged['dob_day'] = parts[2]
+        
+        # 신청일 기본값
+        if 'application_date' not in merged:
+            merged['application_date'] = datetime.now().strftime('%Y.%m.%d')
+        
+        return merged
     
-    def create_mapping_plan(self, structure: Dict, user_data: Dict) -> List[Dict]:
-        """AI 기반 문서 매핑 계획 생성"""
-        mappings = []
+    def get_template_path(self, doc_name: str) -> Optional[str]:
+        """
+        문서명으로 템플릿 파일 경로 가져오기
         
-        field_mapping = {
-            "surname": ["성", "Surname"],
-            "given_name": ["이름", "Given Name"],
-            "birth_date": ["생년월일", "Date of Birth"],
-            "gender": ["성별", "Gender"],
-            "nationality": ["국적", "Nationality"],
-            "passport_no": ["여권번호", "Passport No"],
-            "alien_registration_no": ["외국인등록번호", "Alien Registration"],
-            "korea_address": ["주소", "Address"],
-            "korea_phone": ["전화번호", "Phone"],
-            "email": ["이메일", "Email"]
-        }
+        Args:
+            doc_name: 문서명 (예: "구직활동계획서")
+            
+        Returns:
+            템플릿 파일 전체 경로 또는 None
+        """
+        from config.settings import DOCUMENT_TEMPLATES
         
-        for table in structure.get("tables", []):
-            for row_idx, row in enumerate(table.get("rows", [])):
-                if len(row) >= 2:
-                    label_text = row[0].get("text", "").strip()
-                    for data_key, label_variants in field_mapping.items():
-                        if any(v in label_text for v in label_variants):
-                            if data_key in user_data and user_data[data_key]:
-                                mappings.append({
-                                    "target_type": "table",
-                                    "table_index": table["index"],
-                                    "row": row_idx,
-                                    "cell": 1,
-                                    "value": str(user_data[data_key]),
-                                    "mode": "REPLACE"
-                                })
+        template_file = DOCUMENT_TEMPLATES.get(doc_name)
+        if not template_file:
+            print(f"⚠️ 템플릿 매핑 없음: {doc_name}")
+            return None
         
-        return mappings
-    
-    def apply_mappings(self, template_path: str, mappings: List[Dict]) -> bytes:
-        """매핑을 적용하여 문서 생성"""
-        try:
-            # 실제 배포 시 python-docx 사용
-            # 개발용 목업: 빈 바이트 반환
-            return self._create_mock_document(mappings)
-        except Exception as e:
-            st.error(f"문서 생성 오류: {str(e)}")
-            return b""
-    
-    def _create_mock_document(self, mappings: List[Dict]) -> bytes:
-        """개발용 목업 문서 생성"""
-        content = "K-Stay Generated Document\n"
-        content += "=" * 40 + "\n\n"
+        template_path = os.path.join(self.templates_dir, template_file)
         
-        for mapping in mappings:
-            content += f"[{mapping.get('target_type', 'field')}] "
-            content += f"{mapping.get('value', 'N/A')}\n"
+        if not os.path.exists(template_path):
+            print(f"⚠️ 템플릿 파일 없음: {template_path}")
+            return None
         
-        content += "\n" + "=" * 40
-        content += "\nGenerated at: " + datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        
-        return content.encode('utf-8')
+        return template_path
     
     def generate_document(self, doc_name: str, user_data: Dict, 
                          form_data: Dict, narrative_data: Dict) -> bytes:
@@ -111,67 +379,111 @@ class DocumentService:
         
         Args:
             doc_name: 문서 이름
-            user_data: 사용자 기본 정보
-            form_data: 시나리오별 폼 데이터
-            narrative_data: AI 검토된 사연 데이터
+            user_data: Layer 1 데이터
+            form_data: Layer 2 데이터
+            narrative_data: Layer 3 데이터
             
         Returns:
             생성된 문서 바이트
         """
-        from config.settings import DOCUMENT_TEMPLATES
+        from templates.mapping_guide import get_document_mapping
         
-        template_file = DOCUMENT_TEMPLATES.get(doc_name)
-        if not template_file:
-            return self._create_fallback_document(doc_name, user_data, form_data, narrative_data)
+        # 데이터 병합
+        merged_data = self.merge_all_data(user_data, form_data, narrative_data)
         
-        template_path = os.path.join(self.templates_dir, template_file)
+        # 템플릿 파일 경로
+        template_path = self.get_template_path(doc_name)
         
-        combined_data = {**user_data, **form_data, **narrative_data}
+        # python-docx가 없거나 템플릿이 없으면 폴백
+        if not DOCX_AVAILABLE or not template_path:
+            return self._create_fallback_document(doc_name, merged_data)
         
-        structure = self.parse_document_structure(template_path)
-        mappings = self.create_mapping_plan(structure, combined_data)
+        # 매핑 설정 가져오기
+        mapping_config = get_document_mapping(doc_name)
         
-        return self.apply_mappings(template_path, mappings)
+        if not mapping_config:
+            print(f"ℹ️ 매핑 설정 없음: {doc_name} - 템플릿 원본 복사")
+            # 매핑 없이 템플릿만 복사
+            try:
+                with open(template_path, 'rb') as f:
+                    return f.read()
+            except:
+                return self._create_fallback_document(doc_name, merged_data)
+        
+        # DocumentProcessor로 처리
+        try:
+            processor = DocumentProcessor(merged_data)
+            
+            # 임시 파일로 저장
+            with tempfile.NamedTemporaryFile(suffix='.docx', delete=False) as tmp:
+                temp_output = tmp.name
+            
+            if processor.process_file(mapping_config, template_path, temp_output):
+                with open(temp_output, 'rb') as f:
+                    doc_bytes = f.read()
+                
+                # 임시 파일 삭제
+                try:
+                    os.remove(temp_output)
+                except:
+                    pass
+                
+                return doc_bytes
+            else:
+                return self._create_fallback_document(doc_name, merged_data)
+                
+        except Exception as e:
+            print(f"❌ 문서 생성 오류: {str(e)}")
+            return self._create_fallback_document(doc_name, merged_data)
     
-    def _create_fallback_document(self, doc_name: str, user_data: Dict,
-                                  form_data: Dict, narrative_data: Dict) -> bytes:
-        """템플릿이 없을 경우 기본 문서 생성"""
+    def _create_fallback_document(self, doc_name: str, data: Dict) -> bytes:
+        """템플릿이 없을 경우 텍스트 기반 문서 생성"""
         lines = []
-        lines.append(f"{'='*60}")
+        lines.append("=" * 60)
         lines.append(f"  {doc_name}")
-        lines.append(f"{'='*60}")
+        lines.append("=" * 60)
         lines.append("")
         
-        lines.append("[신청인 정보]")
-        lines.append(f"  성명: {user_data.get('surname', '')} {user_data.get('given_name', '')}")
-        lines.append(f"  생년월일: {user_data.get('birth_date', '')}")
-        lines.append(f"  국적: {user_data.get('nationality', '')}")
-        lines.append(f"  여권번호: {user_data.get('passport_no', '')}")
-        lines.append(f"  외국인등록번호: {user_data.get('alien_registration_no', '미소지')}")
-        lines.append(f"  한국 주소: {user_data.get('korea_address', '')}")
-        lines.append(f"  연락처: {user_data.get('korea_phone', '')}")
-        lines.append(f"  이메일: {user_data.get('email', '')}")
+        # Layer 1: 신청인 정보
+        lines.append("[신청인 정보 - Layer 1]")
+        layer1_fields = ['surname', 'given_name', 'birth_date', 'gender', 
+                        'nationality', 'passport_no', 'alien_registration_no',
+                        'korea_address', 'korea_phone', 'email']
+        for key in layer1_fields:
+            if key in data and data[key]:
+                label = key.replace('_', ' ').title()
+                lines.append(f"  {label}: {data[key]}")
         lines.append("")
         
-        if form_data:
-            lines.append("[시나리오별 정보]")
-            for key, value in form_data.items():
-                if value:
+        # Layer 2: 시나리오별 정보
+        lines.append("[시나리오별 정보 - Layer 2]")
+        layer2_printed = False
+        for key, value in data.items():
+            if key not in layer1_fields and not key.startswith('plan_') and value:
+                if key not in ['full_name', 'dob_year', 'dob_month', 'dob_day', 'application_date']:
                     label = key.replace('_', ' ').title()
                     lines.append(f"  {label}: {value}")
-            lines.append("")
+                    layer2_printed = True
+        if not layer2_printed:
+            lines.append("  (입력된 정보 없음)")
+        lines.append("")
         
-        if narrative_data:
-            lines.append("[사연 내용]")
-            for key, value in narrative_data.items():
-                if value:
-                    lines.append(f"  {value}")
-            lines.append("")
+        # Layer 3: 서술형 내용
+        lines.append("[서술형 내용 - Layer 3]")
+        layer3_printed = False
+        for key, value in data.items():
+            if key.startswith('plan_') and value:
+                label = key.replace('plan_month_', '').replace('_', ' ')
+                lines.append(f"  {label}개월차: {value}")
+                layer3_printed = True
+        if not layer3_printed:
+            lines.append("  (입력된 내용 없음)")
+        lines.append("")
         
-        lines.append(f"{'='*60}")
+        lines.append("=" * 60)
         lines.append(f"  생성일시: {datetime.now().strftime('%Y년 %m월 %d일 %H:%M')}")
-        lines.append(f"  K-Stay - Korea Stay Assistant")
-        lines.append(f"{'='*60}")
+        lines.append("  K-Stay - Korea Stay Assistant")
+        lines.append("=" * 60)
         
         return "\n".join(lines).encode('utf-8')
     
@@ -182,45 +494,59 @@ class DocumentService:
         
         Args:
             scenario_id: 시나리오 ID
-            user_data: 사용자 기본 정보
-            form_data: 시나리오별 폼 데이터
-            narrative_data: AI 검토된 사연 데이터
+            user_data: Layer 1 데이터
+            form_data: Layer 2 데이터
+            narrative_data: Layer 3 데이터
             
         Returns:
             ZIP 파일 바이트
         """
         from config.settings import SCENARIOS
+        from templates.mapping_guide import get_scenario_documents
         
         scenario = SCENARIOS.get(scenario_id)
         if not scenario:
             st.error("유효하지 않은 시나리오입니다.")
             return b""
         
+        # 시나리오별 필요 문서 목록
+        required_docs = get_scenario_documents(scenario_id)
+        if not required_docs:
+            required_docs = scenario.required_docs
+        
         zip_buffer = io.BytesIO()
         
         with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
-            for doc_name in scenario.required_docs:
+            for doc_name in required_docs:
                 try:
                     doc_bytes = self.generate_document(
                         doc_name, user_data, form_data, narrative_data
                     )
                     
                     safe_name = doc_name.replace(' ', '_').replace('/', '_')
-                    filename = f"{safe_name}.txt"
+                    
+                    # 확장자 결정 (DOCX 시그니처 확인: PK로 시작)
+                    if len(doc_bytes) >= 4 and doc_bytes[:4] == b'PK\x03\x04':
+                        filename = f"{safe_name}.docx"
+                    else:
+                        filename = f"{safe_name}.txt"
                     
                     zip_file.writestr(filename, doc_bytes)
+                    print(f"📄 추가됨: {filename}")
                     
                 except Exception as e:
                     error_content = f"문서 생성 오류: {str(e)}"
                     zip_file.writestr(f"ERROR_{doc_name}.txt", error_content.encode('utf-8'))
+                    print(f"❌ 오류: {doc_name} - {str(e)}")
             
-            readme_content = self._create_readme(scenario, datetime.now())
+            # README 추가
+            readme_content = self._create_readme(scenario, required_docs, datetime.now())
             zip_file.writestr("README.txt", readme_content.encode('utf-8'))
         
         zip_buffer.seek(0)
         return zip_buffer.getvalue()
     
-    def _create_readme(self, scenario, generated_at: datetime) -> str:
+    def _create_readme(self, scenario, docs: List[str], generated_at: datetime) -> str:
         """README 파일 생성"""
         lines = [
             "=" * 60,
@@ -234,12 +560,17 @@ class DocumentService:
             "-" * 40,
         ]
         
-        for i, doc in enumerate(scenario.required_docs, 1):
+        for i, doc in enumerate(docs, 1):
             lines.append(f"  {i}. {doc}")
         
         lines.extend([
             "",
             "-" * 40,
+            "",
+            "데이터 레이어 구조:",
+            "  - Layer 1 (Universal): 회원가입 시 입력된 불변 정보",
+            "  - Layer 2 (Variable): 시나리오별 폼 입력 정보",
+            "  - Layer 3 (Narrative): AI 검토된 서술형 정보",
             "",
             "주의사항:",
             "  1. 본 문서는 AI가 생성한 초안입니다.",
@@ -255,6 +586,10 @@ class DocumentService:
         return "\n".join(lines)
 
 
+# =============================================================================
+# DocumentPreviewService 클래스
+# =============================================================================
+
 class DocumentPreviewService:
     """문서 미리보기 서비스"""
     
@@ -262,25 +597,29 @@ class DocumentPreviewService:
     def preview_document(doc_bytes: bytes, doc_name: str):
         """문서 미리보기 렌더링"""
         try:
-            content = doc_bytes.decode('utf-8')
-            
-            st.markdown(f"""
-                <div style="
-                    background: rgba(255,255,255,0.03);
-                    border: 1px solid rgba(201,162,39,0.2);
-                    border-radius: 12px;
-                    padding: 1.5rem;
-                    font-family: 'Courier New', monospace;
-                    font-size: 0.9rem;
-                    white-space: pre-wrap;
-                    max-height: 500px;
-                    overflow-y: auto;
-                    color: #e0e0e0;
-                ">
+            # 텍스트 파일인 경우
+            try:
+                content = doc_bytes.decode('utf-8')
+                st.markdown(f"""
+                    <div style="
+                        background: rgba(255,255,255,0.03);
+                        border: 1px solid rgba(201,162,39,0.2);
+                        border-radius: 12px;
+                        padding: 1.5rem;
+                        font-family: 'Courier New', monospace;
+                        font-size: 0.9rem;
+                        white-space: pre-wrap;
+                        max-height: 500px;
+                        overflow-y: auto;
+                        color: #e0e0e0;
+                    ">
 {content}
-                </div>
-            """, unsafe_allow_html=True)
-            
+                    </div>
+                """, unsafe_allow_html=True)
+            except UnicodeDecodeError:
+                # DOCX 파일인 경우
+                st.info(f"📄 {doc_name} - Word 문서 파일입니다. 다운로드하여 확인하세요.")
+                
         except Exception as e:
             st.error(f"미리보기 오류: {str(e)}")
     

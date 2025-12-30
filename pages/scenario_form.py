@@ -44,6 +44,10 @@ def render():
     
     current_step = st.session_state.get('form_step', 1)
     
+    # 새로고침 경고 (Phase 2, 3에서만)
+    if current_step in [2, 3]:
+        st.warning("⚠️ 주의: 새로고침 또는 페이지 이탈 시 작성 중인 내용이 저장되지 않을 수 있습니다.")
+    
     # 상단 Phase 진행 표시
     render_phase_indicator(current_step)
     
@@ -75,52 +79,40 @@ def render_phase_indicator(current_step: int):
         is_done = current_step > step_num
         
         with col:
+            # 변수로 미리 계산
             if is_active:
-                bg_color = f"{phase['color']}15"
+                bg_color = phase['color'] + "15"
                 border_color = phase['color']
-                badge_text = f"● PHASE {step_num}"
-                shadow = f"box-shadow: 0 4px 12px {phase['color']}40;"
+                badge_text = "● PHASE " + str(step_num)
+                shadow = "box-shadow: 0 4px 12px " + phase['color'] + "40;"
+                badge_bg = phase['color']
+                title_color = "#1e293b"
+                desc_color = "#64748b"
             elif is_done:
                 bg_color = "#f0fdf4"
                 border_color = "#86efac"
-                badge_text = f"✓ PHASE {step_num}"
+                badge_text = "✓ PHASE " + str(step_num)
                 shadow = ""
+                badge_bg = "#22c55e"
+                title_color = "#1e293b"
+                desc_color = "#64748b"
             else:
                 bg_color = "#f1f5f9"
                 border_color = "#cbd5e1"
-                badge_text = f"PHASE {step_num}"
+                badge_text = "PHASE " + str(step_num)
                 shadow = ""
+                badge_bg = "#94a3b8"
+                title_color = "#64748b"
+                desc_color = "#94a3b8"
             
-            st.markdown(f"""
-                <div style="
-                    background: {bg_color};
-                    border-radius: 0.75rem;
-                    padding: 1rem;
-                    border: 2px solid {border_color};
-                    min-height: 100px;
-                    {shadow}
-                ">
-                    <div style="
-                        background: {phase['color'] if is_active else ('#22c55e' if is_done else '#94a3b8')};
-                        color: white;
-                        font-size: 0.65rem;
-                        font-weight: 700;
-                        padding: 0.2rem 0.4rem;
-                        border-radius: 0.25rem;
-                        display: inline-block;
-                        margin-bottom: 0.5rem;
-                    ">{badge_text}</div>
-                    <h3 style="
-                        color: {'#1e293b' if is_active or is_done else '#64748b'};
-                        font-size: 0.9rem;
-                        font-weight: 700;
-                        margin: 0.25rem 0;
-                    ">{phase['name']}</h3>
-                    <p style="color: {'#64748b' if is_active or is_done else '#94a3b8'}; font-size: 0.7rem; margin: 0;">
-                        {phase['desc']}
-                    </p>
+            html = f"""
+                <div style="background: {bg_color}; border-radius: 0.75rem; padding: 1rem; border: 2px solid {border_color}; min-height: 100px; {shadow}">
+                    <div style="background: {badge_bg}; color: white; font-size: 0.65rem; font-weight: 700; padding: 0.2rem 0.4rem; border-radius: 0.25rem; display: inline-block; margin-bottom: 0.5rem;">{badge_text}</div>
+                    <h3 style="color: {title_color}; font-size: 0.9rem; font-weight: 700; margin: 0.25rem 0;">{phase['name']}</h3>
+                    <p style="color: {desc_color}; font-size: 0.7rem; margin: 0;">{phase['desc']}</p>
                 </div>
-            """, unsafe_allow_html=True)
+            """
+            st.markdown(html, unsafe_allow_html=True)
     
     st.markdown("<br>", unsafe_allow_html=True)
 
@@ -526,15 +518,18 @@ def run_ai_validation(scenario_id: str, fields: List[Dict], danger_patterns: Lis
 
 
 def render_feedback_panel(fields: List[Dict]):
-    """AI 피드백 패널"""
+    """AI 피드백 패널 (Fixed)"""
     
-    st.markdown("""
-        <div style="background: linear-gradient(135deg, #fef2f2, #fee2e2); border: 1px solid #fecaca; border-radius: 0.75rem; padding: 1.25rem; margin-bottom: 1rem;">
-            <h4 style="font-weight: 700; color: #dc2626; font-size: 0.9rem; margin: 0 0 0.75rem 0;">🧠 AI Validator 피드백</h4>
-    """, unsafe_allow_html=True)
+    # 진행률 계산
+    total = len(fields)
+    completed = sum(1 for f in fields if len(st.session_state.narrative_data.get(f['data_key'], '')) >= f.get('min_chars', 50))
+    progress = int((completed / total) * 100) if total > 0 else 0
     
+    # 피드백 데이터
     feedbacks = st.session_state.get('ai_feedbacks', [])
     
+    # 피드백 HTML 생성
+    feedback_html = ""
     if feedbacks:
         for fb in feedbacks:
             fb_type = fb.get('type', 'info')
@@ -545,32 +540,57 @@ def render_feedback_panel(fields: List[Dict]):
                 'info': {"icon": "💡", "bg": "#dbeafe", "border": "#93c5fd", "color": "#1e40af"},
             }
             s = styles.get(fb_type, styles['info'])
-            
-            st.markdown(f"""
+            feedback_html += f"""
                 <div style="background: {s['bg']}; border: 1px solid {s['border']}; border-radius: 0.5rem; padding: 0.75rem; margin-bottom: 0.5rem;">
                     <div style="font-size: 0.8rem; color: {s['color']}; font-weight: 600;">{s['icon']} {fb.get('field', '')}</div>
                     <div style="font-size: 0.75rem; color: {s['color']};">{fb.get('message', '')}</div>
                 </div>
-            """, unsafe_allow_html=True)
+            """
     else:
-        st.markdown('<div style="text-align: center; padding: 1rem; color: #94a3b8; font-size: 0.8rem;">아직 검토 결과가 없습니다.<br>\'AI 검토 요청\' 버튼을 클릭하세요.</div>', unsafe_allow_html=True)
+        feedback_html = '<div style="text-align: center; padding: 1rem; color: #94a3b8; font-size: 0.8rem;">아직 검토 결과가 없습니다.<br>\'AI 검토 요청\' 버튼을 클릭하세요.</div>'
     
-    st.markdown("</div>", unsafe_allow_html=True)
+    progress_color = '#22c55e' if progress == 100 else '#64748b'
     
-    # 진행률
-    total = len(fields)
-    completed = sum(1 for f in fields if len(st.session_state.narrative_data.get(f['data_key'], '')) >= f.get('min_chars', 50))
-    progress = int((completed / total) * 100) if total > 0 else 0
+    # Fixed 스타일 CSS 주입
+    st.markdown("""
+        <style>
+        .fixed-feedback-panel {
+            position: fixed;
+            top: 380px;
+            right: 2rem;
+            width: 280px;
+            max-height: calc(100vh - 420px);
+            z-index: 999;
+            overflow-y: auto;
+        }
+        @media (max-width: 1200px) {
+            .fixed-feedback-panel {
+                position: relative;
+                top: 0;
+                right: 0;
+                width: 100%;
+                max-height: none;
+            }
+        }
+        </style>
+    """, unsafe_allow_html=True)
     
+    # Fixed 컨테이너로 전체 패널 렌더링
     st.markdown(f"""
-        <div style="background: white; border: 1px solid #e2e8f0; border-radius: 0.75rem; padding: 1.25rem;">
-            <h4 style="font-weight: 700; color: #1e293b; font-size: 0.9rem; margin: 0 0 0.75rem 0;">📊 작성 진행률</h4>
-            <div style="background: #e2e8f0; border-radius: 0.5rem; height: 8px; margin-bottom: 0.5rem; overflow: hidden;">
-                <div style="background: linear-gradient(90deg, #22c55e, #16a34a); height: 100%; width: {progress}%; border-radius: 0.5rem;"></div>
+        <div class="fixed-feedback-panel">
+            <div style="background: linear-gradient(135deg, #fef2f2, #fee2e2); border: 1px solid #fecaca; border-radius: 0.75rem; padding: 1.25rem; margin-bottom: 1rem;">
+                <h4 style="font-weight: 700; color: #dc2626; font-size: 0.9rem; margin: 0 0 0.75rem 0;">🧠 AI Validator 피드백</h4>
+                {feedback_html}
             </div>
-            <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: #64748b;">
-                <span>{completed}/{total} 항목 완료</span>
-                <span style="font-weight: 600; color: {'#22c55e' if progress == 100 else '#64748b'};">{progress}%</span>
+            <div style="background: white; border: 1px solid #e2e8f0; border-radius: 0.75rem; padding: 1.25rem; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                <h4 style="font-weight: 700; color: #1e293b; font-size: 0.9rem; margin: 0 0 0.75rem 0;">📊 작성 진행률</h4>
+                <div style="background: #e2e8f0; border-radius: 0.5rem; height: 8px; margin-bottom: 0.5rem; overflow: hidden;">
+                    <div style="background: linear-gradient(90deg, #22c55e, #16a34a); height: 100%; width: {progress}%; border-radius: 0.5rem;"></div>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: #64748b;">
+                    <span>{completed}/{total} 항목 완료</span>
+                    <span style="font-weight: 600; color: {progress_color};">{progress}%</span>
+                </div>
             </div>
         </div>
     """, unsafe_allow_html=True)

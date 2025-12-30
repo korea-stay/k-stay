@@ -34,8 +34,8 @@ class PaymentService:
     def is_stripe_connected(self) -> bool:
         return not self.use_mock
     
-    def create_checkout_session(self, user_id: str, user_email: str) -> Optional[str]:
-        """Stripe Checkout 세션 생성"""
+    def create_checkout_session(self, user_id: str, user_email: str) -> Tuple[Optional[str], Optional[str]]:
+        """Stripe Checkout 세션 생성 - (url, session_id) 반환"""
         try:
             if not self.use_mock:
                 price_id = st.secrets.get("STRIPE_PRICE_ID", "")
@@ -51,11 +51,11 @@ class PaymentService:
                     customer_email=user_email if user_email else None,
                     metadata={'user_id': user_id}
                 )
-                return checkout_session.url
-            return None
+                return checkout_session.url, checkout_session.id
+            return None, None
         except Exception as e:
             st.error(f"결제 세션 생성 실패: {str(e)}")
-            return None
+            return None, None
     
     def verify_payment(self, session_id: str) -> Tuple[bool, Dict]:
         """결제 완료 확인"""

@@ -323,7 +323,7 @@ def render_phase2_variable_fact(scenario):
             st.session_state.form_step = 1
             st.rerun()
         
-        if submitted:
+        if next_btn:
             # 폼 데이터 저장
             save_layer2_data(field_groups)
             st.session_state.form_step = 3
@@ -770,32 +770,73 @@ def render_payment_section(scenario):
     if payment_service.is_stripe_connected():
         st.success("✅ Stripe 연결됨")
         
+        # 결제 세션이 없으면 생성 버튼 표시
         if 'checkout_url' not in st.session_state or not st.session_state.checkout_url:
             if st.button("💳 카드 결제하기", type="primary", use_container_width=True):
                 user_id = st.session_state.get('user_id', '')
                 user_email = st.session_state.get('user_email', '')
                 
                 with st.spinner("결제 페이지 생성 중..."):
-                    checkout_url = payment_service.create_checkout_session(user_id, user_email)
+                    checkout_url, session_id = payment_service.create_checkout_session(user_id, user_email)
                 
-                if checkout_url:
+                if checkout_url and session_id:
                     st.session_state.checkout_url = checkout_url
+                    st.session_state.checkout_session_id = session_id
                     st.rerun()
         
+        # 결제 링크가 있으면 표시
         if st.session_state.get('checkout_url'):
             url = st.session_state.checkout_url
+            session_id = st.session_state.get('checkout_session_id', '')
             
             st.markdown("### 🔗 결제 링크")
             st.markdown(f"[**👉 여기를 클릭하여 결제 페이지로 이동**]({url})")
             st.text_input("또는 URL 복사:", value=url, key="payment_url")
             
-            st.info("💡 결제 완료 후 아래 버튼을 눌러주세요.")
+            st.markdown("---")
             
-            if st.button("✅ 결제 완료했습니다", type="primary", use_container_width=True):
-                st.session_state.is_paid = True
-                st.session_state.checkout_url = None
-                st.success("🎉 Premium이 활성화되었습니다!")
-                st.rerun()
+            # 결제 상태 확인 버튼
+            st.info("💡 결제 완료 후 아래 버튼을 눌러 결제를 확인해주세요.")
+            
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                if st.button("🔄 결제 상태 확인", use_container_width=True):
+                    with st.spinner("결제 상태 확인 중..."):
+                        is_paid, payment_info = payment_service.verify_payment(session_id)
+                    
+                    if is_paid:
+                        # 결제 확인됨 - DB 업데이트
+                        user_id = st.session_state.get('user_id', '')
+                        payment_service.record_payment_to_db(user_id, payment_info)
+                        
+                        st.session_state.is_paid = True
+                        st.session_state.checkout_url = None
+                        st.session_state.checkout_session_id = None
+                        st.session_state.payment_verified = True
+                        
+                        st.success("🎉 결제가 확인되었습니다! Premium이 활성화되었습니다!")
+                        st.balloons()
+                        st.rerun()
+                    else:
+                        st.error("❌ 결제가 아직 완료되지 않았습니다. 결제를 완료한 후 다시 확인해주세요.")
+            
+            with col2:
+                if st.button("❌ 결제 취소", use_container_width=True):
+                    st.session_state.checkout_url = None
+                    st.session_state.checkout_session_id = None
+                    st.rerun()
+            
+            # 안내 메시지
+            st.markdown("""
+            <div style="background: #fef3c7; border: 1px solid #f59e0b; border-radius: 0.5rem; padding: 1rem; margin-top: 1rem;">
+                <p style="color: #92400e; margin: 0; font-size: 0.85rem;">
+                    ⚠️ <strong>참고:</strong> 결제 페이지에서 카드 정보 입력 후 결제를 완료해야 합니다.<br>
+                    결제 완료 후 이 페이지로 돌아와서 "결제 상태 확인" 버튼을 클릭해주세요.
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
+    
     else:
         st.warning("⚠️ Stripe 미연결 - 테스트 모드")
         

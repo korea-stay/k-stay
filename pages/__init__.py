@@ -4,3 +4,5 @@ from . import main_dashboard
 from . import scenario_form
 from . import ai_chat
 from . import document_preview
+from . import my_documents
+from . import my_page

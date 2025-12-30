@@ -323,7 +323,7 @@ def render_phase2_variable_fact(scenario):
             st.session_state.form_step = 1
             st.rerun()
         
-        if submitted:
+        if next_btn:
             # 폼 데이터 저장
             save_layer2_data(field_groups)
             st.session_state.form_step = 3

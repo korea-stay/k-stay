@@ -2,7 +2,7 @@
 K-Stay Scenario Form Page
 4-Phase Architecture (settings.py 기반 동적 생성)
 - Phase 1: Universal Fact (Layer 1) - 회원가입 시 입력, DB에서 로드
-- Phase 2: Variable Fact (Layer 2) - 시나리오별 Smart Form
+- Phase 2: Variable Fact (Layer 2) - 시나리오별 Smart Form (target별 그룹화)
 - Phase 3: Narrative (Layer 3) - AI 실시간 검토 & 코칭
 - Phase 4: Payment & Document Generation - 결제 후 문서 생성
 """
@@ -17,7 +17,9 @@ from config.settings import (
     LAYER1_UNIVERSAL_FIELDS,
     LAYER2_VARIABLE_FIELDS,
     LAYER3_NARRATIVE_FIELDS,
+    TARGET_INFO,
     get_layer2_fields,
+    get_layer2_field_groups,
     get_layer3_fields,
     get_danger_patterns,
     get_narrative_config,
@@ -221,7 +223,7 @@ def render_phase1_universal_fact(scenario):
 # =============================================================================
 
 def render_phase2_variable_fact(scenario):
-    """Phase 2: 시나리오별 가변 정보 입력"""
+    """Phase 2: 시나리오별 가변 정보 입력 (field_groups 기반 target별 그룹화)"""
     
     scenario_id = scenario.id
     
@@ -239,27 +241,67 @@ def render_phase2_variable_fact(scenario):
         </div>
     """, unsafe_allow_html=True)
     
-    layer2_fields = get_layer2_fields(scenario_id)
+    # 뒤로가기
+    if st.button("← Phase 1로 돌아가기"):
+        st.session_state.form_step = 1
+        st.rerun()
     
-    if not layer2_fields:
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    # Layer 2 필드 그룹 가져오기 (target별 그룹화)
+    field_groups = get_layer2_field_groups(scenario_id)
+    
+    if not field_groups:
         st.warning("이 시나리오에 대한 폼 설정이 없습니다.")
+        if st.button("다음 단계로 →"):
+            st.session_state.form_step = 3
+            st.rerun()
         return
     
-    # 섹션별로 필드 그룹화
-    sections = {}
-    for field in layer2_fields:
-        section = field.get('section', '기타')
-        if section not in sections:
-            sections[section] = []
-        sections[section].append(field)
-    
+    # 폼 데이터 초기화
     if 'form_data' not in st.session_state:
         st.session_state.form_data = {}
     
+    # 폼 렌더링 (target별 그룹으로 구분)
     with st.form("phase2_form"):
-        for section_name, fields in sections.items():
-            st.markdown(f"**📁 {section_name}**")
+        for group in field_groups:
+            target = group.get('target', 'self')
+            group_name = group.get('group_name', '기타')
+            group_name_en = group.get('group_name_en', 'Other')
+            fields = group.get('fields', [])
             
+            # target에 따른 아이콘 선택
+            target_icons = {
+                "other_guarantor": "🤝",
+                "other_spouse": "💑",
+                "other_inviter": "📨",
+                "other_employer": "🏢",
+                "other_family": "👨‍👩‍👧",
+                "other_introducer": "🔗",
+                "other_reference": "📋",
+                "self": "👤",
+            }
+            icon = target_icons.get(target, "📁")
+            
+            # 그룹 헤더
+            st.markdown(f"""
+                <div style="
+                    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+                    border-radius: 0.5rem;
+                    padding: 0.75rem 1rem;
+                    margin: 1rem 0 0.75rem 0;
+                ">
+                    <span style="font-size: 1rem; margin-right: 0.5rem;">{icon}</span>
+                    <span style="color: white; font-weight: 600; font-size: 0.95rem;">
+                        {group_name}
+                    </span>
+                    <span style="color: rgba(255,255,255,0.7); font-size: 0.8rem; margin-left: 0.5rem;">
+                        {group_name_en}
+                    </span>
+                </div>
+            """, unsafe_allow_html=True)
+            
+            # 2열 레이아웃으로 필드 표시
             col1, col2 = st.columns(2)
             
             for idx, field in enumerate(fields):
@@ -267,7 +309,7 @@ def render_phase2_variable_fact(scenario):
                 with col:
                     render_form_field(field)
             
-            st.markdown("---")
+            st.markdown("<br>", unsafe_allow_html=True)
         
         col_back, col_next = st.columns(2)
         
@@ -281,8 +323,9 @@ def render_phase2_variable_fact(scenario):
             st.session_state.form_step = 1
             st.rerun()
         
-        if next_btn:
-            save_layer2_data(layer2_fields)
+        if submitted:
+            # 폼 데이터 저장
+            save_layer2_data(field_groups)
             st.session_state.form_step = 3
             st.rerun()
 
@@ -291,14 +334,23 @@ def render_form_field(field: Dict):
     """개별 폼 필드 렌더링"""
     
     data_key = field['data_key']
-    label = field['label']
+    label = field.get('label', data_key)
+    label_en = field.get('label_en', '')
     field_type = field.get('type', 'text')
     placeholder = field.get('placeholder', '')
     required = field.get('required', False)
     options = field.get('options', [])
     
     current_value = st.session_state.form_data.get(data_key, '')
-    label_display = f"{label} *" if required else label
+    
+    # 라벨 표시 (한글 + 영문)
+    if label_en:
+        label_display = f"{label} ({label_en})"
+    else:
+        label_display = label
+    
+    if required:
+        label_display += " *"
     
     if field_type == 'text':
         st.text_input(label_display, key=data_key, value=current_value, placeholder=placeholder)
@@ -315,11 +367,17 @@ def render_form_field(field: Dict):
         if max_val:
             kwargs['max_value'] = max_val
         if current_value:
-            kwargs['value'] = int(current_value) if isinstance(current_value, (int, float)) else min_val
+            try:
+                kwargs['value'] = int(current_value) if isinstance(current_value, (int, float, str)) else min_val
+            except:
+                kwargs['value'] = min_val
         
         st.number_input(**kwargs)
     
     elif field_type == 'select':
+        if not options:
+            options = ['']
+        
         default_idx = 0
         if current_value and current_value in options:
             default_idx = options.index(current_value)
@@ -331,24 +389,29 @@ def render_form_field(field: Dict):
             try:
                 if isinstance(current_value, str):
                     default_date = datetime.strptime(current_value, '%Y-%m-%d').date()
-                else:
+                elif isinstance(current_value, date):
                     default_date = current_value
             except:
                 pass
         st.date_input(label_display, key=data_key, value=default_date)
 
 
-def save_layer2_data(fields: List[Dict]):
-    """Layer 2 폼 데이터 저장"""
+def save_layer2_data(field_groups: List[Dict]):
+    """Layer 2 폼 데이터 저장 (field_groups 구조에서)"""
     form_data = {}
     
-    for field in fields:
-        data_key = field['data_key']
-        if data_key in st.session_state:
-            value = st.session_state[data_key]
-            if hasattr(value, 'strftime'):
-                value = value.strftime('%Y-%m-%d')
-            form_data[data_key] = value
+    for group in field_groups:
+        fields = group.get('fields', [])
+        for field in fields:
+            data_key = field['data_key']
+            if data_key in st.session_state:
+                value = st.session_state[data_key]
+                
+                # 날짜 문자열 변환
+                if hasattr(value, 'strftime'):
+                    value = value.strftime('%Y-%m-%d')
+                
+                form_data[data_key] = value
     
     st.session_state.form_data = form_data
 
@@ -372,6 +435,7 @@ def render_phase3_narrative(scenario):
         st.session_state.ai_feedbacks = []
     
     narrative_label = narrative_config.get('narrative_label', '상세 내용')
+    narrative_label_en = narrative_config.get('narrative_label_en', 'Details')
     
     st.markdown(f"""
         <div style="margin-bottom: 1.5rem;">
@@ -401,16 +465,26 @@ def render_phase3_narrative(scenario):
                 <span style="font-weight: 600; color: white; font-size: 0.95rem; margin-left: 0.5rem;">
                     {narrative_label}
                 </span>
-                <span style="background: rgba(255,255,255,0.2); color: white; font-size: 0.7rem; padding: 0.125rem 0.5rem; border-radius: 1rem; margin-left: auto; float: right;">
-                    {len(layer3_fields)}개 항목
+                <span style="color: rgba(255,255,255,0.8); font-size: 0.8rem; margin-left: 0.25rem;">
+                    ({narrative_label_en})
                 </span>
+                <span style="
+                    background: rgba(255,255,255,0.2);
+                    color: white;
+                    font-size: 0.7rem;
+                    padding: 0.125rem 0.5rem;
+                    border-radius: 1rem;
+                    margin-left: auto;
+                ">{len(layer3_fields)}개 항목</span>
             </div>
         """, unsafe_allow_html=True)
         
         for i, field in enumerate(layer3_fields):
             data_key = field['data_key']
-            label = field['label']
+            label = field.get('label', data_key)
+            label_en = field.get('label_en', '')
             hint = field.get('hint', '')
+            hint_en = field.get('hint_en', '')
             placeholder = field.get('placeholder', '')
             min_chars = field.get('min_chars', 50)
             required = field.get('required', False)
@@ -419,8 +493,13 @@ def render_phase3_narrative(scenario):
                 st.divider()
             
             required_text = " *필수" if required else ""
-            st.markdown(f"**Q{i+1}. {label}**{required_text}")
-            st.caption(hint)
+            label_full = f"{label} ({label_en})" if label_en else label
+            st.markdown(f"**Q{i+1}. {label_full}**{required_text}")
+            
+            hint_full = f"{hint}" if hint else ""
+            if hint_en:
+                hint_full += f" / {hint_en}"
+            st.caption(hint_full)
             
             current_value = st.session_state.narrative_data.get(data_key, '')
             
@@ -480,7 +559,7 @@ def run_ai_validation(scenario_id: str, fields: List[Dict], danger_patterns: Lis
     for field in fields:
         data_key = field['data_key']
         answer = answers.get(data_key, '')
-        label = field['label']
+        label = field.get('label', data_key)
         min_chars = field.get('min_chars', 50)
         
         if len(answer) == 0:
@@ -605,7 +684,8 @@ def validate_required_fields(fields: List[Dict]) -> List[str]:
             min_chars = field.get('min_chars', 50)
             answer = st.session_state.narrative_data.get(data_key, '')
             if len(answer) < min_chars:
-                missing.append(field['label'])
+                missing.append(field.get('label', data_key))
+    
     return missing
 
 

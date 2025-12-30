@@ -1,45 +1,131 @@
 """
 K-Stay Configuration Settings
-Layer 기반 데이터 구조 설계
-- Layer 1 (Universal): users 테이블에서 자동 로드 (회원가입 시 입력, 수정 불가)
-- Layer 2 (Variable): 시나리오별 폼 입력 (객관적 사실)
-- Layer 3 (Narrative): AI가 검토하는 서술형 데이터
+Auto-generated at: 2025-12-30 01:00:49
+
+이 파일은 자동 생성되었습니다.
+- Layer 1: 사용자 기본 정보 (users 테이블)
+- Layer 2: 시나리오별 추가 입력 필드 (타인 정보 포함)
+- Layer 3: 서술형 필드 (AI 검토 대상)
 """
 
 import streamlit as st
 from dataclasses import dataclass, field
-from typing import Optional, Dict, Any, List
+from typing import Dict, List, Any, Optional, Tuple
 
-# =============================================================================
-# 🔑 API KEYS & SECRETS
-# =============================================================================
+# ======================================================================
+# 🔑 API KEYS
+# ======================================================================
 
 def get_secret(key: str, default: str = "") -> str:
-    """Streamlit secrets에서 값을 안전하게 가져옴"""
+    """Streamlit secrets에서 값 가져오기"""
     try:
         return st.secrets.get(key, default)
     except:
         return default
 
-# Supabase
-SUPABASE_URL = get_secret("SUPABASE_URL", "https://your-project.supabase.co")
-SUPABASE_KEY = get_secret("SUPABASE_KEY", "your-supabase-anon-key")
+SUPABASE_URL = get_secret("SUPABASE_URL")
+SUPABASE_KEY = get_secret("SUPABASE_KEY")
+OPENAI_API_KEY = get_secret("OPENAI_API_KEY")
 
-# OpenAI
-OPENAI_API_KEY = get_secret("OPENAI_API_KEY", "sk-your-openai-api-key")
+# ======================================================================
+# 🏷️ data_key → Label 매핑 (UI 표시용)
+# ======================================================================
 
-# Stripe
-STRIPE_API_KEY = get_secret("STRIPE_API_KEY", "sk_test_your-stripe-key")
-STRIPE_PRICE_ID = get_secret("STRIPE_PRICE_ID", "price_your-price-id")
-STRIPE_SUCCESS_URL = get_secret("STRIPE_SUCCESS_URL", "https://your-app.streamlit.app/?payment=success")
-STRIPE_CANCEL_URL = get_secret("STRIPE_CANCEL_URL", "https://your-app.streamlit.app/?payment=cancel")
+DATA_KEY_LABEL_MAP = {
+    # 기본 개인정보
+    "name": ("성명", "Name"),
+    "full_name": ("성명", "Full Name"),
+    "surname": ("성", "Surname"),
+    "given_name": ("이름", "Given Name"),
+    "hanja": ("한자", "Chinese Characters"),
+    "birth_date": ("생년월일", "Date of Birth"),
+    "gender": ("성별", "Gender"),
+    "nationality": ("국적", "Nationality"),
+    "phone": ("전화번호", "Phone"),
+    "address": ("주소", "Address"),
+    "occupation": ("직업", "Occupation"),
+    "workplace": ("근무처", "Workplace"),
+    "position": ("직위", "Position"),
+    "workplace_address": ("근무처 주소", "Workplace Address"),
+    "workplace_phone": ("근무처 전화번호", "Workplace Phone"),
+    "relationship": ("관계", "Relationship"),
+    "email": ("이메일", "Email"),
+    # 여권 관련
+    "passport_no": ("여권번호", "Passport No."),
+    "passport_issue_date": ("여권 발급일", "Passport Issue Date"),
+    "passport_expiry_date": ("여권 만료일", "Passport Expiry Date"),
+    # 외국인등록
+    "alien_registration_no": ("외국인등록번호", "Alien Registration No."),
+    # 보증 관련
+    "guarantee_period": ("보증기간", "Guarantee Period"),
+    "guarantee_amount": ("보증금액", "Guarantee Amount"),
+    # 기타
+    "remarks": ("비고", "Remarks"),
+    "note": ("비고", "Note"),
+}
 
-# =============================================================================
-# 📊 LAYER 1: Universal Facts (불변 정보 - users 테이블)
-# =============================================================================
+# Target별 prefix와 그룹명
+TARGET_INFO = {
+    "other_guarantor": {
+        "prefix": "guarantor_",
+        "group_name": "신원보증인 정보",
+        "group_name_en": "Guarantor Information"
+    },
+    "other_spouse": {
+        "prefix": "spouse_",
+        "group_name": "배우자 정보",
+        "group_name_en": "Spouse Information"
+    },
+    "other_inviter": {
+        "prefix": "inviter_",
+        "group_name": "초청인 정보",
+        "group_name_en": "Inviter Information"
+    },
+    "other_invitee": {
+        "prefix": "invitee_",
+        "group_name": "피초청인 정보",
+        "group_name_en": "Invitee Information"
+    },
+    "other_employer": {
+        "prefix": "employer_",
+        "group_name": "고용주 정보",
+        "group_name_en": "Employer Information"
+    },
+    "other_family": {
+        "prefix": "family_",
+        "group_name": "가족 정보",
+        "group_name_en": "Family Information"
+    },
+}
+
+def get_label_for_data_key(data_key: str, target: str = "self") -> Tuple[str, str]:
+    """
+    data_key에서 사용자 친화적 label 생성
+    Returns: (label_kr, label_en)
+    """
+    base_key = data_key
+    target_info = TARGET_INFO.get(target, {})
+    prefix = target_info.get("prefix", "")
+    
+    if prefix and data_key.startswith(prefix):
+        base_key = data_key[len(prefix):]
+    
+    if base_key in DATA_KEY_LABEL_MAP:
+        label_kr, label_en = DATA_KEY_LABEL_MAP[base_key]
+        if target != "self" and target in TARGET_INFO:
+            group_kr = TARGET_INFO[target]["group_name"].replace(" 정보", "")
+            group_en = TARGET_INFO[target]["group_name_en"].replace(" Information", "")
+            return (f"{group_kr} {label_kr}", f"{group_en} {label_en}")
+        return (label_kr, label_en)
+    
+    readable = base_key.replace("_", " ").title()
+    return (readable, readable)
+
+# ======================================================================
+# 📊 LAYER 1: Universal Facts (본인 정보)
+# ======================================================================
 
 LAYER1_UNIVERSAL_FIELDS = [
-    # 계정 정보
     {
         "data_key": "email",
         "label": "이메일",
@@ -47,8 +133,6 @@ LAYER1_UNIVERSAL_FIELDS = [
         "type": "text",
         "category": "account"
     },
-    
-    # 인적사항
     {
         "data_key": "surname",
         "label": "성",
@@ -64,6 +148,20 @@ LAYER1_UNIVERSAL_FIELDS = [
         "category": "personal"
     },
     {
+        "data_key": "full_name",
+        "label": "성명",
+        "label_en": "Full Name",
+        "type": "text",
+        "category": "personal"
+    },
+    {
+        "data_key": "full_name_hanja",
+        "label": "한자 성명",
+        "label_en": "Name in Chinese Characters",
+        "type": "text",
+        "category": "personal"
+    },
+    {
         "data_key": "birth_date",
         "label": "생년월일",
         "label_en": "Date of Birth",
@@ -75,7 +173,6 @@ LAYER1_UNIVERSAL_FIELDS = [
         "label": "성별",
         "label_en": "Gender",
         "type": "select",
-        "options": ["Male", "Female"],
         "category": "personal"
     },
     {
@@ -92,8 +189,6 @@ LAYER1_UNIVERSAL_FIELDS = [
         "type": "text",
         "category": "personal"
     },
-    
-    # 여권정보
     {
         "data_key": "passport_no",
         "label": "여권번호",
@@ -115,8 +210,6 @@ LAYER1_UNIVERSAL_FIELDS = [
         "type": "date",
         "category": "passport"
     },
-    
-    # 연락처
     {
         "data_key": "korea_address",
         "label": "한국 주소",
@@ -145,1045 +238,3810 @@ LAYER1_UNIVERSAL_FIELDS = [
         "type": "text",
         "category": "contact"
     },
+    {
+        "data_key": "occupation",
+        "label": "직업",
+        "label_en": "Occupation",
+        "type": "text",
+        "category": "personal"
+    },
+    {
+        "data_key": "stay_purpose",
+        "label": "체류목적",
+        "label_en": "Purpose of Stay",
+        "type": "text",
+        "category": "visa"
+    },
 ]
 
-# Layer 1 필드 키 목록 (빠른 조회용)
 LAYER1_KEYS = [f["data_key"] for f in LAYER1_UNIVERSAL_FIELDS]
 
-# =============================================================================
-# 📊 LAYER 2: Variable Facts (가변 정보 - 시나리오별 폼 입력)
-# =============================================================================
+# ======================================================================
+# 📊 LAYER 2: Variable Facts (타인 정보, 시나리오별 추가 정보)
+# ======================================================================
 
 LAYER2_VARIABLE_FIELDS = {
-    # -----------------------------------------------------------------
-    # 시나리오 A: 구직 준비 (D-10)
-    # -----------------------------------------------------------------
     "A": {
         "scenario_name": "구직 준비",
+        "scenario_name_en": "Job Seeking",
         "visa_type": "D-10",
-        "fields": [
+        "field_groups": [
             {
-                "data_key": "chinese_name",
-                "label": "한자 이름",
-                "label_en": "Chinese Name",
-                "type": "text",
-                "placeholder": "예: 洪吉童",
-                "required": False,
-                "section": "기본정보"
+                "target": "self",
+                "group_name": "신청인 추가 정보",
+                "group_name_en": "Applicant Additional Info",
+                "fields": [
+                    {
+                        "data_key": "address_korea",
+                        "label": "대한민국 내 주소 Address In Korea",
+                        "label_en": "Address Korea",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "home_country_address",
+                        "label": "본국 주소 Address In Home Country",
+                        "label_en": "Home Country Address",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "school_status",
+                        "label": "미취학[],  초[ ],     중[ ],   고[ ]",
+                        "label_en": "School Status",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "school_name",
+                        "label": "학교 이름 Name of School",
+                        "label_en": "School Name",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "school_type",
+                        "label": "교육청 인가[], 교육청 비인가, 대안학교[] Accr",
+                        "label_en": "School Type",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "current_workplace_name",
+                        "label": "원 근무처 Current Workplace",
+                        "label_en": "Current Workplace Name",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "new_workplace_name",
+                        "label": "예정 근무처 New Workplace",
+                        "label_en": "New Workplace Name",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "annual_income_amount",
+                        "label": "연 소득금액 Annual Income Amount",
+                        "label_en": "Annual Income Amount",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "occupation",
+                        "label": "직업 Occupation",
+                        "label_en": "Occupation",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "intended_reentry_period",
+                        "label": "재입국 신청 기간 Intended Period Of R",
+                        "label_en": "Intended Reentry Period",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "refund_bank_account_no",
+                        "label": "반환용 계좌번호(외국인등록 및 외국인등록증 재발급 신청",
+                        "label_en": "Refund Bank Account No",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "application_date",
+                        "label": "신청일 Date of application",
+                        "label_en": "Application Date",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "applicant_signature",
+                        "label": "신청인 서명 또는 인 Signature/Seal",
+                        "label_en": "Applicant Signature",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "consent_applicant_signature",
+                        "label": "신청인 Applicant",
+                        "label_en": "Consent Applicant Signature",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "consent_spouse_signature",
+                        "label": "신청인의 배우자 Spouse of applicant",
+                        "label_en": "Consent Spouse Signature",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "consent_parent_signature",
+                        "label": "신청인의 부 또는 모 Father/Mother of a",
+                        "label_en": "Consent Parent Signature",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "university_name",
+                        "label": "毕业学校 Name of University or Col",
+                        "label_en": "University Name",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "major_degree",
+                        "label": "专业 & 学位 (预毕业) Major & Degree (",
+                        "label_en": "Major Degree",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "work_experience",
+                        "label": "工作经验 Work Experience",
+                        "label_en": "Work Experience",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "occupational_category",
+                        "label": "业种 Occupational Category",
+                        "label_en": "Occupational Category",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "company_name",
+                        "label": "单位名称 Name of company",
+                        "label_en": "Company Name",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "expected_salary",
+                        "label": "期望薪资 Salary",
+                        "label_en": "Expected Salary",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "living_cost_cash",
+                        "label": "现金 Cash",
+                        "label_en": "Living Cost Cash",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "living_cost_deposit",
+                        "label": "存款 Deposit",
+                        "label_en": "Living Cost Deposit",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "living_cost_credit_card",
+                        "label": "信用卡 Credit card",
+                        "label_en": "Living Cost Credit Card",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "living_cost_remittance",
+                        "label": "汇款 Remittance",
+                        "label_en": "Living Cost Remittance",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "stay_purpose",
+                        "label": "체류목적",
+                        "label_en": "Stay Purpose",
+                        "type": "text",
+                        "required": True
+                    },
+                ]
             },
             {
-                "data_key": "school_name",
-                "label": "출신 대학교",
-                "label_en": "University/College Name",
-                "type": "text",
-                "placeholder": "예: 서강대학교",
-                "required": True,
-                "section": "학력"
-            },
-            {
-                "data_key": "major_degree",
-                "label": "전공 및 학위",
-                "label_en": "Major & Degree",
-                "type": "text",
-                "placeholder": "예: 컴퓨터공학 학사",
-                "required": True,
-                "section": "학력"
-            },
-            {
-                "data_key": "work_experience",
-                "label": "경력사항",
-                "label_en": "Work Experience",
-                "type": "textarea",
-                "placeholder": "예: ABC회사 인턴 6개월, XYZ프로젝트 참여",
-                "required": False,
-                "section": "경력"
-            },
-            {
-                "data_key": "target_industry",
-                "label": "희망 산업/직종",
-                "label_en": "Target Industry/Occupation",
-                "type": "text",
-                "placeholder": "예: IT/소프트웨어 개발",
-                "required": True,
-                "section": "구직목표"
-            },
-            {
-                "data_key": "target_company",
-                "label": "희망 기업",
-                "label_en": "Target Company",
-                "type": "text",
-                "placeholder": "예: 네이버, 카카오, 삼성전자",
-                "required": False,
-                "section": "구직목표"
-            },
-            {
-                "data_key": "desired_salary",
-                "label": "희망 연봉 (만원)",
-                "label_en": "Desired Salary",
-                "type": "number",
-                "placeholder": "예: 4000",
-                "required": False,
-                "section": "구직목표"
-            },
-            {
-                "data_key": "living_expenses_cash",
-                "label": "생활비 - 현금 (만원)",
-                "label_en": "Living Expenses - Cash",
-                "type": "number",
-                "placeholder": "예: 500",
-                "required": False,
-                "section": "재정"
-            },
-            {
-                "data_key": "living_expenses_deposit",
-                "label": "생활비 - 예금 (만원)",
-                "label_en": "Living Expenses - Deposit",
-                "type": "number",
-                "placeholder": "예: 2000",
-                "required": False,
-                "section": "재정"
-            },
-            {
-                "data_key": "living_expenses_credit_card",
-                "label": "신용카드 보유",
-                "label_en": "Credit Card",
-                "type": "select",
-                "options": ["있음", "없음"],
-                "required": False,
-                "section": "재정"
-            },
-            {
-                "data_key": "living_expenses_remittance",
-                "label": "송금 예정액 (만원)",
-                "label_en": "Remittance",
-                "type": "number",
-                "placeholder": "예: 100",
-                "required": False,
-                "section": "재정"
+                "target": "other_guarantor",
+                "group_name": "신원보증인",
+                "group_name_en": "Guarantor",
+                "fields": [
+                    {
+                        "data_key": "guarantor_name",
+                        "label": "성명",
+                        "label_en": "Guarantor Name",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_name_hanja",
+                        "label": "漢字",
+                        "label_en": "Guarantor Name Hanja",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_nationality",
+                        "label": "국적",
+                        "label_en": "Guarantor Nationality",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_gender",
+                        "label": "성별",
+                        "label_en": "Guarantor Gender",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_passport_or_birth",
+                        "label": "여권번호 또는 생년월일",
+                        "label_en": "Guarantor Passport Or Birth",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_phone",
+                        "label": "전화번호",
+                        "label_en": "Guarantor Phone",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_address",
+                        "label": "주소",
+                        "label_en": "Guarantor Address",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_relationship",
+                        "label": "피보증인과의 관계",
+                        "label_en": "Guarantor Relationship",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_employer",
+                        "label": "근무처",
+                        "label_en": "Guarantor Employer",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_position",
+                        "label": "직위",
+                        "label_en": "Guarantor Position",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_employer_address",
+                        "label": "근무처 주소",
+                        "label_en": "Guarantor Employer Address",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_note",
+                        "label": "비고",
+                        "label_en": "Guarantor Note",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_guarantee_period",
+                        "label": "나. 보증기간(보증기간의 최장기간은 4년으로 한다)",
+                        "label_en": "Guarantor Guarantee Period",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_signature_date",
+                        "label": "년              월           일장",
+                        "label_en": "Guarantor Signature Date",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_signature",
+                        "label": "(서명 또는 인)",
+                        "label_en": "Guarantor Signature",
+                        "type": "text",
+                        "required": True
+                    },
+                ]
             },
         ]
     },
-    
-    # -----------------------------------------------------------------
-    # 시나리오 B: 아르바이트 (시간제 취업)
-    # -----------------------------------------------------------------
     "B": {
         "scenario_name": "아르바이트",
+        "scenario_name_en": "Part-time Work",
         "visa_type": "시간제 취업",
-        "fields": [
+        "field_groups": [
             {
-                "data_key": "school_name",
-                "label": "학교명",
-                "label_en": "School Name",
-                "type": "text",
-                "placeholder": "예: 서울대학교",
-                "required": True,
-                "section": "학교정보"
+                "target": "self",
+                "group_name": "신청인 추가 정보",
+                "group_name_en": "Applicant Additional Info",
+                "fields": [
+                    {
+                        "data_key": "address_korea",
+                        "label": "대한민국 내 주소 Address In Korea",
+                        "label_en": "Address Korea",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "home_country_address",
+                        "label": "본국 주소 Address In Home Country",
+                        "label_en": "Home Country Address",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "school_status",
+                        "label": "미취학[],  초[ ],     중[ ],   고[ ]",
+                        "label_en": "School Status",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "school_name",
+                        "label": "학교 이름 Name of School",
+                        "label_en": "School Name",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "school_type",
+                        "label": "교육청 인가[], 교육청 비인가, 대안학교[] Accr",
+                        "label_en": "School Type",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "current_workplace_name",
+                        "label": "원 근무처 Current Workplace",
+                        "label_en": "Current Workplace Name",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "new_workplace_name",
+                        "label": "예정 근무처 New Workplace",
+                        "label_en": "New Workplace Name",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "annual_income_amount",
+                        "label": "연 소득금액 Annual Income Amount",
+                        "label_en": "Annual Income Amount",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "occupation",
+                        "label": "직업 Occupation",
+                        "label_en": "Occupation",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "intended_reentry_period",
+                        "label": "재입국 신청 기간 Intended Period Of R",
+                        "label_en": "Intended Reentry Period",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "refund_bank_account_no",
+                        "label": "반환용 계좌번호(외국인등록 및 외국인등록증 재발급 신청",
+                        "label_en": "Refund Bank Account No",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "application_date",
+                        "label": "신청일 Date of application",
+                        "label_en": "Application Date",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "applicant_signature",
+                        "label": "신청인 서명 또는 인 Signature/Seal",
+                        "label_en": "Applicant Signature",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "consent_applicant_signature",
+                        "label": "신청인 Applicant",
+                        "label_en": "Consent Applicant Signature",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "consent_spouse_signature",
+                        "label": "신청인의 배우자 Spouse of applicant",
+                        "label_en": "Consent Spouse Signature",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "consent_parent_signature",
+                        "label": "신청인의 부 또는 모 Father/Mother of a",
+                        "label_en": "Consent Parent Signature",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "department_major",
+                        "label": "학과(전 공 )",
+                        "label_en": "Department Major",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "semester",
+                        "label": "이수학기",
+                        "label_en": "Semester",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "phone",
+                        "label": "전 화번 호",
+                        "label_en": "Phone",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "stay_purpose",
+                        "label": "체류목적",
+                        "label_en": "Stay Purpose",
+                        "type": "text",
+                        "required": True
+                    },
+                ]
             },
             {
-                "data_key": "student_status",
-                "label": "재학 상태",
-                "label_en": "Student Status",
-                "type": "select",
-                "options": ["재학중", "휴학중", "수료"],
-                "required": True,
-                "section": "학교정보"
+                "target": "other_employer",
+                "group_name": "취업 예정 근무처",
+                "group_name_en": "Expected Workplace",
+                "fields": [
+                    {
+                        "data_key": "employer_company_name",
+                        "label": "업	체	명",
+                        "label_en": "Employer Company Name",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "employer_business_registration_no",
+                        "label": "사 업	자 등 록 번 호",
+                        "label_en": "Employer Business Registration No",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "employer_industry",
+                        "label": "업 종",
+                        "label_en": "Employer Industry",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "employer_address",
+                        "label": "주	소",
+                        "label_en": "Employer Address",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "employer_phone",
+                        "label": "전 화 번 호",
+                        "label_en": "Employer Phone",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "employment_period",
+                        "label": "취 업 기 간",
+                        "label_en": "Employment Period",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "wage_hourly",
+                        "label": "급 여 ( 시 급 )",
+                        "label_en": "Wage Hourly",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "weekday_total_hours",
+                        "label": "평  일 : 총	시간",
+                        "label_en": "Weekday Total Hours",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "weekend_total_hours",
+                        "label": "주말 : 총	시간",
+                        "label_en": "Weekend Total Hours",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "working_hours_mon",
+                        "label": "월",
+                        "label_en": "Working Hours Mon",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "working_hours_tue",
+                        "label": "화",
+                        "label_en": "Working Hours Tue",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "working_hours_wed",
+                        "label": "수",
+                        "label_en": "Working Hours Wed",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "working_hours_thu",
+                        "label": "목",
+                        "label_en": "Working Hours Thu",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "working_hours_fri",
+                        "label": "금",
+                        "label_en": "Working Hours Fri",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "working_hours_sat",
+                        "label": "토",
+                        "label_en": "Working Hours Sat",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "working_hours_sun",
+                        "label": "일",
+                        "label_en": "Working Hours Sun",
+                        "type": "text",
+                        "required": True
+                    },
+                ]
             },
             {
-                "data_key": "semester",
-                "label": "현재 학기",
-                "label_en": "Current Semester",
-                "type": "text",
-                "placeholder": "예: 3학년 2학기",
-                "required": True,
-                "section": "학교정보"
+                "target": "other_university_officer",
+                "group_name": "유학생 담당자 확인란",
+                "group_name_en": "Confirmation by University Officer",
+                "fields": [
+                    {
+                        "data_key": "university_officer_ieqas",
+                        "label": "인증대 학 여부",
+                        "label_en": "University Officer Ieqas",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "university_officer_position_phone",
+                        "label": "직위 (연락처)",
+                        "label_en": "University Officer Position Phone",
+                        "type": "text",
+                        "required": True
+                    },
+                ]
             },
             {
-                "data_key": "gpa",
-                "label": "평균 성적 (GPA)",
-                "label_en": "GPA",
-                "type": "number",
-                "min_value": 0.0,
-                "max_value": 4.5,
-                "step": 0.1,
-                "required": False,
-                "section": "학교정보"
-            },
-            {
-                "data_key": "employer_name",
-                "label": "고용주 상호",
-                "label_en": "Employer Name",
-                "type": "text",
-                "placeholder": "예: 스타벅스 강남점",
-                "required": True,
-                "section": "고용주정보"
-            },
-            {
-                "data_key": "employer_business_no",
-                "label": "사업자등록번호",
-                "label_en": "Business Registration No.",
-                "type": "text",
-                "placeholder": "예: 123-45-67890",
-                "required": True,
-                "section": "고용주정보"
-            },
-            {
-                "data_key": "employer_representative",
-                "label": "대표자명",
-                "label_en": "Representative",
-                "type": "text",
-                "placeholder": "예: 김대표",
-                "required": True,
-                "section": "고용주정보"
-            },
-            {
-                "data_key": "employer_phone",
-                "label": "고용주 연락처",
-                "label_en": "Employer Phone",
-                "type": "text",
-                "placeholder": "예: 02-1234-5678",
-                "required": True,
-                "section": "고용주정보"
-            },
-            {
-                "data_key": "work_address",
-                "label": "근무지 주소",
-                "label_en": "Work Address",
-                "type": "text",
-                "placeholder": "예: 서울시 강남구 테헤란로 123",
-                "required": True,
-                "section": "고용주정보"
-            },
-            {
-                "data_key": "hourly_wage",
-                "label": "시급 (원)",
-                "label_en": "Hourly Wage",
-                "type": "number",
-                "min_value": 9860,
-                "step": 100,
-                "required": True,
-                "section": "근무조건"
-            },
-            {
-                "data_key": "weekly_hours",
-                "label": "주당 근무시간",
-                "label_en": "Weekly Hours",
-                "type": "number",
-                "min_value": 1,
-                "max_value": 20,
-                "required": True,
-                "section": "근무조건"
-            },
-            {
-                "data_key": "work_period_start",
-                "label": "근무 시작일",
-                "label_en": "Work Start Date",
-                "type": "date",
-                "required": True,
-                "section": "근무조건"
-            },
-            {
-                "data_key": "work_period_end",
-                "label": "근무 종료일",
-                "label_en": "Work End Date",
-                "type": "date",
-                "required": True,
-                "section": "근무조건"
+                "target": "other_guarantor",
+                "group_name": "신원보증인",
+                "group_name_en": "Guarantor",
+                "fields": [
+                    {
+                        "data_key": "guarantor_name",
+                        "label": "성명",
+                        "label_en": "Guarantor Name",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_name_hanja",
+                        "label": "漢字",
+                        "label_en": "Guarantor Name Hanja",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_nationality",
+                        "label": "국적",
+                        "label_en": "Guarantor Nationality",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_gender",
+                        "label": "성별",
+                        "label_en": "Guarantor Gender",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_passport_or_birth",
+                        "label": "여권번호 또는 생년월일",
+                        "label_en": "Guarantor Passport Or Birth",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_phone",
+                        "label": "전화번호",
+                        "label_en": "Guarantor Phone",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_address",
+                        "label": "주소",
+                        "label_en": "Guarantor Address",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_relationship",
+                        "label": "피보증인과의 관계",
+                        "label_en": "Guarantor Relationship",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_employer",
+                        "label": "근무처",
+                        "label_en": "Guarantor Employer",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_position",
+                        "label": "직위",
+                        "label_en": "Guarantor Position",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_employer_address",
+                        "label": "근무처 주소",
+                        "label_en": "Guarantor Employer Address",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_note",
+                        "label": "비고",
+                        "label_en": "Guarantor Note",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_guarantee_period",
+                        "label": "나. 보증기간(보증기간의 최장기간은 4년으로 한다)",
+                        "label_en": "Guarantor Guarantee Period",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_signature_date",
+                        "label": "년              월           일장",
+                        "label_en": "Guarantor Signature Date",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_signature",
+                        "label": "(서명 또는 인)",
+                        "label_en": "Guarantor Signature",
+                        "type": "text",
+                        "required": True
+                    },
+                ]
             },
         ]
     },
-    
-    # -----------------------------------------------------------------
-    # 시나리오 C: 결혼 이민 (F-6)
-    # -----------------------------------------------------------------
     "C": {
         "scenario_name": "결혼 이민",
+        "scenario_name_en": "Marriage Immigration",
         "visa_type": "F-6",
-        "fields": [
+        "field_groups": [
             {
-                "data_key": "spouse_name",
-                "label": "배우자 성명",
-                "label_en": "Spouse Name",
-                "type": "text",
-                "placeholder": "예: 김철수",
-                "required": True,
-                "section": "배우자정보"
+                "target": "self",
+                "group_name": "신청인 추가 정보",
+                "group_name_en": "Applicant Additional Info",
+                "fields": [
+                    {
+                        "data_key": "address_korea",
+                        "label": "대한민국 내 주소 Address In Korea",
+                        "label_en": "Address Korea",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "home_country_address",
+                        "label": "본국 주소 Address In Home Country",
+                        "label_en": "Home Country Address",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "school_status",
+                        "label": "미취학[],  초[ ],     중[ ],   고[ ]",
+                        "label_en": "School Status",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "school_name",
+                        "label": "학교 이름 Name of School",
+                        "label_en": "School Name",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "school_type",
+                        "label": "교육청 인가[], 교육청 비인가, 대안학교[] Accr",
+                        "label_en": "School Type",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "current_workplace_name",
+                        "label": "원 근무처 Current Workplace",
+                        "label_en": "Current Workplace Name",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "new_workplace_name",
+                        "label": "예정 근무처 New Workplace",
+                        "label_en": "New Workplace Name",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "annual_income_amount",
+                        "label": "연 소득금액 Annual Income Amount",
+                        "label_en": "Annual Income Amount",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "occupation",
+                        "label": "직업 Occupation",
+                        "label_en": "Occupation",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "intended_reentry_period",
+                        "label": "재입국 신청 기간 Intended Period Of R",
+                        "label_en": "Intended Reentry Period",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "refund_bank_account_no",
+                        "label": "반환용 계좌번호(외국인등록 및 외국인등록증 재발급 신청",
+                        "label_en": "Refund Bank Account No",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "application_date",
+                        "label": "신청일 Date of application",
+                        "label_en": "Application Date",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "applicant_signature",
+                        "label": "신청인 서명 또는 인 Signature/Seal",
+                        "label_en": "Applicant Signature",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "consent_applicant_signature",
+                        "label": "신청인 Applicant",
+                        "label_en": "Consent Applicant Signature",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "consent_spouse_signature",
+                        "label": "신청인의 배우자 Spouse of applicant",
+                        "label_en": "Consent Spouse Signature",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "consent_parent_signature",
+                        "label": "신청인의 부 또는 모 Father/Mother of a",
+                        "label_en": "Consent Parent Signature",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "surname_native",
+                        "label": "1.3 현지 언어로 성명을 기재하시오 / Your fu",
+                        "label_en": "Surname Native",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "given_name_native",
+                        "label": "1.3 현지 언어로 성명을 기재하시오 / Your fu",
+                        "label_en": "Given Name Native",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "used_other_names",
+                        "label": "1.4 과거에 다른 이름을 사용하였던 적이 있습니까?",
+                        "label_en": "Used Other Names",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "family_knows_marriage",
+                        "label": "2.1 신청인의 부모, 형제, 자매가 혼인에 대해 알고",
+                        "label_en": "Family Knows Marriage",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "ever_been_married",
+                        "label": "2.2 신청인은 과거에 혼인한 적이 있습니까?",
+                        "label_en": "Ever Been Married",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "has_other_spouse_currently",
+                        "label": "2.3 현재 배우자 이외에 혼인관계를 유지하고 있는 다",
+                        "label_en": "Has Other Spouse Currently",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "has_children_from_previous_marriage",
+                        "label": "2.4 신청인은 과거 혼인관계에서 출생한 자녀가 있습니",
+                        "label_en": "Has Children From Previous Marriage",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "visited_korea_before",
+                        "label": "3.1 신청인은 과거 한국에 방문한 적이 있습니까?",
+                        "label_en": "Visited Korea Before",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "immigration_issues_history",
+                        "label": "3.2 과거 한국 정부로부터 입국거부, 입국금지되거나 ",
+                        "label_en": "Immigration Issues History",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "received_assistance",
+                        "label": "4.1 이 초청장을 작성하는데 다른 사람의 도움을 받았",
+                        "label_en": "Received Assistance",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "stay_purpose",
+                        "label": "체류목적",
+                        "label_en": "Stay Purpose",
+                        "type": "text",
+                        "required": True
+                    },
+                ]
             },
             {
-                "data_key": "spouse_resident_no",
-                "label": "배우자 주민등록번호",
-                "label_en": "Spouse Resident No.",
-                "type": "text",
-                "placeholder": "예: 900101-1234567",
-                "required": True,
-                "section": "배우자정보"
+                "target": "other_inviter",
+                "group_name": "초청인 인적사항",
+                "group_name_en": "Inviter Information",
+                "fields": [
+                    {
+                        "data_key": "inviter_home_phone",
+                        "label": "1.6 집 전화번호",
+                        "label_en": "Inviter Home Phone",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "inviter_phone",
+                        "label": "1.7 휴대전화번호",
+                        "label_en": "Inviter Phone",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "inviter_email",
+                        "label": "1.8 전자우편 주소",
+                        "label_en": "Inviter Email",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "household_lineal_count",
+                        "label": "초청인과 주민등록표상 세대를 같이 하는 직계가족 (부모",
+                        "label_en": "Household Lineal Count",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "household_total_count",
+                        "label": "합 계",
+                        "label_en": "Household Total Count",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "other_income_type",
+                        "label": "소득의 종류 (부동산 임대, 이자, 배당, 연금 중 택",
+                        "label_en": "Other Income Type",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "other_income_amount",
+                        "label": "세전 소득",
+                        "label_en": "Other Income Amount",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "asset_type_1",
+                        "label": "재산의 종류 (예금, 보험, 증권, 채권, 부동산 중 ",
+                        "label_en": "Asset Type 1",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "asset_amount_1",
+                        "label": "재산의 현금가액",
+                        "label_en": "Asset Amount 1",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "asset_total_amount",
+                        "label": "합 계",
+                        "label_en": "Asset Total Amount",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "earned_income_total",
+                        "label": "근로소득",
+                        "label_en": "Earned Income Total",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "business_income_total",
+                        "label": "사업소득",
+                        "label_en": "Business Income Total",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "other_income_total",
+                        "label": "그 밖의 소득",
+                        "label_en": "Other Income Total",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "asset_converted_total",
+                        "label": "재산의 환산금액",
+                        "label_en": "Asset Converted Total",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "income_assets_grand_total",
+                        "label": "합 계",
+                        "label_en": "Income Assets Grand Total",
+                        "type": "text",
+                        "required": True
+                    },
+                ]
             },
             {
-                "data_key": "spouse_phone",
-                "label": "배우자 연락처",
-                "label_en": "Spouse Phone",
-                "type": "text",
-                "placeholder": "예: 010-1234-5678",
-                "required": True,
-                "section": "배우자정보"
+                "target": "other_introducer",
+                "group_name": "소개인 정보",
+                "group_name_en": "Introducer Information",
+                "fields": [
+                    {
+                        "data_key": "introducer_name",
+                        "label": "2.3.1 소개인의 성명  (중개업체의 경우 상호명도 ",
+                        "label_en": "Introducer Name",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "introducer_birth_date",
+                        "label": "2.3.2 소개인의 생년월일  (중개업체의 경우 사업자",
+                        "label_en": "Introducer Birth Date",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "introducer_nationality",
+                        "label": "2.3.3 소개인의 국적",
+                        "label_en": "Introducer Nationality",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "introducer_phone",
+                        "label": "2.3.4 소개인의 전화번호",
+                        "label_en": "Introducer Phone",
+                        "type": "text",
+                        "required": True
+                    },
+                ]
             },
             {
-                "data_key": "spouse_occupation",
-                "label": "배우자 직업",
-                "label_en": "Spouse Occupation",
-                "type": "text",
-                "placeholder": "예: 회사원",
-                "required": True,
-                "section": "배우자정보"
+                "target": "other_reference",
+                "group_name": "혼인 관련 참고인 명단",
+                "group_name_en": "Marriage References",
+                "fields": [
+                    {
+                        "data_key": "reference_name",
+                        "label": "성명",
+                        "label_en": "Reference Name",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "reference_birth_date",
+                        "label": "생년월일",
+                        "label_en": "Reference Birth Date",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "reference_phone",
+                        "label": "연락처",
+                        "label_en": "Reference Phone",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "reference_relationship",
+                        "label": "초청인과의 관계",
+                        "label_en": "Reference Relationship",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "reference_person_name",
+                        "label": "성명",
+                        "label_en": "Reference Person Name",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "reference_person_age",
+                        "label": "연령",
+                        "label_en": "Reference Person Age",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "reference_person_relationship",
+                        "label": "초청인과의 관계",
+                        "label_en": "Reference Person Relationship",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "reference_person_phone",
+                        "label": "연락처",
+                        "label_en": "Reference Person Phone",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "witness_name",
+                        "label": "성명",
+                        "label_en": "Witness Name",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "witness_address",
+                        "label": "주소",
+                        "label_en": "Witness Address",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "witness_phone",
+                        "label": "연락처",
+                        "label_en": "Witness Phone",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "witness_relationship",
+                        "label": "초청인과의 관계",
+                        "label_en": "Witness Relationship",
+                        "type": "text",
+                        "required": True
+                    },
+                ]
             },
             {
-                "data_key": "spouse_income",
-                "label": "배우자 연 소득 (만원)",
-                "label_en": "Spouse Annual Income",
-                "type": "number",
-                "min_value": 0,
-                "required": True,
-                "section": "배우자정보"
+                "target": "other_family",
+                "group_name": "가족 연락처 및 혼인 사실 인지 여부",
+                "group_name_en": "Family Contacts and Marriage Awareness",
+                "fields": [
+                    {
+                        "data_key": "family_name",
+                        "label": "성명",
+                        "label_en": "Family Name",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "family_phone",
+                        "label": "연락처",
+                        "label_en": "Family Phone",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "family_knows_marriage",
+                        "label": "혼인사실을 알고 있는지 여부",
+                        "label_en": "Family Knows Marriage",
+                        "type": "text",
+                        "required": True
+                    },
+                ]
             },
             {
-                "data_key": "marriage_date",
-                "label": "혼인신고일",
-                "label_en": "Marriage Date",
-                "type": "date",
-                "required": True,
-                "section": "혼인정보"
+                "target": "other_spouse",
+                "group_name": "배우자 정보",
+                "group_name_en": "Spouse Information",
+                "fields": [
+                    {
+                        "data_key": "spouse_name",
+                        "label": "배우자의 성명",
+                        "label_en": "Spouse Name",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "spouse_birth_date",
+                        "label": "생년월일",
+                        "label_en": "Spouse Birth Date",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "spouse_nationality",
+                        "label": "배우자의 국적",
+                        "label_en": "Spouse Nationality",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "marriage_period",
+                        "label": "혼인기간",
+                        "label_en": "Marriage Period",
+                        "type": "text",
+                        "required": True
+                    },
+                ]
             },
             {
-                "data_key": "marriage_location",
-                "label": "혼인신고 장소",
-                "label_en": "Marriage Registration Location",
-                "type": "text",
-                "placeholder": "예: 서울시 강남구청",
-                "required": True,
-                "section": "혼인정보"
+                "target": "other_employer",
+                "group_name": "초청인 직장 정보",
+                "group_name_en": "Employer Information",
+                "fields": [
+                    {
+                        "data_key": "employer_company_name",
+                        "label": "직장명",
+                        "label_en": "Employer Company Name",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "employer_address",
+                        "label": "주소",
+                        "label_en": "Employer Address",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "employer_name",
+                        "label": "고용주 성명",
+                        "label_en": "Employer Name",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "employer_phone",
+                        "label": "고용주(직장) 연락처",
+                        "label_en": "Employer Phone",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "employment_employer_name",
+                        "label": "직장명",
+                        "label_en": "Employment Employer Name",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "employment_period",
+                        "label": "근무한 기간",
+                        "label_en": "Employment Period",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "employment_income_pre_tax",
+                        "label": "세전 소득",
+                        "label_en": "Employment Income Pre Tax",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "business_name",
+                        "label": "명칭",
+                        "label_en": "Business Name",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "business_address",
+                        "label": "주 소",
+                        "label_en": "Business Address",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "business_phone",
+                        "label": "전화번호",
+                        "label_en": "Business Phone",
+                        "type": "text",
+                        "required": True
+                    },
+                ]
             },
             {
-                "data_key": "residence_type",
-                "label": "주거 형태",
-                "label_en": "Residence Type",
-                "type": "select",
-                "options": ["자가", "전세", "월세", "기타"],
-                "required": True,
-                "section": "혼인정보"
-            },
-            {
-                "data_key": "first_meeting_date",
-                "label": "첫 만남 시기",
-                "label_en": "First Meeting Date",
-                "type": "date",
-                "required": True,
-                "section": "만남정보"
-            },
-            {
-                "data_key": "first_meeting_location",
-                "label": "첫 만남 장소",
-                "label_en": "First Meeting Location",
-                "type": "text",
-                "placeholder": "예: 서울 종로구 인사동 카페",
-                "required": True,
-                "section": "만남정보"
+                "target": "other_guarantor",
+                "group_name": "신원보증인",
+                "group_name_en": "Guarantor",
+                "fields": [
+                    {
+                        "data_key": "guarantor_name",
+                        "label": "성명",
+                        "label_en": "Guarantor Name",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_name_hanja",
+                        "label": "漢字",
+                        "label_en": "Guarantor Name Hanja",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_nationality",
+                        "label": "국적",
+                        "label_en": "Guarantor Nationality",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_gender",
+                        "label": "성별",
+                        "label_en": "Guarantor Gender",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_passport_or_birth",
+                        "label": "여권번호 또는 생년월일",
+                        "label_en": "Guarantor Passport Or Birth",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_phone",
+                        "label": "전화번호",
+                        "label_en": "Guarantor Phone",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_address",
+                        "label": "주소",
+                        "label_en": "Guarantor Address",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_relationship",
+                        "label": "피보증인과의 관계",
+                        "label_en": "Guarantor Relationship",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_employer",
+                        "label": "근무처",
+                        "label_en": "Guarantor Employer",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_position",
+                        "label": "직위",
+                        "label_en": "Guarantor Position",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_employer_address",
+                        "label": "근무처 주소",
+                        "label_en": "Guarantor Employer Address",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_note",
+                        "label": "비고",
+                        "label_en": "Guarantor Note",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_guarantee_period",
+                        "label": "나. 보증기간(보증기간의 최장기간은 4년으로 한다)",
+                        "label_en": "Guarantor Guarantee Period",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_signature_date",
+                        "label": "년              월           일장",
+                        "label_en": "Guarantor Signature Date",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_signature",
+                        "label": "(서명 또는 인)",
+                        "label_en": "Guarantor Signature",
+                        "type": "text",
+                        "required": True
+                    },
+                ]
             },
         ]
     },
-    
-    # -----------------------------------------------------------------
-    # 시나리오 D: 가족 초청 (F-1-5)
-    # -----------------------------------------------------------------
     "D": {
         "scenario_name": "가족 초청",
+        "scenario_name_en": "Family Invitation",
         "visa_type": "F-1-5",
-        "fields": [
+        "field_groups": [
             {
-                "data_key": "invitee_name",
-                "label": "피초청인 성명",
-                "label_en": "Invitee Name",
-                "type": "text",
-                "placeholder": "예: 홍길순",
-                "required": True,
-                "section": "피초청인정보"
+                "target": "other_inviter",
+                "group_name": "초청인의 인적사항",
+                "group_name_en": "Inviter's Personal Information",
+                "fields": [
+                    {
+                        "data_key": "inviter_name",
+                        "label": "1.1 성명",
+                        "label_en": "Inviter Name",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "inviter_gender",
+                        "label": "1.2 성별",
+                        "label_en": "Inviter Gender",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "inviter_nationality",
+                        "label": "1.3 국적(외국인인 경우 체류자격도 함께 기재)",
+                        "label_en": "Inviter Nationality",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "inviter_birth_date",
+                        "label": "1.4 생년월일 년 월 일",
+                        "label_en": "Inviter Birth Date",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "inviter_address",
+                        "label": "1.5 주소",
+                        "label_en": "Inviter Address",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "inviter_home_phone",
+                        "label": "1.6 집 전화번호",
+                        "label_en": "Inviter Home Phone",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "inviter_mobile_phone",
+                        "label": "1.7 휴대전화번호",
+                        "label_en": "Inviter Mobile Phone",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "inviter_email",
+                        "label": "1.8 전자우편(e-mail) 주소",
+                        "label_en": "Inviter Email",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "inviter_household_members",
+                        "label": "2.1 초청인의 동거 가족(외국인 포함)과 관련된 정보",
+                        "label_en": "Inviter Household Members",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "invitation_reason",
+                        "label": "3.1아래 초청 사유 중 해당하는 곳에 √표를 하시기 ",
+                        "label_en": "Invitation Reason",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "prior_invitation_history",
+                        "label": "4.1 초청인은 과거 결혼이민자(초청인 본인 또는 배우",
+                        "label_en": "Prior Invitation History",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "prior_invited_person_details",
+                        "label": "4.2 위 “4.1” 항목에 “예”라고 답하였다면, 초",
+                        "label_en": "Prior Invited Person Details",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "inviter_law_violation_record",
+                        "label": "5.1 초청인은 과거 ｢출입국관리법｣ 제7조의2, 제1",
+                        "label_en": "Inviter Law Violation Record",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "invited_foreigner_violation_record",
+                        "label": "5.2 과거 초청인의 초청을 받고 입국한 외국인 중, ",
+                        "label_en": "Invited Foreigner Violation Record",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "help_received",
+                        "label": "9.1 이 신청서를 작성하는데 다른 사람의 도움을 받았",
+                        "label_en": "Help Received",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "inviter_phone",
+                        "label": "연락처",
+                        "label_en": "Inviter Phone",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "inviter_exists",
+                        "label": "9.1 초청인/초청회사 Is there anyone i",
+                        "label_en": "Inviter Exists",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "inviter_birth_or_business_no",
+                        "label": "b) 생년월일/사업자등록번호 Date of Birth ",
+                        "label_en": "Inviter Birth Or Business No",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "inviter_relationship",
+                        "label": "c) 관계 Relationship to the",
+                        "label_en": "Inviter Relationship",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "application_date",
+                        "label": "신청일자 (년. 월. 일) DATE OF APPLICA",
+                        "label_en": "Application Date",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "inviter_applicant_name",
+                        "label": "신청인(초청인) 성명 NAME OF APPLICANT(",
+                        "label_en": "Inviter Applicant Name",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "inviter_signature",
+                        "label": "신청인(초청인) 서명(인) SIGNATURE(SEAL)",
+                        "label_en": "Inviter Signature",
+                        "type": "text",
+                        "required": True
+                    },
+                ]
             },
             {
-                "data_key": "invitee_relation",
-                "label": "관계",
-                "label_en": "Relationship",
-                "type": "select",
-                "options": ["부", "모", "형제", "자녀", "기타"],
-                "required": True,
-                "section": "피초청인정보"
+                "target": "self",
+                "group_name": "피초청인 인적사항 및 가족관계",
+                "group_name_en": "Invitee's Information and Family Relationship",
+                "fields": [
+                    {
+                        "data_key": "relationship_to_inviter",
+                        "label": "6.1 초청인과 피초청(사증발급 신청인)의 중 해당하는",
+                        "label_en": "Relationship To Inviter",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "family_members_info",
+                        "label": "6.2 피초청인과 그의 배우자, 부모, 자녀, 형제자매",
+                        "label_en": "Family Members Info",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "previous_visit_korea",
+                        "label": "6.3 피초청인은 과거 한국에 방문한 적이 있습니까(해",
+                        "label_en": "Previous Visit Korea",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "previous_violation_korea",
+                        "label": "6.4 위 “6.3” 항목에 “예”라고 답하였다면, 피",
+                        "label_en": "Previous Violation Korea",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "stay_purpose",
+                        "label": "체류목적",
+                        "label_en": "Stay Purpose",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "has_used_other_names",
+                        "label": "1.8 이전에 한국에 출입국하였을 때 다른 성명을 사용",
+                        "label_en": "Has Used Other Names",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "has_multiple_nationalities",
+                        "label": "1.9 복수 국적 여부 Is the the applia",
+                        "label_en": "Has Multiple Nationalities",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "passport_type_other",
+                        "label": "→ ‘기타’상세내용 If‘Other’, please p",
+                        "label_en": "Passport Type Other",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "passport_place_of_issue",
+                        "label": "2.4 발급지 Place of Issue",
+                        "label_en": "Passport Place Of Issue",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "has_other_passport",
+                        "label": "2.7 다른 여권 소지 여부 Does the the a",
+                        "label_en": "Has Other Passport",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "other_passport_type",
+                        "label": "a) 여권종류 Passport Type",
+                        "label_en": "Other Passport Type",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "other_passport_no",
+                        "label": "b) 여권번호 Passport No.",
+                        "label_en": "Other Passport No",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "other_passport_country",
+                        "label": "c) 발급국가 Country of Passport",
+                        "label_en": "Other Passport Country",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "other_passport_expiry",
+                        "label": "d) 기간만료일 Date of Expiry",
+                        "label_en": "Other Passport Expiry",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "home_country_address",
+                        "label": "3.1 본국 주소 Home Country Address",
+                        "label_en": "Home Country Address",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "phone_alt",
+                        "label": "3.4 일반전화 Telephone No.",
+                        "label_en": "Phone Alt",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "marital_status",
+                        "label": "4.1 현재 혼인사항 Current Marital St",
+                        "label_en": "Marital Status",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "has_children",
+                        "label": "4.3 자녀 유무 Does the applicant h",
+                        "label_en": "Has Children",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "children_count",
+                        "label": "자녀수 Number of children",
+                        "label_en": "Children Count",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "education_level",
+                        "label": "5.1 최종학력 What is the highest d",
+                        "label_en": "Education Level",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "education_other_details",
+                        "label": "→ ‘기타’선택 시 상세내용 기재 If‘Other’, ",
+                        "label_en": "Education Other Details",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "school_name",
+                        "label": "5.2 학교명 Name of School",
+                        "label_en": "School Name",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "school_location",
+                        "label": "5.3 학교 소재지 Location of School(",
+                        "label_en": "School Location",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "occupation_status",
+                        "label": "6.1 직업  Current personal circu",
+                        "label_en": "Occupation Status",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "occupation_other_details",
+                        "label": "→ ‘기타’선택 시 상세내용 기재 If‘Other’, ",
+                        "label_en": "Occupation Other Details",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "purpose_of_visit",
+                        "label": "7.1 입국목적 Purpose of Visit to K",
+                        "label_en": "Purpose Of Visit",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "purpose_other_details",
+                        "label": "→ ‘기타’선택 시 상세내용 기재 If ‘Other’ ",
+                        "label_en": "Purpose Other Details",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "intended_stay_period",
+                        "label": "7.2 체류예정기간 Intended Period of ",
+                        "label_en": "Intended Stay Period",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "intended_entry_date",
+                        "label": "7.3 입국예정일 Intended Date of Ent",
+                        "label_en": "Intended Entry Date",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "address_in_korea",
+                        "label": "7.4 체류예정지(호텔 포함) Address in Ko",
+                        "label_en": "Address In Korea",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "contact_in_korea_phone",
+                        "label": "7.5 한국 내 연락처 Contact No. in Ko",
+                        "label_en": "Contact In Korea Phone",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "past_korea_visits",
+                        "label": "7.6 과거 5년간 한국을 방문한 경력",
+                        "label_en": "Past Korea Visits",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "past_travel_country",
+                        "label": "국가명 Name of Country (in Englis",
+                        "label_en": "Past Travel Country",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "past_travel_purpose",
+                        "label": "방문목적 Purpose of Visit",
+                        "label_en": "Past Travel Purpose",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "past_travel_period",
+                        "label": "방문기간 Period of Stay  (yyyy/mm/",
+                        "label_en": "Past Travel Period",
+                        "type": "text",
+                        "required": True
+                    },
+                ]
             },
             {
-                "data_key": "invitee_birth_date",
-                "label": "피초청인 생년월일",
-                "label_en": "Invitee Birth Date",
-                "type": "date",
-                "required": True,
-                "section": "피초청인정보"
+                "target": "other_guarantor",
+                "group_name": "신원보증인",
+                "group_name_en": "Guarantor",
+                "fields": [
+                    {
+                        "data_key": "guarantor_name",
+                        "label": "성명",
+                        "label_en": "Guarantor Name",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_name_hanja",
+                        "label": "漢字",
+                        "label_en": "Guarantor Name Hanja",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_nationality",
+                        "label": "국적",
+                        "label_en": "Guarantor Nationality",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_gender",
+                        "label": "성별",
+                        "label_en": "Guarantor Gender",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_passport_or_birth",
+                        "label": "여권번호 또는 생년월일",
+                        "label_en": "Guarantor Passport Or Birth",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_phone",
+                        "label": "전화번호",
+                        "label_en": "Guarantor Phone",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_address",
+                        "label": "주소",
+                        "label_en": "Guarantor Address",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_relationship",
+                        "label": "피보증인과의 관계",
+                        "label_en": "Guarantor Relationship",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_employer",
+                        "label": "근무처",
+                        "label_en": "Guarantor Employer",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_position",
+                        "label": "직위",
+                        "label_en": "Guarantor Position",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_employer_address",
+                        "label": "근무처 주소",
+                        "label_en": "Guarantor Employer Address",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_note",
+                        "label": "비고",
+                        "label_en": "Guarantor Note",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_guarantee_period",
+                        "label": "나. 보증기간(보증기간의 최장기간은 4년으로 한다)",
+                        "label_en": "Guarantor Guarantee Period",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_signature_date",
+                        "label": "년              월           일장",
+                        "label_en": "Guarantor Signature Date",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_signature",
+                        "label": "(서명 또는 인)",
+                        "label_en": "Guarantor Signature",
+                        "type": "text",
+                        "required": True
+                    },
+                ]
             },
             {
-                "data_key": "invitee_passport_no",
-                "label": "피초청인 여권번호",
-                "label_en": "Invitee Passport No.",
-                "type": "text",
-                "placeholder": "예: M12345678",
-                "required": True,
-                "section": "피초청인정보"
+                "target": "other_emergency_contact",
+                "group_name": "비상시 연락처",
+                "group_name_en": "Emergency Contact",
+                "fields": [
+                    {
+                        "data_key": "emergency_name",
+                        "label": "a) 성명 Full Name in English",
+                        "label_en": "Emergency Name",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "emergency_country_of_residence",
+                        "label": "b) 거주국가 Country of Residence",
+                        "label_en": "Emergency Country Of Residence",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "emergency_phone",
+                        "label": "c) 전화번호 Telephone No.",
+                        "label_en": "Emergency Phone",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "emergency_relationship",
+                        "label": "d) 관계 Relationship to the appl",
+                        "label_en": "Emergency Relationship",
+                        "type": "text",
+                        "required": True
+                    },
+                ]
             },
             {
-                "data_key": "invitee_address",
-                "label": "피초청인 본국 주소",
-                "label_en": "Invitee Home Address",
-                "type": "text",
-                "placeholder": "예: 123 Main St, City, Country",
-                "required": True,
-                "section": "피초청인정보"
+                "target": "other_spouse",
+                "group_name": "배우자 인적사항",
+                "group_name_en": "Spouse Information",
+                "fields": [
+                    {
+                        "data_key": "spouse_surname",
+                        "label": "a) 성 Family Name (in English)",
+                        "label_en": "Spouse Surname",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "spouse_given_name",
+                        "label": "b) 명 Given Names (in English)",
+                        "label_en": "Spouse Given Name",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "spouse_birth_date",
+                        "label": "c) 생년월일 Date of Birth (yyyy/mm",
+                        "label_en": "Spouse Birth Date",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "spouse_nationality",
+                        "label": "d) 국적 Nationality",
+                        "label_en": "Spouse Nationality",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "spouse_address",
+                        "label": "e) 거주지 Residential Address",
+                        "label_en": "Spouse Address",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "spouse_phone",
+                        "label": "f) 연락처 Contact No.",
+                        "label_en": "Spouse Phone",
+                        "type": "text",
+                        "required": True
+                    },
+                ]
             },
             {
-                "data_key": "invitation_purpose",
-                "label": "초청 목적",
-                "label_en": "Invitation Purpose",
-                "type": "select",
-                "options": ["방문", "요양", "가족 돌봄", "기타"],
-                "required": True,
-                "section": "초청정보"
+                "target": "other_employer",
+                "group_name": "고용주/회사 정보",
+                "group_name_en": "Employer/Company Details",
+                "fields": [
+                    {
+                        "data_key": "employer_name",
+                        "label": "a) 회사/기관/학교명 Name of Company/I",
+                        "label_en": "Employer Name",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "employer_position",
+                        "label": "b) 직위/과정 Position/Course",
+                        "label_en": "Employer Position",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "employer_address",
+                        "label": "c) 회사/기관/학교 주소 Address of Comp",
+                        "label_en": "Employer Address",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "employer_phone",
+                        "label": "d) 전화번호 Telephone No.",
+                        "label_en": "Employer Phone",
+                        "type": "text",
+                        "required": True
+                    },
+                ]
             },
             {
-                "data_key": "stay_period",
-                "label": "예정 체류 기간",
-                "label_en": "Planned Stay Period",
-                "type": "text",
-                "placeholder": "예: 6개월",
-                "required": True,
-                "section": "초청정보"
+                "target": "other_family",
+                "group_name": "국내 체류 가족",
+                "group_name_en": "Family Staying in Korea",
+                "fields": [
+                    {
+                        "data_key": "family_korea_name",
+                        "label": "성명 Full name in English",
+                        "label_en": "Family Korea Name",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "family_korea_birth_date",
+                        "label": "생년월일 Date of Birth  (yyyy/mm/d",
+                        "label_en": "Family Korea Birth Date",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "family_korea_nationality",
+                        "label": "국적 Nationality",
+                        "label_en": "Family Korea Nationality",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "family_korea_relationship",
+                        "label": "관계 Relationship to the applica",
+                        "label_en": "Family Korea Relationship",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "companion_name",
+                        "label": "성명 Full name in English",
+                        "label_en": "Companion Name",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "companion_birth_date",
+                        "label": "생년월일 Date of Birth  (yyyy/mm/d",
+                        "label_en": "Companion Birth Date",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "companion_nationality",
+                        "label": "국적 Nationality",
+                        "label_en": "Companion Nationality",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "companion_relationship",
+                        "label": "관계 Relationship to the invitee",
+                        "label_en": "Companion Relationship",
+                        "type": "text",
+                        "required": True
+                    },
+                ]
             },
             {
-                "data_key": "inviter_income",
-                "label": "초청인 연 소득 (만원)",
-                "label_en": "Inviter Annual Income",
-                "type": "number",
-                "min_value": 0,
-                "required": True,
-                "section": "초청인재정"
-            },
-            {
-                "data_key": "inviter_assets",
-                "label": "초청인 자산 (만원)",
-                "label_en": "Inviter Assets",
-                "type": "number",
-                "min_value": 0,
-                "required": False,
-                "section": "초청인재정"
+                "target": "other_assistant",
+                "group_name": "서류 작성 도움 여부",
+                "group_name_en": "Assistance With This Form",
+                "fields": [
+                    {
+                        "data_key": "assistant_name",
+                        "label": "8.1 이 신청서를 작성하는데 다른 사람의 도움을 받았",
+                        "label_en": "Assistant Name",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "assistant_birth_date",
+                        "label": "생년월일 Date of Birth  (yyyy/mm/d",
+                        "label_en": "Assistant Birth Date",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "assistant_phone",
+                        "label": "연락처 Phone No.",
+                        "label_en": "Assistant Phone",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "assistant_relationship",
+                        "label": "관계 Relationship to  the applic",
+                        "label_en": "Assistant Relationship",
+                        "type": "text",
+                        "required": True
+                    },
+                ]
             },
         ]
     },
-    
-    # -----------------------------------------------------------------
-    # 시나리오 E: 전문 인력 (E-7)
-    # -----------------------------------------------------------------
     "E": {
         "scenario_name": "전문 인력",
+        "scenario_name_en": "Professional Worker",
         "visa_type": "E-7",
-        "fields": [
+        "field_groups": [
             {
-                "data_key": "company_name",
-                "label": "기업명",
-                "label_en": "Company Name",
-                "type": "text",
-                "placeholder": "예: 삼성전자",
-                "required": True,
-                "section": "기업정보"
+                "target": "self",
+                "group_name": "신청인 추가 정보",
+                "group_name_en": "Applicant Additional Info",
+                "fields": [
+                    {
+                        "data_key": "has_used_other_names",
+                        "label": "1.8 이전에 한국에 출입국하였을 때 다른 성명을 사용",
+                        "label_en": "Has Used Other Names",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "has_multiple_nationalities",
+                        "label": "1.9 복수 국적 여부 Is the the applia",
+                        "label_en": "Has Multiple Nationalities",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "passport_type_other",
+                        "label": "→ ‘기타’상세내용 If‘Other’, please p",
+                        "label_en": "Passport Type Other",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "passport_place_of_issue",
+                        "label": "2.4 발급지 Place of Issue",
+                        "label_en": "Passport Place Of Issue",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "has_other_passport",
+                        "label": "2.7 다른 여권 소지 여부 Does the the a",
+                        "label_en": "Has Other Passport",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "other_passport_type",
+                        "label": "a) 여권종류 Passport Type",
+                        "label_en": "Other Passport Type",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "other_passport_no",
+                        "label": "b) 여권번호 Passport No.",
+                        "label_en": "Other Passport No",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "other_passport_country",
+                        "label": "c) 발급국가 Country of Passport",
+                        "label_en": "Other Passport Country",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "other_passport_expiry",
+                        "label": "d) 기간만료일 Date of Expiry",
+                        "label_en": "Other Passport Expiry",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "home_country_address",
+                        "label": "3.1 본국 주소 Home Country Address",
+                        "label_en": "Home Country Address",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "phone_alt",
+                        "label": "3.4 일반전화 Telephone No.",
+                        "label_en": "Phone Alt",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "marital_status",
+                        "label": "4.1 현재 혼인사항 Current Marital St",
+                        "label_en": "Marital Status",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "has_children",
+                        "label": "4.3 자녀 유무 Does the applicant h",
+                        "label_en": "Has Children",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "children_count",
+                        "label": "자녀수 Number of children",
+                        "label_en": "Children Count",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "education_level",
+                        "label": "5.1 최종학력 What is the highest d",
+                        "label_en": "Education Level",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "education_other_details",
+                        "label": "→ ‘기타’선택 시 상세내용 기재 If‘Other’, ",
+                        "label_en": "Education Other Details",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "school_name",
+                        "label": "5.2 학교명 Name of School",
+                        "label_en": "School Name",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "school_location",
+                        "label": "5.3 학교 소재지 Location of School(",
+                        "label_en": "School Location",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "occupation_status",
+                        "label": "6.1 직업  Current personal circu",
+                        "label_en": "Occupation Status",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "occupation_other_details",
+                        "label": "→ ‘기타’선택 시 상세내용 기재 If‘Other’, ",
+                        "label_en": "Occupation Other Details",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "purpose_of_visit",
+                        "label": "7.1 입국목적 Purpose of Visit to K",
+                        "label_en": "Purpose Of Visit",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "purpose_other_details",
+                        "label": "→ ‘기타’선택 시 상세내용 기재 If ‘Other’ ",
+                        "label_en": "Purpose Other Details",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "intended_stay_period",
+                        "label": "7.2 체류예정기간 Intended Period of ",
+                        "label_en": "Intended Stay Period",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "intended_entry_date",
+                        "label": "7.3 입국예정일 Intended Date of Ent",
+                        "label_en": "Intended Entry Date",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "address_in_korea",
+                        "label": "7.4 체류예정지(호텔 포함) Address in Ko",
+                        "label_en": "Address In Korea",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "contact_in_korea_phone",
+                        "label": "7.5 한국 내 연락처 Contact No. in Ko",
+                        "label_en": "Contact In Korea Phone",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "past_korea_visits",
+                        "label": "7.6 과거 5년간 한국을 방문한 경력",
+                        "label_en": "Past Korea Visits",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "past_travel_country",
+                        "label": "국가명 Name of Country (in Englis",
+                        "label_en": "Past Travel Country",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "past_travel_purpose",
+                        "label": "방문목적 Purpose of Visit",
+                        "label_en": "Past Travel Purpose",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "past_travel_period",
+                        "label": "방문기간 Period of Stay  (yyyy/mm/",
+                        "label_en": "Past Travel Period",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "education_school_name",
+                        "label": "학 교 명",
+                        "label_en": "Education School Name",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "education_degree",
+                        "label": "학 위",
+                        "label_en": "Education Degree",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "education_major",
+                        "label": "전 공",
+                        "label_en": "Education Major",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "education_graduation_year",
+                        "label": "졸업년도",
+                        "label_en": "Education Graduation Year",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "experience_company",
+                        "label": "업 체 명",
+                        "label_en": "Experience Company",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "experience_period",
+                        "label": "재직기간",
+                        "label_en": "Experience Period",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "experience_field",
+                        "label": "근무분야",
+                        "label_en": "Experience Field",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "experience_position",
+                        "label": "직 위",
+                        "label_en": "Experience Position",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "employment_period",
+                        "label": "고용(예정)기간",
+                        "label_en": "Employment Period",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "sojourn_status",
+                        "label": "체류자격 (직종코드)",
+                        "label_en": "Sojourn Status",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "job_field",
+                        "label": "근무(예정)분야",
+                        "label_en": "Job Field",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "job_title",
+                        "label": "직 위",
+                        "label_en": "Job Title",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "workplace",
+                        "label": "근무(예정)지",
+                        "label_en": "Workplace",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "salary_and_benefits",
+                        "label": "급여 및 처우",
+                        "label_en": "Salary And Benefits",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "stay_purpose",
+                        "label": "체류목적",
+                        "label_en": "Stay Purpose",
+                        "type": "text",
+                        "required": True
+                    },
+                ]
             },
             {
-                "data_key": "company_business_no",
-                "label": "사업자등록번호",
-                "label_en": "Business Registration No.",
-                "type": "text",
-                "placeholder": "예: 123-45-67890",
-                "required": True,
-                "section": "기업정보"
+                "target": "other_emergency_contact",
+                "group_name": "비상시 연락처",
+                "group_name_en": "Emergency Contact",
+                "fields": [
+                    {
+                        "data_key": "emergency_name",
+                        "label": "a) 성명 Full Name in English",
+                        "label_en": "Emergency Name",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "emergency_country_of_residence",
+                        "label": "b) 거주국가 Country of Residence",
+                        "label_en": "Emergency Country Of Residence",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "emergency_phone",
+                        "label": "c) 전화번호 Telephone No.",
+                        "label_en": "Emergency Phone",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "emergency_relationship",
+                        "label": "d) 관계 Relationship to the appl",
+                        "label_en": "Emergency Relationship",
+                        "type": "text",
+                        "required": True
+                    },
+                ]
             },
             {
-                "data_key": "company_address",
-                "label": "기업 주소",
-                "label_en": "Company Address",
-                "type": "text",
-                "placeholder": "예: 경기도 수원시 영통구",
-                "required": True,
-                "section": "기업정보"
+                "target": "other_spouse",
+                "group_name": "배우자 인적사항",
+                "group_name_en": "Spouse Information",
+                "fields": [
+                    {
+                        "data_key": "spouse_surname",
+                        "label": "a) 성 Family Name (in English)",
+                        "label_en": "Spouse Surname",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "spouse_given_name",
+                        "label": "b) 명 Given Names (in English)",
+                        "label_en": "Spouse Given Name",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "spouse_birth_date",
+                        "label": "c) 생년월일 Date of Birth (yyyy/mm",
+                        "label_en": "Spouse Birth Date",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "spouse_nationality",
+                        "label": "d) 국적 Nationality",
+                        "label_en": "Spouse Nationality",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "spouse_address",
+                        "label": "e) 거주지 Residential Address",
+                        "label_en": "Spouse Address",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "spouse_phone",
+                        "label": "f) 연락처 Contact No.",
+                        "label_en": "Spouse Phone",
+                        "type": "text",
+                        "required": True
+                    },
+                ]
             },
             {
-                "data_key": "company_industry",
-                "label": "업종",
-                "label_en": "Industry",
-                "type": "text",
-                "placeholder": "예: 전자제품 제조",
-                "required": True,
-                "section": "기업정보"
+                "target": "other_employer",
+                "group_name": "고용주/회사 정보",
+                "group_name_en": "Employer/Company Details",
+                "fields": [
+                    {
+                        "data_key": "employer_name",
+                        "label": "a) 회사/기관/학교명 Name of Company/I",
+                        "label_en": "Employer Name",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "employer_position",
+                        "label": "b) 직위/과정 Position/Course",
+                        "label_en": "Employer Position",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "employer_address",
+                        "label": "c) 회사/기관/학교 주소 Address of Comp",
+                        "label_en": "Employer Address",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "employer_phone",
+                        "label": "d) 전화번호 Telephone No.",
+                        "label_en": "Employer Phone",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "employer_company_name",
+                        "label": "회사명",
+                        "label_en": "Employer Company Name",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "employer_business_registration_no",
+                        "label": "사업자등록번호 (법인등록번호)",
+                        "label_en": "Employer Business Registration No",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "employer_representative_name",
+                        "label": "대표자명",
+                        "label_en": "Employer Representative Name",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "employer_capital_amount",
+                        "label": "자본금",
+                        "label_en": "Employer Capital Amount",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "employer_total_sales",
+                        "label": "총매출액",
+                        "label_en": "Employer Total Sales",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "employer_total_liabilities",
+                        "label": "부채총액",
+                        "label_en": "Employer Total Liabilities",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "employer_operating_profit",
+                        "label": "영업이익",
+                        "label_en": "Employer Operating Profit",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "employer_num_employees",
+                        "label": "상시종업원수",
+                        "label_en": "Employer Num Employees",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "employer_num_foreign_professionals",
+                        "label": "외국전문인력수",
+                        "label_en": "Employer Num Foreign Professionals",
+                        "type": "text",
+                        "required": True
+                    },
+                ]
             },
             {
-                "data_key": "company_employees",
-                "label": "상시 근로자 수",
-                "label_en": "Number of Employees",
-                "type": "number",
-                "min_value": 1,
-                "required": True,
-                "section": "기업정보"
+                "target": "other_family",
+                "group_name": "국내 체류 가족",
+                "group_name_en": "Family Staying in Korea",
+                "fields": [
+                    {
+                        "data_key": "family_korea_name",
+                        "label": "성명 Full name in English",
+                        "label_en": "Family Korea Name",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "family_korea_birth_date",
+                        "label": "생년월일 Date of Birth  (yyyy/mm/d",
+                        "label_en": "Family Korea Birth Date",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "family_korea_nationality",
+                        "label": "국적 Nationality",
+                        "label_en": "Family Korea Nationality",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "family_korea_relationship",
+                        "label": "관계 Relationship to the applica",
+                        "label_en": "Family Korea Relationship",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "companion_name",
+                        "label": "성명 Full name in English",
+                        "label_en": "Companion Name",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "companion_birth_date",
+                        "label": "생년월일 Date of Birth  (yyyy/mm/d",
+                        "label_en": "Companion Birth Date",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "companion_nationality",
+                        "label": "국적 Nationality",
+                        "label_en": "Companion Nationality",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "companion_relationship",
+                        "label": "관계 Relationship to the invitee",
+                        "label_en": "Companion Relationship",
+                        "type": "text",
+                        "required": True
+                    },
+                ]
             },
             {
-                "data_key": "position_title",
-                "label": "채용 직위",
-                "label_en": "Position Title",
-                "type": "text",
-                "placeholder": "예: 소프트웨어 엔지니어",
-                "required": True,
-                "section": "채용정보"
+                "target": "other_assistant",
+                "group_name": "서류 작성 도움 여부",
+                "group_name_en": "Assistance With This Form",
+                "fields": [
+                    {
+                        "data_key": "assistant_name",
+                        "label": "8.1 이 신청서를 작성하는데 다른 사람의 도움을 받았",
+                        "label_en": "Assistant Name",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "assistant_birth_date",
+                        "label": "생년월일 Date of Birth  (yyyy/mm/d",
+                        "label_en": "Assistant Birth Date",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "assistant_phone",
+                        "label": "연락처 Phone No.",
+                        "label_en": "Assistant Phone",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "assistant_relationship",
+                        "label": "관계 Relationship to  the applic",
+                        "label_en": "Assistant Relationship",
+                        "type": "text",
+                        "required": True
+                    },
+                ]
             },
             {
-                "data_key": "position_duties",
-                "label": "담당 업무",
-                "label_en": "Job Duties",
-                "type": "textarea",
-                "placeholder": "예: AI 모델 개발 및 최적화",
-                "required": True,
-                "section": "채용정보"
+                "target": "other_inviter",
+                "group_name": "초청 정보",
+                "group_name_en": "Details of Invitation",
+                "fields": [
+                    {
+                        "data_key": "inviter_exists",
+                        "label": "9.1 초청인/초청회사 Is there anyone i",
+                        "label_en": "Inviter Exists",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "inviter_name",
+                        "label": "a) 초청인/초청회사명 Name of inviting ",
+                        "label_en": "Inviter Name",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "inviter_birth_or_business_no",
+                        "label": "b) 생년월일/사업자등록번호 Date of Birth ",
+                        "label_en": "Inviter Birth Or Business No",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "inviter_relationship",
+                        "label": "c) 관계 Relationship to the",
+                        "label_en": "Inviter Relationship",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "inviter_address",
+                        "label": "d) 주소 Address",
+                        "label_en": "Inviter Address",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "inviter_phone",
+                        "label": "e) 전화번호 Phone No.",
+                        "label_en": "Inviter Phone",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "application_date",
+                        "label": "신청일자 (년. 월. 일) DATE OF APPLICA",
+                        "label_en": "Application Date",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "inviter_applicant_name",
+                        "label": "신청인(초청인) 성명 NAME OF APPLICANT(",
+                        "label_en": "Inviter Applicant Name",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "inviter_signature",
+                        "label": "신청인(초청인) 서명(인) SIGNATURE(SEAL)",
+                        "label_en": "Inviter Signature",
+                        "type": "text",
+                        "required": True
+                    },
+                ]
             },
             {
-                "data_key": "annual_salary",
-                "label": "연봉 (만원)",
-                "label_en": "Annual Salary",
-                "type": "number",
-                "min_value": 0,
-                "required": True,
-                "section": "채용정보"
-            },
-            {
-                "data_key": "contract_period",
-                "label": "계약 기간",
-                "label_en": "Contract Period",
-                "type": "text",
-                "placeholder": "예: 2년",
-                "required": True,
-                "section": "채용정보"
-            },
-            {
-                "data_key": "foreigner_name",
-                "label": "외국인 성명",
-                "label_en": "Foreigner Name",
-                "type": "text",
-                "placeholder": "예: John Smith",
-                "required": True,
-                "section": "외국인정보"
-            },
-            {
-                "data_key": "foreigner_nationality",
-                "label": "외국인 국적",
-                "label_en": "Foreigner Nationality",
-                "type": "text",
-                "placeholder": "예: 미국",
-                "required": True,
-                "section": "외국인정보"
-            },
-            {
-                "data_key": "foreigner_education",
-                "label": "외국인 학력",
-                "label_en": "Foreigner Education",
-                "type": "text",
-                "placeholder": "예: MIT 컴퓨터공학 석사",
-                "required": True,
-                "section": "외국인정보"
-            },
-            {
-                "data_key": "foreigner_experience",
-                "label": "외국인 경력 (년)",
-                "label_en": "Foreigner Experience (years)",
-                "type": "number",
-                "min_value": 0,
-                "required": True,
-                "section": "외국인정보"
+                "target": "other_guarantor",
+                "group_name": "신원보증인",
+                "group_name_en": "Guarantor",
+                "fields": [
+                    {
+                        "data_key": "guarantor_name",
+                        "label": "성명",
+                        "label_en": "Guarantor Name",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_name_hanja",
+                        "label": "漢字",
+                        "label_en": "Guarantor Name Hanja",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_nationality",
+                        "label": "국적",
+                        "label_en": "Guarantor Nationality",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_gender",
+                        "label": "성별",
+                        "label_en": "Guarantor Gender",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_passport_or_birth",
+                        "label": "여권번호 또는 생년월일",
+                        "label_en": "Guarantor Passport Or Birth",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_phone",
+                        "label": "전화번호",
+                        "label_en": "Guarantor Phone",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_address",
+                        "label": "주소",
+                        "label_en": "Guarantor Address",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_relationship",
+                        "label": "피보증인과의 관계",
+                        "label_en": "Guarantor Relationship",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_employer",
+                        "label": "근무처",
+                        "label_en": "Guarantor Employer",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_position",
+                        "label": "직위",
+                        "label_en": "Guarantor Position",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_employer_address",
+                        "label": "근무처 주소",
+                        "label_en": "Guarantor Employer Address",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_note",
+                        "label": "비고",
+                        "label_en": "Guarantor Note",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_guarantee_period",
+                        "label": "나. 보증기간(보증기간의 최장기간은 4년으로 한다)",
+                        "label_en": "Guarantor Guarantee Period",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_signature_date",
+                        "label": "년              월           일장",
+                        "label_en": "Guarantor Signature Date",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_signature",
+                        "label": "(서명 또는 인)",
+                        "label_en": "Guarantor Signature",
+                        "type": "text",
+                        "required": True
+                    },
+                ]
             },
         ]
     },
-    
-    # -----------------------------------------------------------------
-    # 시나리오 F: 국적 귀화
-    # -----------------------------------------------------------------
     "F": {
         "scenario_name": "국적 귀화",
+        "scenario_name_en": "Naturalization",
         "visa_type": "귀화",
-        "fields": [
+        "field_groups": [
             {
-                "data_key": "korea_stay_years",
-                "label": "한국 거주 기간 (년)",
-                "label_en": "Years in Korea",
-                "type": "number",
-                "min_value": 0,
-                "required": True,
-                "section": "체류정보"
+                "target": "self",
+                "group_name": "신청인 인적사항",
+                "group_name_en": "Applicant Personal Information",
+                "fields": [
+                    {
+                        "data_key": "birth_place",
+                        "label": "출생지(국가 및 도시명)",
+                        "label_en": "Birth Place",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "full_name_en",
+                        "label": "성명(영문)",
+                        "label_en": "Full Name En",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "phone_home",
+                        "label": "(자택)",
+                        "label_en": "Phone Home",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "intended_registered_domicile",
+                        "label": "예정 등록기준지",
+                        "label_en": "Intended Registered Domicile",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "occupation",
+                        "label": "직업",
+                        "label_en": "Occupation",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "monthly_income",
+                        "label": "월 평균 소득액(최근 6개월간)",
+                        "label_en": "Monthly Income",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "last_year_income",
+                        "label": "전년도 소득액(세무서장 발행 소득금액증명원상 소득)",
+                        "label_en": "Last Year Income",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "real_estate_assets_amount",
+                        "label": "부동산(보증금 등) 만원",
+                        "label_en": "Real Estate Assets Amount",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "financial_assets_amount",
+                        "label": "금융재산 만원",
+                        "label_en": "Financial Assets Amount",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "offense_date",
+                        "label": "일자",
+                        "label_en": "Offense Date",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "offense_details",
+                        "label": "위반내용(죄명)",
+                        "label_en": "Offense Details",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "disposition_result",
+                        "label": "처분결과",
+                        "label_en": "Disposition Result",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "tax_arrears_amount",
+                        "label": "국세",
+                        "label_en": "Tax Arrears Amount",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "health_insurance_arrears_amount",
+                        "label": "건강보험료",
+                        "label_en": "Health Insurance Arrears Amount",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "oath_participation",
+                        "label": "국민선서의 내용을 확인하였으며, 국적증서수여식에 참석하",
+                        "label_en": "Oath Participation",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "law_compliance_agree",
+                        "label": "대한민국 국적 취득 후 대한민국의 헌법과 법률을 준수하",
+                        "label_en": "Law Compliance Agree",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "four_duties_ack",
+                        "label": "국민의 4대 의무",
+                        "label_en": "Four Duties Ack",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "disability_type",
+                        "label": "장애 종류",
+                        "label_en": "Disability Type",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "disability_grade",
+                        "label": "장애 구분",
+                        "label_en": "Disability Grade",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "disease_type",
+                        "label": "질병 종류",
+                        "label_en": "Disease Type",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "disease_status",
+                        "label": "질병 구분",
+                        "label_en": "Disease Status",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "award_name",
+                        "label": "수상명",
+                        "label_en": "Award Name",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "award_issuer",
+                        "label": "수여자",
+                        "label_en": "Award Issuer",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "license_name",
+                        "label": "자격(면허)명",
+                        "label_en": "License Name",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "license_grade",
+                        "label": "등급",
+                        "label_en": "License Grade",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "volunteer_activity",
+                        "label": "봉사활동",
+                        "label_en": "Volunteer Activity",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "community_activity",
+                        "label": "지역사회활동",
+                        "label_en": "Community Activity",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "organization_name",
+                        "label": "단체명",
+                        "label_en": "Organization Name",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "activity_period",
+                        "label": "활동기간",
+                        "label_en": "Activity Period",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "commendation_for_good_deed",
+                        "label": "선행으로 인한 훈장ㆍ표창 수여",
+                        "label_en": "Commendation For Good Deed",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "blood_donation_times",
+                        "label": "횟수",
+                        "label_en": "Blood Donation Times",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "signature_name",
+                        "label": "신청인 Applicant’s Name",
+                        "label_en": "Signature Name",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "stay_purpose",
+                        "label": "체류목적",
+                        "label_en": "Stay Purpose",
+                        "type": "text",
+                        "required": True
+                    },
+                ]
             },
             {
-                "data_key": "first_entry_date",
-                "label": "최초 입국일",
-                "label_en": "First Entry Date",
-                "type": "date",
-                "required": True,
-                "section": "체류정보"
+                "target": "other_family",
+                "group_name": "가족사항",
+                "group_name_en": "Family Members",
+                "fields": [
+                    {
+                        "data_key": "family_name",
+                        "label": "성명",
+                        "label_en": "Family Name",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "family_birth_date",
+                        "label": "생년월일",
+                        "label_en": "Family Birth Date",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "family_gender",
+                        "label": "성별",
+                        "label_en": "Family Gender",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "family_nationality",
+                        "label": "국적 (거주지)",
+                        "label_en": "Family Nationality",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "family_phone",
+                        "label": "연락처",
+                        "label_en": "Family Phone",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "family_former_korean_national",
+                        "label": "과거 한국국적 보유자",
+                        "label_en": "Family Former Korean National",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "family_dependent_application",
+                        "label": "수반취득 신청자",
+                        "label_en": "Family Dependent Application",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "child_nationality",
+                        "label": "현재 국적",
+                        "label_en": "Child Nationality",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "child_birth_place",
+                        "label": "출생지(국가 및 도시명)",
+                        "label_en": "Child Birth Place",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "child_name_kr",
+                        "label": "성명(한글)",
+                        "label_en": "Child Name Kr",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "child_gender",
+                        "label": "성별",
+                        "label_en": "Child Gender",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "child_name_en",
+                        "label": "성명(영문)",
+                        "label_en": "Child Name En",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "child_alien_registration_no",
+                        "label": "외국인등록번호",
+                        "label_en": "Child Alien Registration No",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "child_intended_registered_domicile",
+                        "label": "예정 등록기준지",
+                        "label_en": "Child Intended Registered Domicile",
+                        "type": "text",
+                        "required": True
+                    },
+                ]
             },
             {
-                "data_key": "current_visa_type",
-                "label": "현재 체류자격",
-                "label_en": "Current Visa Type",
-                "type": "text",
-                "placeholder": "예: F-2-7",
-                "required": True,
-                "section": "체류정보"
+                "target": "other_spouse",
+                "group_name": "배우자",
+                "group_name_en": "Spouse",
+                "fields": [
+                    {
+                        "data_key": "spouse_name",
+                        "label": "배우자",
+                        "label_en": "Spouse Name",
+                        "type": "text",
+                        "required": True
+                    },
+                ]
             },
             {
-                "data_key": "criminal_record",
-                "label": "범죄 이력",
-                "label_en": "Criminal Record",
-                "type": "select",
-                "options": ["없음", "있음"],
-                "required": True,
-                "section": "체류정보"
+                "target": "other_contact",
+                "group_name": "국내 연고자 또는 동거인",
+                "group_name_en": "Domestic Relative or Cohabitant",
+                "fields": [
+                    {
+                        "data_key": "contact_relation",
+                        "label": "관계",
+                        "label_en": "Contact Relation",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "contact_name",
+                        "label": "성명",
+                        "label_en": "Contact Name",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "contact_birth_date",
+                        "label": "생년월일",
+                        "label_en": "Contact Birth Date",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "contact_nationality",
+                        "label": "국적 (거주지)",
+                        "label_en": "Contact Nationality",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "contact_phone",
+                        "label": "연락처",
+                        "label_en": "Contact Phone",
+                        "type": "text",
+                        "required": True
+                    },
+                ]
             },
             {
-                "data_key": "korean_language_level",
-                "label": "한국어 능력",
-                "label_en": "Korean Language Level",
-                "type": "select",
-                "options": ["TOPIK 1급", "TOPIK 2급", "TOPIK 3급", "TOPIK 4급", "TOPIK 5급", "TOPIK 6급", "사회통합프로그램 이수"],
-                "required": True,
-                "section": "자격요건"
-            },
-            {
-                "data_key": "korean_spouse",
-                "label": "한국인 배우자 유무",
-                "label_en": "Korean Spouse",
-                "type": "select",
-                "options": ["있음", "없음"],
-                "required": True,
-                "section": "가족정보"
-            },
-            {
-                "data_key": "children_in_korea",
-                "label": "한국 내 자녀 수",
-                "label_en": "Children in Korea",
-                "type": "number",
-                "min_value": 0,
-                "required": False,
-                "section": "가족정보"
-            },
-            {
-                "data_key": "property_value",
-                "label": "보유 재산 (만원)",
-                "label_en": "Property Value",
-                "type": "number",
-                "min_value": 0,
-                "required": True,
-                "section": "재정정보"
-            },
-            {
-                "data_key": "annual_income",
-                "label": "연 소득 (만원)",
-                "label_en": "Annual Income",
-                "type": "number",
-                "min_value": 0,
-                "required": True,
-                "section": "재정정보"
+                "target": "other_guarantor",
+                "group_name": "신원보증인",
+                "group_name_en": "Guarantor",
+                "fields": [
+                    {
+                        "data_key": "guarantor_name",
+                        "label": "성명",
+                        "label_en": "Guarantor Name",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_name_hanja",
+                        "label": "漢字",
+                        "label_en": "Guarantor Name Hanja",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_nationality",
+                        "label": "국적",
+                        "label_en": "Guarantor Nationality",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_gender",
+                        "label": "성별",
+                        "label_en": "Guarantor Gender",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_passport_or_birth",
+                        "label": "여권번호 또는 생년월일",
+                        "label_en": "Guarantor Passport Or Birth",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_phone",
+                        "label": "전화번호",
+                        "label_en": "Guarantor Phone",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_address",
+                        "label": "주소",
+                        "label_en": "Guarantor Address",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_relationship",
+                        "label": "피보증인과의 관계",
+                        "label_en": "Guarantor Relationship",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_employer",
+                        "label": "근무처",
+                        "label_en": "Guarantor Employer",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_position",
+                        "label": "직위",
+                        "label_en": "Guarantor Position",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_employer_address",
+                        "label": "근무처 주소",
+                        "label_en": "Guarantor Employer Address",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_note",
+                        "label": "비고",
+                        "label_en": "Guarantor Note",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_guarantee_period",
+                        "label": "나. 보증기간(보증기간의 최장기간은 4년으로 한다)",
+                        "label_en": "Guarantor Guarantee Period",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_signature_date",
+                        "label": "년              월           일장",
+                        "label_en": "Guarantor Signature Date",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_signature",
+                        "label": "(서명 또는 인)",
+                        "label_en": "Guarantor Signature",
+                        "type": "text",
+                        "required": True
+                    },
+                ]
             },
         ]
     },
 }
 
-# =============================================================================
-# 📊 LAYER 3: Narrative Fields (서술형 - AI 검토)
-# =============================================================================
+# ======================================================================
+# 📊 LAYER 3: Narrative Fields (서술형, AI 검토)
+# ======================================================================
 
 LAYER3_NARRATIVE_FIELDS = {
-    # -----------------------------------------------------------------
-    # 시나리오 A: 구직 준비 (D-10)
-    # -----------------------------------------------------------------
     "A": {
         "scenario_name": "구직 준비",
+        "scenario_name_en": "Job Seeking",
         "visa_type": "D-10",
         "narrative_label": "월별 구직 활동 계획",
+        "narrative_label_en": "Monthly Job Search Plan",
         "fields": [
             {
-                "data_key": "plan_month_1",
+                "data_key": "job_search_plan_month1",
                 "label": "1개월차 계획",
                 "label_en": "1st Month Plan",
-                "hint": "첫 번째 달의 구직 활동 계획을 작성해주세요.",
-                "placeholder": "예: 이력서 및 자기소개서 작성, 잡코리아/사람인 등록, IT 기업 10곳 서류 지원",
+                "hint": "1번째 달의 구직 활동 계획을 상세히 작성해주세요.",
+                "hint_en": "1번째 달의 구직 활동 계획을 상세히 작성해주세요.",
+                "placeholder": "예: 이력서 작성, 기업 분석 및 지원 리스트업",
+                "placeholder_en": "",
                 "min_chars": 50,
                 "required": True,
-                "anchor_text": "1st month"
+                "anchor_text": "第一月 / 1st month"
             },
             {
-                "data_key": "plan_month_2",
+                "data_key": "job_search_plan_month2",
                 "label": "2개월차 계획",
-                "label_en": "2nd Month Plan",
-                "hint": "두 번째 달의 구직 활동 계획을 작성해주세요.",
-                "placeholder": "예: 면접 준비, 코딩테스트 대비, 추가 기업 지원",
+                "label_en": "第二月 / 2nd month",
+                "hint": "2번째 달의 활동 계획을 작성해주세요.",
+                "hint_en": "2번째 달의 활동 계획을 작성해주세요.",
+                "placeholder": "",
+                "placeholder_en": "",
                 "min_chars": 50,
                 "required": True,
-                "anchor_text": "2nd month"
+                "anchor_text": "第二月 / 2nd month"
             },
             {
-                "data_key": "plan_month_3",
+                "data_key": "job_search_plan_month3",
                 "label": "3개월차 계획",
-                "label_en": "3rd Month Plan",
-                "hint": "세 번째 달의 구직 활동 계획을 작성해주세요.",
-                "placeholder": "예: 1차 면접 참여, 피드백 반영 및 보완",
+                "label_en": "第三月 / 3rd month",
+                "hint": "3번째 달의 활동 계획을 작성해주세요.",
+                "hint_en": "3번째 달의 활동 계획을 작성해주세요.",
+                "placeholder": "",
+                "placeholder_en": "",
                 "min_chars": 50,
                 "required": True,
-                "anchor_text": "3rd month"
+                "anchor_text": "第三月 / 3rd month"
             },
             {
-                "data_key": "plan_month_4",
+                "data_key": "job_search_plan_month4",
                 "label": "4개월차 계획",
-                "label_en": "4th Month Plan",
-                "hint": "네 번째 달의 구직 활동 계획을 작성해주세요.",
-                "placeholder": "예: 최종 면접 준비, 연봉 협상 준비",
+                "label_en": "第四月 / 4th month",
+                "hint": "4번째 달의 활동 계획을 작성해주세요.",
+                "hint_en": "4번째 달의 활동 계획을 작성해주세요.",
+                "placeholder": "",
+                "placeholder_en": "",
                 "min_chars": 50,
                 "required": True,
-                "anchor_text": "4th month"
+                "anchor_text": "第四月 / 4th month"
             },
             {
-                "data_key": "plan_month_5",
+                "data_key": "job_search_plan_month5",
                 "label": "5개월차 계획",
-                "label_en": "5th Month Plan",
-                "hint": "다섯 번째 달의 구직 활동 계획을 작성해주세요.",
-                "placeholder": "예: 취업 확정 시 비자 변경 준비, 미확정 시 추가 지원",
+                "label_en": "第五月 / 5th month",
+                "hint": "5번째 달의 활동 계획을 작성해주세요.",
+                "hint_en": "5번째 달의 활동 계획을 작성해주세요.",
+                "placeholder": "",
+                "placeholder_en": "",
                 "min_chars": 50,
                 "required": True,
-                "anchor_text": "5th month"
+                "anchor_text": "第五月 / 5th month"
             },
             {
-                "data_key": "plan_month_6",
+                "data_key": "job_search_plan_month6",
                 "label": "6개월차 계획",
-                "label_en": "6th Month Plan",
-                "hint": "여섯 번째 달의 구직 활동 계획을 작성해주세요.",
-                "placeholder": "예: 입사 준비 또는 비자 연장 준비",
+                "label_en": "第六月 /6th month",
+                "hint": "6번째 달의 활동 계획을 작성해주세요.",
+                "hint_en": "6번째 달의 활동 계획을 작성해주세요.",
+                "placeholder": "",
+                "placeholder_en": "",
                 "min_chars": 50,
                 "required": True,
-                "anchor_text": "6th month"
+                "anchor_text": "第六月 /6th month"
             },
         ],
-        "validation_prompt": """
-            당신은 D-10 비자 구직활동계획서 검토 전문가입니다.
-            다음 내용을 검토하고 문제점과 개선점을 제안하세요:
-            
-            검토 기준:
-            1. 구체적인 월별 계획이 있는가?
-            2. 목표 기업/산업이 명확한가?
-            3. "취업 확정", "내정" 등 D-10에 부적합한 표현이 없는가?
-            4. 실현 가능한 계획인가?
-            
-            문제가 있으면 구체적인 수정 제안을 해주세요.
-        """,
-        "danger_patterns": ["취업 확정", "내정", "채용 확정", "이미 취업", "입사 예정"]
+        "validation_prompt": """구체적인 월별 계획과 실현 가능성을 중점적으로 검토하세요.""",
+        "danger_patterns": ['취업 확정', '내정', '채용 확정']
     },
-    
-    # -----------------------------------------------------------------
-    # 시나리오 B: 아르바이트 (시간제 취업)
-    # -----------------------------------------------------------------
-    "B": {
-        "scenario_name": "아르바이트",
-        "visa_type": "시간제 취업",
-        "narrative_label": "업무 내용 및 근무 계획",
-        "fields": [
-            {
-                "data_key": "work_description",
-                "label": "담당 업무 내용",
-                "label_en": "Job Description",
-                "hint": "맡게 될 업무를 구체적으로 설명해주세요. (단순 노무가 아님을 증명)",
-                "placeholder": "예: 카페에서 바리스타로 근무하며 음료 제조, 고객 응대, 재고 관리 등의 업무를 담당합니다...",
-                "min_chars": 100,
-                "required": True,
-                "anchor_text": "업무 내용"
-            },
-            {
-                "data_key": "work_schedule",
-                "label": "근무 일정",
-                "label_en": "Work Schedule",
-                "hint": "주당 근무 시간과 요일별 스케줄을 작성해주세요. (주 20시간 이내)",
-                "placeholder": "예: 월, 수, 금 오후 2시~6시 (주 12시간) 학업에 지장이 없는 시간대에 근무합니다...",
-                "min_chars": 80,
-                "required": True,
-                "anchor_text": "근무 일정"
-            },
-            {
-                "data_key": "study_balance",
-                "label": "학업과의 병행 계획",
-                "label_en": "Study Balance Plan",
-                "hint": "아르바이트와 학업을 어떻게 병행할 것인지 설명해주세요.",
-                "placeholder": "예: 수업이 없는 시간대에만 근무하여 학업에 집중하면서도...",
-                "min_chars": 80,
-                "required": False,
-                "anchor_text": "병행 계획"
-            },
-        ],
-        "validation_prompt": """
-            당신은 시간제 취업 허가 서류 검토 전문가입니다.
-            다음 내용을 검토하세요:
-            
-            검토 기준:
-            1. 주 20시간 이내인가? (학기중)
-            2. 최저임금 이상인가?
-            3. 유흥업소 등 금지 업종이 아닌가?
-            4. 학업에 지장이 없는 시간대인가?
-            
-            문제가 있으면 구체적인 수정 제안을 해주세요.
-        """,
-        "danger_patterns": ["풀타임", "40시간", "주 40", "전일제", "야간", "유흥"]
-    },
-    
-    # -----------------------------------------------------------------
-    # 시나리오 C: 결혼 이민 (F-6)
-    # -----------------------------------------------------------------
     "C": {
         "scenario_name": "결혼 이민",
+        "scenario_name_en": "Marriage Immigration",
         "visa_type": "F-6",
-        "narrative_label": "교제 과정 및 결혼 배경",
+        "narrative_label": "결혼 배경 진술",
+        "narrative_label_en": "Marriage Background",
         "fields": [
             {
-                "data_key": "first_meeting",
-                "label": "첫 만남과 교제 과정",
-                "label_en": "First Meeting & Dating",
-                "hint": "배우자와 처음 만난 계기와 교제 과정을 진솔하게 작성해주세요.",
-                "placeholder": "예: 2022년 3월 친구의 소개로 처음 만났습니다. 첫 만남은 서울 종로구의 한 카페에서...",
-                "min_chars": 200,
+                "data_key": "other_names_explanation",
+                "label": "1.4 과거에 다른 이름을 사용하였던 적이 있습니까?",
+                "label_en": "1.4 과거에 다른 이름을 사용하였던 적이 있습니까?",
+                "hint": "1.4 과거에 다른 이름을 사용하였던 적이 있습니까?",
+                "hint_en": "1.4 과거에 다른 이름을 사용하였던 적이 있습니까?",
+                "placeholder": "",
+                "placeholder_en": "",
+                "min_chars": 50,
                 "required": True,
-                "anchor_text": "첫 만남"
+                "anchor_text": "1.4 과거에 다른 이름을 사용하였던 적이 있습니까?"
             },
             {
-                "data_key": "marriage_decision",
-                "label": "결혼 결심 계기",
-                "label_en": "Marriage Decision",
-                "hint": "결혼을 결심하게 된 구체적인 계기나 에피소드를 작성해주세요.",
-                "placeholder": "예: 1년간의 교제 후, 서로의 가치관과 미래 계획이 일치한다는 것을 확인하고...",
-                "min_chars": 150,
+                "data_key": "children_from_previous_marriage_details",
+                "label": "2.4 신청인은 과거 혼인관계에서 출생한 자녀가 있습니까?",
+                "label_en": "2.4 신청인은 과거 혼인관계에서 출생한 자녀가 있습니까?",
+                "hint": "2.4 신청인은 과거 혼인관계에서 출생한 자녀가 있습니까?",
+                "hint_en": "2.4 신청인은 과거 혼인관계에서 출생한 자녀가 있습니까?",
+                "placeholder": "",
+                "placeholder_en": "",
+                "min_chars": 50,
                 "required": True,
-                "anchor_text": "결혼 결심"
+                "anchor_text": "2.4 신청인은 과거 혼인관계에서 출생한 자녀가 있습니까?"
             },
             {
-                "data_key": "future_plan",
-                "label": "결혼 후 계획",
-                "label_en": "Future Plan",
-                "hint": "결혼 후 한국에서의 생활 계획을 작성해주세요.",
-                "placeholder": "예: 배우자와 함께 서울에서 거주하며, 한국어 공부를 계속하고...",
-                "min_chars": 100,
+                "data_key": "immigration_issues_details",
+                "label": "3.2 과거 한국 정부로부터 입국거부, 입국금지되거나 강제퇴거 또는 출국명령을 받은 적이",
+                "label_en": "3.2 과거 한국 정부로부터 입국거부, 입국금지되거나 강제퇴거 또는 출국명령을 받은 적이",
+                "hint": "3.2 과거 한국 정부로부터 입국거부, 입국금지되거나 강제퇴거 또는 출국명령을 받은 적이",
+                "hint_en": "3.2 과거 한국 정부로부터 입국거부, 입국금지되거나 강제퇴거 또는 출국명령을 받은 적이",
+                "placeholder": "",
+                "placeholder_en": "",
+                "min_chars": 50,
                 "required": True,
-                "anchor_text": "결혼 후 계획"
+                "anchor_text": "3.2 과거 한국 정부로부터 입국거부, 입국금지되거나 강제퇴거 또는 출국명령을 받은 적이"
             },
             {
-                "data_key": "family_approval",
-                "label": "양가 부모님 반응",
-                "label_en": "Family Approval",
-                "hint": "양가 부모님의 결혼에 대한 반응과 만남 과정을 작성해주세요.",
-                "placeholder": "예: 2023년 설날에 배우자의 부모님을 처음 뵙고 인사드렸습니다...",
-                "min_chars": 100,
-                "required": False,
-                "anchor_text": "양가 반응"
+                "data_key": "assistance_details",
+                "label": "4.1 이 초청장을 작성하는데 다른 사람의 도움을 받았습니까?",
+                "label_en": "4.1 이 초청장을 작성하는데 다른 사람의 도움을 받았습니까?",
+                "hint": "4.1 이 초청장을 작성하는데 다른 사람의 도움을 받았습니까?",
+                "hint_en": "4.1 이 초청장을 작성하는데 다른 사람의 도움을 받았습니까?",
+                "placeholder": "",
+                "placeholder_en": "",
+                "min_chars": 50,
+                "required": True,
+                "anchor_text": "4.1 이 초청장을 작성하는데 다른 사람의 도움을 받았습니까?"
             },
         ],
-        "validation_prompt": """
-            당신은 F-6 결혼이민 비자 서류 검토 전문가입니다.
-            다음 결혼배경 진술 내용을 검토하세요:
-            
-            검토 기준:
-            1. 시간순으로 논리적인가?
-            2. 구체적인 에피소드가 있는가?
-            3. "위장 결혼", "돈을 받고" 등 의심 표현이 없는가?
-            4. 진정성이 느껴지는가?
-            
-            문제가 있으면 수정 제안을 해주세요.
-            위장결혼 의심 표현이 있으면 반드시 경고하세요.
-        """,
-        "danger_patterns": ["돈을 받고", "위장", "계약 결혼", "비자 때문에", "돈을 벌기 위해", "가짜"]
+        "validation_prompt": """내용의 사실 관계와 논리적 흐름을 검토하세요.""",
+        "danger_patterns": ['허위', '거짓', '불법']
     },
-    
-    # -----------------------------------------------------------------
-    # 시나리오 D: 가족 초청 (F-1-5)
-    # -----------------------------------------------------------------
     "D": {
         "scenario_name": "가족 초청",
+        "scenario_name_en": "Family Invitation",
         "visa_type": "F-1-5",
-        "narrative_label": "초청 사유 및 계획",
+        "narrative_label": "초청 사유",
+        "narrative_label_en": "Narrative Input",
         "fields": [
             {
-                "data_key": "invitation_reason",
-                "label": "초청 사유",
-                "label_en": "Invitation Reason",
-                "hint": "부모님/가족을 초청해야 하는 구체적인 사유를 작성해주세요.",
-                "placeholder": "예: 어머니의 건강이 좋지 않아 한국에서 함께 지내며 돌봐드리고자 합니다...",
-                "min_chars": 150,
+                "data_key": "inviter_activity_status",
+                "label": "3.2.1. 초청인과 배우자가 직장생활 등 외부활동을 하고 있는지 기재하시기 바랍니다(외부",
+                "label_en": "3.2.1. 초청인과 배우자가 직장생활 등 외부활동을 하고 있는지 기재하시기 바랍니다(외부",
+                "hint": "3.2.1. 초청인과 배우자가 직장생활 등 외부활동을 하고 있는지 기재하시기 바랍니다(외부",
+                "hint_en": "3.2.1. 초청인과 배우자가 직장생활 등 외부활동을 하고 있는지 기재하시기 바랍니다(외부",
+                "placeholder": "",
+                "placeholder_en": "",
+                "min_chars": 50,
                 "required": True,
-                "anchor_text": "초청 사유"
+                "anchor_text": "3.2.1. 초청인과 배우자가 직장생활 등 외부활동을 하고 있는지 기재하시기 바랍니다(외부"
             },
             {
-                "data_key": "stay_plan",
-                "label": "체류 중 계획",
-                "label_en": "Stay Plan",
-                "hint": "초청 기간 동안의 구체적인 생활 계획을 작성해주세요.",
-                "placeholder": "예: 저의 집에서 함께 거주하며, 정기적으로 병원 검진을 받고...",
-                "min_chars": 100,
+                "data_key": "current_caregiving_status",
+                "label": "3.2.2. 현재 누가 어떤 방식으로 자녀를 양육(중증질환 등이 있는 가족 간병)하고 있는",
+                "label_en": "3.2.2. 현재 누가 어떤 방식으로 자녀를 양육(중증질환 등이 있는 가족 간병)하고 있는",
+                "hint": "3.2.2. 현재 누가 어떤 방식으로 자녀를 양육(중증질환 등이 있는 가족 간병)하고 있는",
+                "hint_en": "3.2.2. 현재 누가 어떤 방식으로 자녀를 양육(중증질환 등이 있는 가족 간병)하고 있는",
+                "placeholder": "",
+                "placeholder_en": "",
+                "min_chars": 50,
                 "required": True,
-                "anchor_text": "체류 계획"
+                "anchor_text": "3.2.2. 현재 누가 어떤 방식으로 자녀를 양육(중증질환 등이 있는 가족 간병)하고 있는"
             },
             {
-                "data_key": "financial_support",
-                "label": "재정 지원 계획",
-                "label_en": "Financial Support",
-                "hint": "체류 기간 동안의 재정적 지원 계획을 설명해주세요.",
-                "placeholder": "예: 월 급여 350만원 중 100만원을 생활비로 지원하고...",
-                "min_chars": 80,
+                "data_key": "invitee_expected_role",
+                "label": "3.2.3. 피초청인이 입국하면 가정 내에서 어떤 역할을 맡게 될 것인지 기재하시기 바랍니",
+                "label_en": "3.2.3. 피초청인이 입국하면 가정 내에서 어떤 역할을 맡게 될 것인지 기재하시기 바랍니",
+                "hint": "3.2.3. 피초청인이 입국하면 가정 내에서 어떤 역할을 맡게 될 것인지 기재하시기 바랍니",
+                "hint_en": "3.2.3. 피초청인이 입국하면 가정 내에서 어떤 역할을 맡게 될 것인지 기재하시기 바랍니",
+                "placeholder": "",
+                "placeholder_en": "",
+                "min_chars": 50,
                 "required": True,
-                "anchor_text": "재정 지원"
+                "anchor_text": "3.2.3. 피초청인이 입국하면 가정 내에서 어떤 역할을 맡게 될 것인지 기재하시기 바랍니"
+            },
+            {
+                "data_key": "invitee_support_plan",
+                "label": "3.3 위 초청 목적(사유)와 관련하여 피초청인(사증발급 신청인)이 입국하여 국내에 체류해",
+                "label_en": "3.3 위 초청 목적(사유)와 관련하여 피초청인(사증발급 신청인)이 입국하여 국내에 체류해",
+                "hint": "3.3 위 초청 목적(사유)와 관련하여 피초청인(사증발급 신청인)이 입국하여 국내에 체류해",
+                "hint_en": "3.3 위 초청 목적(사유)와 관련하여 피초청인(사증발급 신청인)이 입국하여 국내에 체류해",
+                "placeholder": "",
+                "placeholder_en": "",
+                "min_chars": 50,
+                "required": True,
+                "anchor_text": "3.3 위 초청 목적(사유)와 관련하여 피초청인(사증발급 신청인)이 입국하여 국내에 체류해"
+            },
+            {
+                "data_key": "additional_info",
+                "label": "‣ 이번 초청 건과 관련하여 사증발급 심사에 고려할 그 밖의 정보가 있다면 아래에 기재하시",
+                "label_en": "‣ 이번 초청 건과 관련하여 사증발급 심사에 고려할 그 밖의 정보가 있다면 아래에 기재하시",
+                "hint": "‣ 이번 초청 건과 관련하여 사증발급 심사에 고려할 그 밖의 정보가 있다면 아래에 기재하시",
+                "hint_en": "‣ 이번 초청 건과 관련하여 사증발급 심사에 고려할 그 밖의 정보가 있다면 아래에 기재하시",
+                "placeholder": "",
+                "placeholder_en": "",
+                "min_chars": 50,
+                "required": True,
+                "anchor_text": "‣ 이번 초청 건과 관련하여 사증발급 심사에 고려할 그 밖의 정보가 있다면 아래에 기재하시"
             },
         ],
-        "validation_prompt": """
-            당신은 가족초청 비자 서류 검토 전문가입니다.
-            다음 초청 사유를 검토하세요:
-            
-            검토 기준:
-            1. 인도적 사유가 명확한가?
-            2. 불법 취업 의도가 느껴지지 않는가?
-            3. 경제적 부양 능력이 증명되는가?
-            4. 체류 기간이 합리적인가?
-            
-            문제가 있으면 수정 제안을 해주세요.
-        """,
-        "danger_patterns": ["취업하러", "일하러", "돈 벌러", "불법", "취업 알선"]
+        "validation_prompt": """내용의 사실 관계와 논리적 흐름을 검토하세요.""",
+        "danger_patterns": ['허위', '거짓', '불법']
     },
-    
-    # -----------------------------------------------------------------
-    # 시나리오 E: 전문 인력 (E-7)
-    # -----------------------------------------------------------------
     "E": {
         "scenario_name": "전문 인력",
+        "scenario_name_en": "Professional Worker",
         "visa_type": "E-7",
-        "narrative_label": "채용 필요성 및 기대 효과",
+        "narrative_label": "서술형 작성",
+        "narrative_label_en": "Narrative Input",
         "fields": [
             {
-                "data_key": "hiring_reason",
-                "label": "채용 필요성",
-                "label_en": "Hiring Necessity",
-                "hint": "해당 외국인 인력을 채용해야 하는 구체적인 이유를 작성해주세요.",
-                "placeholder": "예: 당사는 베트남 시장 진출을 위해 베트남어 원어민이면서 IT 개발 역량을 갖춘 인력이 필요합니다...",
-                "min_chars": 150,
+                "data_key": "employer_company_intro",
+                "label": "회사 및 사업(업무) 소개",
+                "label_en": "회사 및 사업(업무) 소개",
+                "hint": "회사 및 사업(업무) 소개",
+                "hint_en": "회사 및 사업(업무) 소개",
+                "placeholder": "",
+                "placeholder_en": "",
+                "min_chars": 50,
                 "required": True,
-                "anchor_text": "채용 필요성"
+                "anchor_text": "회사 및 사업(업무) 소개"
             },
             {
-                "data_key": "job_duties",
-                "label": "담당 업무 상세",
-                "label_en": "Job Duties Detail",
-                "hint": "담당하게 될 업무의 전문성과 구체적인 내용을 작성해주세요.",
-                "placeholder": "예: 베트남 현지 고객사와의 기술 미팅 통역, 현지화 소프트웨어 개발...",
-                "min_chars": 150,
+                "data_key": "employer_employment_reason",
+                "label": "1) 고용사유 (※ 외국인력 도입 업무와 관련한 전문인력부족 현황, 국내인력 채용노력 및 ",
+                "label_en": "1) 고용사유 (※ 외국인력 도입 업무와 관련한 전문인력부족 현황, 국내인력 채용노력 및 ",
+                "hint": "1) 고용사유 (※ 외국인력 도입 업무와 관련한 전문인력부족 현황, 국내인력 채용노력 및 ",
+                "hint_en": "1) 고용사유 (※ 외국인력 도입 업무와 관련한 전문인력부족 현황, 국내인력 채용노력 및 ",
+                "placeholder": "",
+                "placeholder_en": "",
+                "min_chars": 50,
                 "required": True,
-                "anchor_text": "담당 업무"
+                "anchor_text": "1) 고용사유 (※ 외국인력 도입 업무와 관련한 전문인력부족 현황, 국내인력 채용노력 및 "
             },
             {
-                "data_key": "expected_contribution",
-                "label": "기대 효과",
-                "label_en": "Expected Contribution",
-                "hint": "채용으로 인한 회사 및 국가 경제에 대한 기대 효과를 작성해주세요.",
-                "placeholder": "예: 베트남 시장 매출 30% 증가 예상, 양국 간 기술 교류 활성화...",
-                "min_chars": 100,
-                "required": False,
-                "anchor_text": "기대 효과"
+                "data_key": "employer_tech_import_effect",
+                "label": "2) 기술도입 및 전문외국인력고용 효과  (※ 도입기술 분야, 기술 내용, 희소성, 전문성",
+                "label_en": "2) 기술도입 및 전문외국인력고용 효과  (※ 도입기술 분야, 기술 내용, 희소성, 전문성",
+                "hint": "2) 기술도입 및 전문외국인력고용 효과  (※ 도입기술 분야, 기술 내용, 희소성, 전문성",
+                "hint_en": "2) 기술도입 및 전문외국인력고용 효과  (※ 도입기술 분야, 기술 내용, 희소성, 전문성",
+                "placeholder": "",
+                "placeholder_en": "",
+                "min_chars": 50,
+                "required": True,
+                "anchor_text": "2) 기술도입 및 전문외국인력고용 효과  (※ 도입기술 분야, 기술 내용, 희소성, 전문성"
+            },
+            {
+                "data_key": "employer_utilization_plan",
+                "label": "3) 활용계획",
+                "label_en": "3) 활용계획",
+                "hint": "3) 활용계획",
+                "hint_en": "3) 활용계획",
+                "placeholder": "",
+                "placeholder_en": "",
+                "min_chars": 50,
+                "required": True,
+                "anchor_text": "3) 활용계획"
+            },
+            {
+                "data_key": "employer_other_notes",
+                "label": "4) 기타사항",
+                "label_en": "4) 기타사항",
+                "hint": "4) 기타사항",
+                "hint_en": "4) 기타사항",
+                "placeholder": "",
+                "placeholder_en": "",
+                "min_chars": 50,
+                "required": True,
+                "anchor_text": "4) 기타사항"
             },
         ],
-        "validation_prompt": """
-            당신은 E-7 전문인력 비자 서류 검토 전문가입니다.
-            다음 고용활용계획서 내용을 검토하세요:
-            
-            검토 기준:
-            1. 직무가 단순 노무가 아닌가?
-            2. 해당 분야 전문성이 필요한가?
-            3. 국내 인력으로 대체 불가한가?
-            4. 급여가 적정 수준인가?
-            
-            문제가 있으면 수정 제안을 해주세요.
-            단순 노무 직무로 보이면 반드시 경고하세요.
-        """,
-        "danger_patterns": ["단순 노무", "청소", "설거지", "포장", "배달", "공장"]
-    },
-    
-    # -----------------------------------------------------------------
-    # 시나리오 F: 국적 귀화
-    # -----------------------------------------------------------------
-    "F": {
-        "scenario_name": "국적 귀화",
-        "visa_type": "귀화",
-        "narrative_label": "귀화 동기 및 사회 기여 계획",
-        "fields": [
-            {
-                "data_key": "naturalization_reason",
-                "label": "귀화 동기",
-                "label_en": "Naturalization Motivation",
-                "hint": "한국 국적을 취득하고자 하는 동기를 진솔하게 작성해주세요.",
-                "placeholder": "예: 한국에서 15년간 생활하며 이곳이 제 삶의 터전이 되었습니다...",
-                "min_chars": 200,
-                "required": True,
-                "anchor_text": "귀화 동기"
-            },
-            {
-                "data_key": "korea_adaptation",
-                "label": "한국 사회 적응 과정",
-                "label_en": "Korea Adaptation",
-                "hint": "한국 사회에 어떻게 적응해왔는지 구체적으로 작성해주세요.",
-                "placeholder": "예: 처음 한국에 왔을 때 언어와 문화의 차이로 어려움이 있었지만...",
-                "min_chars": 150,
-                "required": True,
-                "anchor_text": "적응 과정"
-            },
-            {
-                "data_key": "contribution_plan",
-                "label": "사회 기여 계획",
-                "label_en": "Contribution Plan",
-                "hint": "한국 사회에 어떻게 기여할 계획인지 작성해주세요.",
-                "placeholder": "예: 다문화 가정 지원 봉사활동에 참여하고, 제 경험을 바탕으로...",
-                "min_chars": 100,
-                "required": True,
-                "anchor_text": "기여 계획"
-            },
-        ],
-        "validation_prompt": """
-            당신은 귀화 서류 검토 전문가입니다.
-            다음 귀화동기서 내용을 검토하세요:
-            
-            검토 기준:
-            1. 한국에 대한 진정한 애정이 느껴지는가?
-            2. 구체적인 사회 기여 계획이 있는가?
-            3. 장기 거주 의지가 명확한가?
-            4. 한국 문화에 대한 이해가 있는가?
-            
-            문제가 있으면 수정 제안을 해주세요.
-        """,
-        "danger_patterns": ["한국이 싫", "빨리 떠나", "다른 나라", "임시", "잠시"]
+        "validation_prompt": """내용의 사실 관계와 논리적 흐름을 검토하세요.""",
+        "danger_patterns": ['허위', '거짓', '불법']
     },
 }
 
-# =============================================================================
-# 📊 시나리오 기본 정보
-# =============================================================================
+
+# ======================================================================
+# 📊 시나리오 정의
+# ======================================================================
 
 @dataclass
 class Scenario:
+    """시나리오 정의 클래스"""
     id: str
     name: str
     name_en: str
     visa_type: str
     icon: str
     description: str
-    track: str  # high_volume, high_margin, recurring
+    description_en: str
+    track: str
     required_docs: List[str]
     price: float = 9.99
 
@@ -1195,8 +4053,9 @@ SCENARIOS: Dict[str, Scenario] = {
         visa_type="D-10",
         icon="💼",
         description="구직 활동을 위한 비자 연장 및 체류자격 변경",
+        description_en="Visa extension and status change for job seeking activities",
         track="high_volume",
-        required_docs=["통합신청서", "구직활동계획서", "신원보증서"],
+        required_docs=['통합신청서', '구직활동계획서', '신원보증서'],
         price=9.99
     ),
     "B": Scenario(
@@ -1206,8 +4065,9 @@ SCENARIOS: Dict[str, Scenario] = {
         visa_type="시간제 취업",
         icon="⏰",
         description="유학생/연수생 시간제 취업 허가 신청",
+        description_en="Part-time work permit application for students",
         track="high_volume",
-        required_docs=["시간제취업 확인서", "표준근로계약서", "요건 준수 확인서", "통합신청서", "사업자등록증 사본"],
+        required_docs=['통합신청서', '시간제취업확인서', '신원보증서'],
         price=9.99
     ),
     "C": Scenario(
@@ -1217,8 +4077,9 @@ SCENARIOS: Dict[str, Scenario] = {
         visa_type="F-6",
         icon="💍",
         description="한국인 배우자와의 결혼을 통한 비자 신청",
+        description_en="Visa application through marriage with Korean spouse",
         track="high_margin",
-        required_docs=["통합신청서", "결혼배경 진술서", "배우자 초청장", "신원보증서", "소득요건 면제신청서"],
+        required_docs=['통합신청서', '결혼배경진술서', '외국인배우자초청장', '신원보증서'],
         price=19.99
     ),
     "D": Scenario(
@@ -1228,8 +4089,9 @@ SCENARIOS: Dict[str, Scenario] = {
         visa_type="F-1-5",
         icon="👨‍👩‍👧",
         description="부모님 또는 가족을 한국으로 초청",
+        description_en="Inviting parents or family members to Korea",
         track="high_margin",
-        required_docs=["가족 초청장", "불법취업 방지 서약서", "신원보증서", "사증발급인정신청서"],
+        required_docs=['가족초청장', '불법체류취업방지서약서', '신원보증서', '사증발급인정신청서'],
         price=19.99
     ),
     "E": Scenario(
@@ -1239,8 +4101,9 @@ SCENARIOS: Dict[str, Scenario] = {
         visa_type="E-7",
         icon="🎓",
         description="특정 분야 전문 인력 채용을 위한 비자 신청",
+        description_en="Visa application for hiring professional workers",
         track="recurring",
-        required_docs=["사증발급인정신청서", "고용활용계획서", "신원보증서"],
+        required_docs=['사증발급인정신청서', '고용사유서', '신원보증서'],
         price=29.99
     ),
     "F": Scenario(
@@ -1250,15 +4113,53 @@ SCENARIOS: Dict[str, Scenario] = {
         visa_type="귀화",
         icon="🏛️",
         description="대한민국 국적 취득을 위한 귀화 신청",
+        description_en="Naturalization application for Korean citizenship",
         track="recurring",
-        required_docs=["귀화허가신청서", "귀화동기서", "귀화추천서", "가족관계통보서"],
+        required_docs=['귀화허가신청서', '신원보증서'],
         price=49.99
     ),
 }
 
-# =============================================================================
+# ======================================================================
+# 유틸리티 함수
+# ======================================================================
+
+def get_layer1_fields() -> List[Dict]:
+    """Layer 1 (본인 정보) 필드 목록 반환"""
+    return LAYER1_UNIVERSAL_FIELDS
+
+
+def get_layer2_field_groups(scenario_id: str) -> List[Dict]:
+    """시나리오별 Layer 2 필드 그룹 반환 (타인 정보 등)"""
+    return LAYER2_VARIABLE_FIELDS.get(scenario_id, {}).get("field_groups", [])
+
+
+def get_layer2_fields(scenario_id: str) -> List[Dict]:
+    """
+    Layer 2 필드를 flat하게 반환 (하위 호환 + section 정보 포함)
+    scenario_form.py에서 사용
+    """
+    field_groups = get_layer2_field_groups(scenario_id)
+    all_fields = []
+    
+    for group in field_groups:
+        target = group.get("target", "self")
+        group_name = group.get("group_name", "기타")
+        group_name_en = group.get("group_name_en", "Other")
+        
+        for field in group.get("fields", []):
+            # 원본 필드 복사 후 section 정보 추가
+            field_with_section = field.copy()
+            field_with_section["section"] = group_name
+            field_with_section["section_en"] = group_name_en
+            field_with_section["target"] = target
+            all_fields.append(field_with_section)
+    
+    return all_fields
+
+# ======================================================================
 # 📄 문서 템플릿 매핑 (실제 파일명)
-# =============================================================================
+# ======================================================================
 
 DOCUMENT_TEMPLATES = {
     # 공통 문서
@@ -1276,14 +4177,15 @@ DOCUMENT_TEMPLATES = {
     
     # 시나리오 C: 결혼 이민 (F-6)
     "결혼배경진술서": "영주자격자의 배우자 결혼배경진술서(F-2-3).docx",
-    "외국인 배우자 초청장": "외국인 배우자 초청장.docx",
+    "외국인배우자초청장": "외국인 배우자 초청장.docx",  # 주의: SCENARIOS의 required_docs 키와 일치해야 함
     
     # 시나리오 D: 가족 초청 (F-1-5)
-    "가족 초청장": "결혼이민자의 부모 등 가족 초청장(F-1-5 비자 신청용).docx",
-    "불법체류 취업 방지 서약서": "불법체류 취업 방지 서약서(F-1-5).docx",
+    "가족초청장": "결혼이민자의 부모 등 가족 초청장(F-1-5 비자 신청용).docx",
+    "불법체류취업방지서약서": "불법체류 취업 방지 서약서(F-1-5).docx",
     
     # 시나리오 E: 전문 인력 (E-7)
     "고용사유서": "고용사유서.docx",
+    "고용활용계획서": "고용사유서.docx", # E-7 필수 문서 매핑 추가
     
     # 시나리오 F: 국적 귀화
     "귀화허가신청서": "귀화허가신청서.docx",
@@ -1294,41 +4196,47 @@ DOCUMENT_TEMPLATES = {
     "거주숙소제공사실확인서": "거주숙소제공사실확인서(영문병기).docx",
 }
 
-# =============================================================================
-# 🔧 유틸리티 함수
-# =============================================================================
-
-def get_layer2_fields(scenario_id: str) -> List[Dict]:
-    """시나리오별 Layer 2 필드 가져오기"""
-    scenario_data = LAYER2_VARIABLE_FIELDS.get(scenario_id, {})
-    return scenario_data.get("fields", [])
-
-def get_layer3_fields(scenario_id: str) -> List[Dict]:
-    """시나리오별 Layer 3 필드 가져오기"""
-    scenario_data = LAYER3_NARRATIVE_FIELDS.get(scenario_id, {})
-    return scenario_data.get("fields", [])
-
-def get_narrative_config(scenario_id: str) -> Dict:
-    """시나리오별 Narrative 설정 가져오기"""
+def get_layer3_config(scenario_id: str) -> Dict:
+    """시나리오별 Layer 3 설정 반환 (서술형 필드)"""
     return LAYER3_NARRATIVE_FIELDS.get(scenario_id, {})
 
+
+def get_layer3_fields(scenario_id: str) -> List[Dict]:
+    """시나리오별 Layer 3 필드 목록 반환"""
+    return LAYER3_NARRATIVE_FIELDS.get(scenario_id, {}).get("fields", [])
+
+
+def get_narrative_config(scenario_id: str) -> Dict:
+    """시나리오별 서술형 설정 전체 반환 (get_layer3_config 별칭)"""
+    return get_layer3_config(scenario_id)
+
+
 def get_danger_patterns(scenario_id: str) -> List[str]:
-    """시나리오별 위험 표현 패턴 가져오기"""
-    scenario_data = LAYER3_NARRATIVE_FIELDS.get(scenario_id, {})
-    return scenario_data.get("danger_patterns", [])
+    """시나리오별 위험 패턴 반환"""
+    return LAYER3_NARRATIVE_FIELDS.get(scenario_id, {}).get("danger_patterns", [])
 
-def get_validation_prompt(scenario_id: str) -> str:
-    """시나리오별 AI 검증 프롬프트 가져오기"""
-    scenario_data = LAYER3_NARRATIVE_FIELDS.get(scenario_id, {})
-    return scenario_data.get("validation_prompt", "")
 
-def is_layer1_field(data_key: str) -> bool:
-    """해당 필드가 Layer 1인지 확인"""
-    return data_key in LAYER1_KEYS
+def is_layer1_field(key: str) -> bool:
+    """해당 키가 Layer 1 필드인지 확인"""
+    return key in LAYER1_KEYS
 
-# =============================================================================
-# 🔧 앱 초기화 함수
-# =============================================================================
+
+def get_scenario(scenario_id: str) -> Optional[Scenario]:
+    """시나리오 정보 반환"""
+    return SCENARIOS.get(scenario_id)
+
+
+def get_all_scenarios() -> Dict[str, Scenario]:
+    """모든 시나리오 반환"""
+    return SCENARIOS
+
+
+def get_target_info(target: str) -> Dict:
+    """Target 정보 반환 (prefix, group_name 등)"""
+    return TARGET_INFO.get(target, TARGET_INFO.get("self", {}))
+    # ======================================================================
+# 🔧 앱 초기화 함수 (이 부분을 파일 맨 끝에 추가하세요)
+# ======================================================================
 
 def init_page_config():
     """Streamlit 페이지 설정"""

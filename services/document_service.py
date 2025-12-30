@@ -1,7 +1,7 @@
 """
 K-Stay Document Service
 Word 문서 생성 및 매핑 - DocumentProcessor 엔진 적용
-(.docx 파일만 지원 - LibreOffice 불필요)
+섹션 기반 구조 지원 (self vs other_xxx)
 """
 
 import streamlit as st
@@ -22,7 +22,6 @@ try:
 except ImportError as e:
     DOCX_AVAILABLE = False
     print(f"⚠️ python-docx 미설치 - pip install python-docx 실행 필요")
-    print(f"   오류 상세: {e}")
 except Exception as e:
     DOCX_AVAILABLE = False
     print(f"⚠️ python-docx 로드 실패: {e}")
@@ -41,6 +40,18 @@ GENDER_CHECKBOX_MAP = {
     "여": ["여", "Female", "F", "Woman"],
 }
 
+YES_NO_CHECKBOX_MAP = {
+    "Yes": ["예", "Yes", "Y", "있음"],
+    "예": ["예", "Yes", "Y", "있음"],
+    "No": ["아니오", "No", "N", "없음"],
+    "아니오": ["아니오", "No", "N", "없음"],
+}
+
+VALUE_MAPS = {
+    "GENDER": GENDER_CHECKBOX_MAP,
+    "YES_NO": YES_NO_CHECKBOX_MAP,
+}
+
 
 # =============================================================================
 # DocumentProcessor 클래스
@@ -49,17 +60,88 @@ GENDER_CHECKBOX_MAP = {
 class DocumentProcessor:
     """
     문서 처리 엔진
+    - 섹션 기반 데이터 매핑 (self vs other_xxx)
     - 앵커 텍스트 기반 데이터 매핑
     - 다양한 전략 지원: BELOW_CELL, NEXT_CELL, CHECKBOX, SPLIT_CELLS, APPEND_TO_SAME_CELL
     """
     
-    def __init__(self, data: Dict[str, Any]):
+    def __init__(self, user_data: Dict[str, Any], form_data: Dict[str, Any], narrative_data: Dict[str, Any]):
         """
         Args:
-            data: Layer 1 + Layer 2 + Layer 3 통합 데이터
+            user_data: Layer 1 데이터 (본인 정보 - DB에서 로드)
+            form_data: Layer 2 데이터 (시나리오별 폼 입력 - 타인 정보 포함)
+            narrative_data: Layer 3 데이터 (서술형)
         """
-        self.data = data
+        self.user_data = user_data or {}
+        self.form_data = form_data or {}
+        self.narrative_data = narrative_data or {}
         self.logs = []
+        
+        # 파생 데이터 생성 (Layer 1)
+        self._prepare_derived_data()
+    
+    def _prepare_derived_data(self):
+        """파생 데이터 생성"""
+        # full_name 생성
+        if self.user_data.get('surname') and self.user_data.get('given_name'):
+            if 'full_name' not in self.user_data:
+                self.user_data['full_name'] = f"{self.user_data['surname']} {self.user_data['given_name']}"
+        
+        # 생년월일 분리
+        if self.user_data.get('birth_date'):
+            birth_str = str(self.user_data['birth_date'])
+            if '-' in birth_str:
+                parts = birth_str.split('-')
+                if len(parts) == 3:
+                    self.user_data['dob_year'] = parts[0]
+                    self.user_data['dob_month'] = parts[1]
+                    self.user_data['dob_day'] = parts[2]
+        
+        # 신청일 기본값
+        if 'application_date' not in self.form_data:
+            self.form_data['application_date'] = datetime.now().strftime('%Y.%m.%d')
+    
+    def get_data_for_section(self, target: str) -> Dict[str, Any]:
+        """
+        섹션 target에 따라 올바른 데이터 소스 반환
+        
+        Args:
+            target: "self" 또는 "other_xxx"
+            
+        Returns:
+            해당 섹션에 사용할 데이터 딕셔너리
+        """
+        if target == "self":
+            # self 섹션: Layer 1 (user_data) + Layer 2/3 중 self 관련 데이터
+            merged = {}
+            merged.update(self.user_data)
+            
+            # form_data에서 prefix 없는 것들 추가
+            for key, value in self.form_data.items():
+                if not any(key.startswith(p) for p in ['guarantor_', 'spouse_', 'inviter_', 'employer_', 'family_', 'introducer_', 'reference_', 'emergency_', 'assistant_', 'contact_']):
+                    merged[key] = value
+            
+            # narrative_data도 추가
+            merged.update(self.narrative_data)
+            
+            return merged
+        else:
+            # other_xxx 섹션: form_data에서 해당 prefix 데이터 추출
+            from config.settings import TARGET_INFO
+            
+            target_info = TARGET_INFO.get(target, {})
+            prefix = target_info.get("prefix", "")
+            
+            if not prefix:
+                return self.form_data
+            
+            # prefix로 시작하는 데이터만 추출
+            section_data = {}
+            for key, value in self.form_data.items():
+                if key.startswith(prefix):
+                    section_data[key] = value
+            
+            return section_data
     
     def normalize_text(self, text: str) -> str:
         """텍스트 정규화 (공백 제거, 소문자)"""
@@ -67,10 +149,10 @@ class DocumentProcessor:
     
     def process_file(self, mapping_config: Dict, input_path: str, output_path: str) -> bool:
         """
-        문서 파일 처리
+        문서 파일 처리 (섹션 기반 구조 지원)
         
         Args:
-            mapping_config: 매핑 설정 (fields 포함)
+            mapping_config: 매핑 설정 (sections 포함)
             input_path: 입력 템플릿 경로 (.docx)
             output_path: 출력 파일 경로
             
@@ -93,8 +175,32 @@ class DocumentProcessor:
             doc = Document(input_path)
             self._log(f"🔄 [분석 시작] {os.path.basename(input_path)}")
             
-            for field in mapping_config.get('fields', []):
-                self._apply_field(doc, field)
+            # sections 구조 확인
+            sections = mapping_config.get('sections', [])
+            
+            if sections:
+                # 새 구조: sections 안의 fields를 섹션별로 처리
+                for section in sections:
+                    section_name = section.get('section_name', '알 수 없음')
+                    target = section.get('target', 'self')
+                    fields = section.get('fields', [])
+                    
+                    self._log(f"\n📁 [섹션] {section_name} (target: {target})")
+                    
+                    # 해당 섹션의 데이터 가져오기
+                    section_data = self.get_data_for_section(target)
+                    
+                    for field in fields:
+                        self._apply_field(doc, field, section_data, target)
+            else:
+                # 하위 호환: 직접 fields 처리
+                fields = mapping_config.get('fields', [])
+                all_data = self.get_data_for_section('self')
+                all_data.update(self.form_data)
+                all_data.update(self.narrative_data)
+                
+                for field in fields:
+                    self._apply_field(doc, field, all_data, 'self')
             
             doc.save(output_path)
             self._log(f"✅ [저장 완료] {output_path}")
@@ -102,6 +208,8 @@ class DocumentProcessor:
             
         except Exception as e:
             self._log(f"❌ 오류 발생: {e}")
+            import traceback
+            self._log(traceback.format_exc())
             return False
     
     def _log(self, message: str):
@@ -109,18 +217,24 @@ class DocumentProcessor:
         self.logs.append(message)
         print(message)
     
-    def _apply_field(self, doc, field: Dict):
+    def _apply_field(self, doc, field: Dict, data: Dict, target: str):
         """개별 필드 적용"""
         data_key = field['data_key']
-        value = self.data.get(data_key, "")
         
-        if not value:
+        # 데이터에서 값 가져오기
+        value = data.get(data_key, "")
+        
+        # 값이 없으면 스킵
+        if not value and value != 0:
             return
         
         # anchor_text 처리 (문자열 또는 리스트)
         anchors = field.get('anchor_text', [])
         if isinstance(anchors, str):
             anchors = [anchors]
+        
+        if not anchors or not anchors[0]:
+            return
         
         strategy = field.get('strategy', 'NEXT_CELL')
         target_index = field.get('index', 0)
@@ -142,7 +256,7 @@ class DocumentProcessor:
                     # 앵커 텍스트 매칭
                     if any(self.normalize_text(a) in cell_text_clean for a in anchors):
                         if found_count == target_index:
-                            self._log(f"   🔎 [발견] '{anchors[0]}' (Table{t_idx}, R{r_idx}, C{c_idx})")
+                            self._log(f"   🔎 [{target}] '{data_key}' → '{anchors[0][:20]}...' (T{t_idx}-R{r_idx}-C{c_idx})")
                             
                             # 전략 실행
                             self._execute_strategy(
@@ -158,8 +272,8 @@ class DocumentProcessor:
             if processed:
                 break
         
-        if not processed:
-            self._log(f"   ⚠️ [Skip] 앵커를 찾지 못함: {anchors}")
+        if not processed and anchors[0]:
+            self._log(f"   ⚠️ [Skip] 앵커를 찾지 못함: {data_key} → '{anchors[0][:30]}...'")
     
     def _execute_strategy(self, strategy: str, table, r_idx: int, c_idx: int, 
                          value: Any, field: Dict, current_cell, row_cells):
@@ -169,7 +283,8 @@ class DocumentProcessor:
             # [전략 A] CHECKBOX - 체크박스 선택
             # -----------------------------------------------------------------
             if strategy == "CHECKBOX":
-                value_map = field.get('value_map', GENDER_CHECKBOX_MAP)
+                value_map_name = field.get('value_map', 'GENDER')
+                value_map = VALUE_MAPS.get(value_map_name, GENDER_CHECKBOX_MAP)
                 target_candidates = value_map.get(str(value), [str(value)])
                 
                 scan_targets = []
@@ -208,7 +323,7 @@ class DocumentProcessor:
                             # [V] 체크
                             new_text = re.sub(pattern, fr"[V]\2\3", original_text, count=1)
                             cell.text = new_text
-                            self._log(f"      ✅ [성공] {pos_name}에서 '{target}' 체크박스 선택!")
+                            self._log(f"      ✅ [체크] {pos_name}에서 '{target}' 선택")
                             checked_success = True
                             break
                     
@@ -216,14 +331,14 @@ class DocumentProcessor:
                         break
                 
                 if not checked_success:
-                    self._log(f"      ⚠️ [실패] 체크박스를 찾지 못함: {target_candidates}")
+                    self._log(f"      ⚠️ [체크 실패] 체크박스 못 찾음: {target_candidates}")
             
             # -----------------------------------------------------------------
             # [전략 B] SPLIT_CELLS - 문자열 분할 (주민번호 등)
             # -----------------------------------------------------------------
             elif strategy == "SPLIT_CELLS":
                 options = field.get('options', {})
-                skip_chars = options.get('skip_chars', [])
+                skip_chars = options.get('skip_chars', ['-', '.', ' '])
                 val_str = str(value)
                 
                 for char in skip_chars:
@@ -235,7 +350,7 @@ class DocumentProcessor:
                     if (cell._tc != current_cell._tc) and ("-" not in cell.text):
                         candidates.append(cell)
                 
-                self._log(f"      ℹ️ [분할] '{val_str}' -> {len(candidates)}칸에 입력")
+                self._log(f"      ℹ️ [분할] '{val_str}' -> {len(candidates)}칸")
                 
                 for i, char in enumerate(val_str):
                     if i < len(candidates):
@@ -251,16 +366,24 @@ class DocumentProcessor:
                     cell = row_cells[i]
                     if cell._tc != current_cell._tc:
                         cell.text = str(value)
-                        self._log(f"      ✅ [입력] 옆({i-c_idx}칸 뒤)에 '{value}' 입력")
+                        self._log(f"      ✅ [입력] 오른쪽 셀에 '{str(value)[:20]}...'")
                         return
+                
+                self._log(f"      ⚠️ [NEXT_CELL 실패] 오른쪽 셀 없음")
             
             # -----------------------------------------------------------------
             # [전략 D] BELOW_CELL - 아래 셀에 입력
             # -----------------------------------------------------------------
             elif strategy == "BELOW_CELL":
                 if r_idx + 1 < len(table.rows):
-                    table.rows[r_idx + 1].cells[c_idx].text = str(value)
-                    self._log(f"      ✅ [입력] 아래 칸에 '{value}' 입력")
+                    below_cells = table.rows[r_idx + 1].cells
+                    if c_idx < len(below_cells):
+                        below_cells[c_idx].text = str(value)
+                        self._log(f"      ✅ [입력] 아래 셀에 '{str(value)[:20]}...'")
+                    else:
+                        self._log(f"      ⚠️ [BELOW_CELL 실패] 아래 셀 인덱스 초과")
+                else:
+                    self._log(f"      ⚠️ [BELOW_CELL 실패] 아래 행 없음")
             
             # -----------------------------------------------------------------
             # [전략 E] APPEND_TO_SAME_CELL - 같은 셀에 추가
@@ -268,13 +391,16 @@ class DocumentProcessor:
             elif strategy == "APPEND_TO_SAME_CELL":
                 if str(value) not in current_cell.text:
                     current_cell.text += f"  {value}"
-                    self._log(f"      ✅ [추가] 같은 칸에 '{value}' 덧붙임")
+                    self._log(f"      ✅ [추가] 같은 셀에 '{str(value)[:20]}...'")
             
             # -----------------------------------------------------------------
             # [전략 F] INSERT_IMAGE - 이미지 삽입 (추후 구현)
             # -----------------------------------------------------------------
             elif strategy == "INSERT_IMAGE":
                 self._log(f"      ℹ️ [이미지] 이미지 삽입 기능은 추후 구현 예정")
+            
+            else:
+                self._log(f"      ⚠️ [알 수 없는 전략] {strategy}")
         
         except Exception as e:
             self._log(f"      ❌ 처리 중 에러: {e}")
@@ -300,52 +426,6 @@ class DocumentService:
             print("✅ python-docx 사용 가능 - .docx 파일 처리 지원")
         else:
             print("❌ python-docx 미설치 - pip install python-docx 실행 필요")
-    
-    def merge_all_data(self, user_data: Dict, form_data: Dict, narrative_data: Dict) -> Dict:
-        """
-        모든 레이어 데이터 병합
-        
-        Args:
-            user_data: Layer 1 (Universal) - DB에서 로드
-            form_data: Layer 2 (Variable) - 폼 입력
-            narrative_data: Layer 3 (Narrative) - 서술형
-            
-        Returns:
-            병합된 데이터
-        """
-        merged = {}
-        
-        # Layer 1: Universal (DB 데이터)
-        if user_data:
-            merged.update(user_data)
-        
-        # Layer 2: Variable (폼 데이터)
-        if form_data:
-            merged.update(form_data)
-        
-        # Layer 3: Narrative (서술형 데이터)
-        if narrative_data:
-            merged.update(narrative_data)
-        
-        # 파생 데이터 생성
-        if merged.get('surname') and merged.get('given_name'):
-            merged['full_name'] = f"{merged['surname']} {merged['given_name']}"
-        
-        # 생년월일 분리
-        if merged.get('birth_date'):
-            birth_str = str(merged['birth_date'])
-            if '-' in birth_str:
-                parts = birth_str.split('-')
-                if len(parts) == 3:
-                    merged['dob_year'] = parts[0]
-                    merged['dob_month'] = parts[1]
-                    merged['dob_day'] = parts[2]
-        
-        # 신청일 기본값
-        if 'application_date' not in merged:
-            merged['application_date'] = datetime.now().strftime('%Y.%m.%d')
-        
-        return merged
     
     def get_template_path(self, doc_name: str) -> Optional[str]:
         """
@@ -388,31 +468,27 @@ class DocumentService:
         """
         from templates.mapping_guide import get_document_mapping
         
-        # 데이터 병합
-        merged_data = self.merge_all_data(user_data, form_data, narrative_data)
-        
         # 템플릿 파일 경로
         template_path = self.get_template_path(doc_name)
         
         # python-docx가 없거나 템플릿이 없으면 폴백
         if not DOCX_AVAILABLE or not template_path:
-            return self._create_fallback_document(doc_name, merged_data)
+            return self._create_fallback_document(doc_name, user_data, form_data, narrative_data)
         
         # 매핑 설정 가져오기
         mapping_config = get_document_mapping(doc_name)
         
         if not mapping_config:
             print(f"ℹ️ 매핑 설정 없음: {doc_name} - 템플릿 원본 복사")
-            # 매핑 없이 템플릿만 복사
             try:
                 with open(template_path, 'rb') as f:
                     return f.read()
             except:
-                return self._create_fallback_document(doc_name, merged_data)
+                return self._create_fallback_document(doc_name, user_data, form_data, narrative_data)
         
-        # DocumentProcessor로 처리
+        # DocumentProcessor로 처리 (섹션 기반)
         try:
-            processor = DocumentProcessor(merged_data)
+            processor = DocumentProcessor(user_data, form_data, narrative_data)
             
             # 임시 파일로 저장
             with tempfile.NamedTemporaryFile(suffix='.docx', delete=False) as tmp:
@@ -430,13 +506,16 @@ class DocumentService:
                 
                 return doc_bytes
             else:
-                return self._create_fallback_document(doc_name, merged_data)
+                return self._create_fallback_document(doc_name, user_data, form_data, narrative_data)
                 
         except Exception as e:
             print(f"❌ 문서 생성 오류: {str(e)}")
-            return self._create_fallback_document(doc_name, merged_data)
+            import traceback
+            traceback.print_exc()
+            return self._create_fallback_document(doc_name, user_data, form_data, narrative_data)
     
-    def _create_fallback_document(self, doc_name: str, data: Dict) -> bytes:
+    def _create_fallback_document(self, doc_name: str, user_data: Dict, 
+                                  form_data: Dict, narrative_data: Dict) -> bytes:
         """템플릿이 없을 경우 텍스트 기반 문서 생성"""
         lines = []
         lines.append("=" * 60)
@@ -446,38 +525,40 @@ class DocumentService:
         
         # Layer 1: 신청인 정보
         lines.append("[신청인 정보 - Layer 1]")
-        layer1_fields = ['surname', 'given_name', 'birth_date', 'gender', 
-                        'nationality', 'passport_no', 'alien_registration_no',
-                        'korea_address', 'korea_phone', 'email']
-        for key in layer1_fields:
-            if key in data and data[key]:
-                label = key.replace('_', ' ').title()
-                lines.append(f"  {label}: {data[key]}")
+        if user_data:
+            for key, value in user_data.items():
+                if value:
+                    label = key.replace('_', ' ').title()
+                    lines.append(f"  {label}: {value}")
+        else:
+            lines.append("  (정보 없음)")
         lines.append("")
         
         # Layer 2: 시나리오별 정보
         lines.append("[시나리오별 정보 - Layer 2]")
-        layer2_printed = False
-        for key, value in data.items():
-            if key not in layer1_fields and not key.startswith('plan_') and value:
-                if key not in ['full_name', 'dob_year', 'dob_month', 'dob_day', 'application_date']:
+        if form_data:
+            for key, value in form_data.items():
+                if value:
                     label = key.replace('_', ' ').title()
                     lines.append(f"  {label}: {value}")
-                    layer2_printed = True
-        if not layer2_printed:
-            lines.append("  (입력된 정보 없음)")
+        else:
+            lines.append("  (정보 없음)")
         lines.append("")
         
         # Layer 3: 서술형 내용
         lines.append("[서술형 내용 - Layer 3]")
-        layer3_printed = False
-        for key, value in data.items():
-            if key.startswith('plan_') and value:
-                label = key.replace('plan_month_', '').replace('_', ' ')
-                lines.append(f"  {label}개월차: {value}")
-                layer3_printed = True
-        if not layer3_printed:
-            lines.append("  (입력된 내용 없음)")
+        if narrative_data:
+            for key, value in narrative_data.items():
+                if value:
+                    label = key.replace('_', ' ').title()
+                    # 긴 텍스트는 줄바꿈 처리
+                    if len(str(value)) > 50:
+                        lines.append(f"  {label}:")
+                        lines.append(f"    {value}")
+                    else:
+                        lines.append(f"  {label}: {value}")
+        else:
+            lines.append("  (내용 없음)")
         lines.append("")
         
         lines.append("=" * 60)
@@ -568,9 +649,16 @@ class DocumentService:
             "-" * 40,
             "",
             "데이터 레이어 구조:",
-            "  - Layer 1 (Universal): 회원가입 시 입력된 불변 정보",
-            "  - Layer 2 (Variable): 시나리오별 폼 입력 정보",
+            "  - Layer 1 (Universal): 회원가입 시 입력된 불변 정보 (본인)",
+            "  - Layer 2 (Variable): 시나리오별 폼 입력 정보 (타인 포함)",
             "  - Layer 3 (Narrative): AI 검토된 서술형 정보",
+            "",
+            "섹션별 데이터 매핑:",
+            "  - self: 본인 정보 (Layer 1)",
+            "  - other_guarantor: 신원보증인 정보 (Layer 2)",
+            "  - other_spouse: 배우자 정보 (Layer 2)",
+            "  - other_inviter: 초청인 정보 (Layer 2)",
+            "  - other_employer: 고용주 정보 (Layer 2)",
             "",
             "주의사항:",
             "  1. 본 문서는 AI가 생성한 초안입니다.",

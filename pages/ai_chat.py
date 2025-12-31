@@ -1,11 +1,12 @@
 """
 K-Stay AI Chat Page
 RAG 기반 AI 상담사
-Modern Chat UI Design
+Modern Chat UI Design with i18n
 """
 
 import streamlit as st
 from services.rag_service import RAGService
+from utils.i18n import t, get_current_language
 
 
 def render():
@@ -92,7 +93,7 @@ def render():
             st.session_state.rag_service = None
     
     # 헤더
-    st.markdown("""
+    st.markdown(f"""
         <div style="
             background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
             border: 1px solid #e2e8f0;
@@ -121,12 +122,12 @@ def render():
                     color: #1e293b !important;
                     margin: 0;
                     letter-spacing: -0.02em;
-                ">K-Stay AI 상담사</h2>
+                ">{t('ai_chat.title')}</h2>
                 <p style="
                     color: #64748b !important;
                     font-size: 0.9rem;
                     margin: 0.35rem 0 0 0;
-                ">D-2 유학 · D-4 연수 · D-5 취재 · D-6 종교 · D-10 구직 · F-6 결혼 · C-4 단기취업</p>
+                ">{t('ai_chat.subtitle')}</p>
             </div>
         </div>
     """, unsafe_allow_html=True)
@@ -138,7 +139,7 @@ def render():
         st.session_state.conversation_history = []
     
     # 빠른 질문 버튼
-    st.markdown("""
+    st.markdown(f"""
         <p style="
             color: #64748b !important;
             font-size: 0.8rem;
@@ -146,15 +147,15 @@ def render():
             margin-bottom: 0.5rem;
             text-transform: uppercase;
             letter-spacing: 0.05em;
-        ">💡 자주 묻는 질문</p>
+        ">💡 {t('ai_chat.faq')}</p>
     """, unsafe_allow_html=True)
     
     col1, col2, col3, col4 = st.columns(4)
     quick_questions = [
-        ("🎓 D-2 유학", "D-2 유학비자 종류가 뭐가 있어요?"),
-        ("📚 D-4 연수", "D-4 일반연수 비자는 뭐예요?"),
-        ("💍 F-6 결혼", "F-6 결혼이민 비자 조건이 뭐예요?"),
-        ("🔍 D-10 구직", "D-10 구직비자 점수제는 어떻게 되나요?")
+        (f"🎓 {t('ai_chat.quick_d2')}", t('ai_chat.quick_d2_q')),
+        (f"📚 {t('ai_chat.quick_d4')}", t('ai_chat.quick_d4_q')),
+        (f"💍 {t('ai_chat.quick_f6')}", t('ai_chat.quick_f6_q')),
+        (f"🔍 {t('ai_chat.quick_d10')}", t('ai_chat.quick_d10_q'))
     ]
     
     for col, (label, question) in zip([col1, col2, col3, col4], quick_questions):
@@ -171,7 +172,7 @@ def render():
     with chat_area:
         # 환영 메시지
         if not st.session_state.ai_chat_history:
-            st.markdown("""
+            st.markdown(f"""
                 <div style="
                     display: flex;
                     gap: 12px;
@@ -197,9 +198,9 @@ def render():
                         box-shadow: 0 1px 3px rgba(0,0,0,0.04);
                     ">
                         <p style="color: #334155 !important; margin: 0; line-height: 1.7; font-size: 0.95rem;">
-                            안녕하세요! 👋<br><br>
-                            저는 <strong style="color: #3b82f6;">K-Stay AI 상담사</strong>입니다.<br>
-                            비자 관련 궁금한 점을 물어보세요!
+                            {t('ai_chat.welcome')} 👋<br><br>
+                            {t('ai_chat.welcome_intro')}<br>
+                            {t('ai_chat.welcome_ask')}
                         </p>
                         <div style="
                             display: flex;
@@ -214,7 +215,7 @@ def render():
                                 border-radius: 12px;
                                 font-size: 0.75rem;
                                 font-weight: 500;
-                            ">D-2 유학</span>
+                            ">{t('ai_chat.visa_d2')}</span>
                             <span style="
                                 background: #e0e7ff;
                                 color: #3730a3;
@@ -222,7 +223,7 @@ def render():
                                 border-radius: 12px;
                                 font-size: 0.75rem;
                                 font-weight: 500;
-                            ">D-4 연수</span>
+                            ">{t('ai_chat.visa_d4')}</span>
                             <span style="
                                 background: #f3e8ff;
                                 color: #6b21a8;
@@ -230,7 +231,7 @@ def render():
                                 border-radius: 12px;
                                 font-size: 0.75rem;
                                 font-weight: 500;
-                            ">D-5 취재</span>
+                            ">{t('ai_chat.visa_d5')}</span>
                             <span style="
                                 background: #fae8ff;
                                 color: #86198f;
@@ -238,7 +239,7 @@ def render():
                                 border-radius: 12px;
                                 font-size: 0.75rem;
                                 font-weight: 500;
-                            ">D-6 종교</span>
+                            ">{t('ai_chat.visa_d6')}</span>
                             <span style="
                                 background: #dcfce7;
                                 color: #166534;
@@ -246,7 +247,7 @@ def render():
                                 border-radius: 12px;
                                 font-size: 0.75rem;
                                 font-weight: 500;
-                            ">D-10 구직</span>
+                            ">{t('ai_chat.visa_d10')}</span>
                             <span style="
                                 background: #fce7f3;
                                 color: #9d174d;
@@ -254,7 +255,7 @@ def render():
                                 border-radius: 12px;
                                 font-size: 0.75rem;
                                 font-weight: 500;
-                            ">F-6 결혼이민</span>
+                            ">{t('ai_chat.visa_f6')}</span>
                             <span style="
                                 background: #fef3c7;
                                 color: #92400e;
@@ -262,7 +263,7 @@ def render():
                                 border-radius: 12px;
                                 font-size: 0.75rem;
                                 font-weight: 500;
-                            ">C-4 단기취업</span>
+                            ">{t('ai_chat.visa_c4')}</span>
                         </div>
                     </div>
                 </div>
@@ -324,59 +325,56 @@ def render():
                         ">{content}</div>
                     </div>
                 """, unsafe_allow_html=True)
-        
+    
+    # 입력 영역
     st.markdown("<div style='height: 1rem;'></div>", unsafe_allow_html=True)
     
-    # 입력 폼
-    with st.form("ai_chat_form", clear_on_submit=True):
+    with st.form("chat_form", clear_on_submit=True):
         col_input, col_btn = st.columns([5, 1])
         
         with col_input:
             user_input = st.text_input(
-                "메시지 입력",
-                placeholder="궁금한 점을 입력하세요...",
+                "message",
+                placeholder=t('ai_chat.input_placeholder'),
+                key="chat_input",
                 label_visibility="collapsed"
             )
         
         with col_btn:
-            submitted = st.form_submit_button("전송 ➤", type="primary", use_container_width=True)
+            submitted = st.form_submit_button(
+                t('ai_chat.send'),
+                use_container_width=True,
+                type="primary"
+            )
         
         if submitted and user_input:
             add_message("user", user_input)
             generate_response(user_input)
     
-    # 하단 버튼들
-    col_clear, col_info, _ = st.columns([1, 1, 4])
-    with col_clear:
-        if st.button("🗑️ 초기화", use_container_width=True):
-            st.session_state.ai_chat_history = []
-            st.session_state.conversation_history = []
-            st.rerun()
-    
-    # 안내 문구
+    # 채팅 초기화 버튼
     st.markdown("""
         <div style="
-            background: linear-gradient(135deg, #fefce8 0%, #fef3c7 100%);
-            border: 1px solid #fde68a;
-            border-radius: 12px;
-            padding: 0.875rem 1.25rem;
-            margin-top: 1rem;
             display: flex;
-            align-items: center;
-            gap: 10px;
+            justify-content: center;
+            margin-top: 1rem;
         ">
-            <span style="font-size: 1.25rem;">⚠️</span>
-            <span style="color: #92400e; font-size: 0.85rem; line-height: 1.5;">
-                AI 상담은 <strong>참고용</strong>입니다. 정확한 정보는 
-                <strong>출입국관리사무소(☎ 1345)</strong> 또는 
-                <strong>하이코리아(hikorea.go.kr)</strong>에서 확인하세요.
-            </span>
+    """, unsafe_allow_html=True)
+    
+    if st.session_state.ai_chat_history:
+        col1, col2, col3 = st.columns([2, 1, 2])
+        with col2:
+            if st.button("🔄", help="Clear chat", use_container_width=True):
+                st.session_state.ai_chat_history = []
+                st.session_state.conversation_history = []
+                st.rerun()
+    
+    st.markdown("""
         </div>
     """, unsafe_allow_html=True)
     
     # 사이드바
     with st.sidebar:
-        st.markdown("""
+        st.markdown(f"""
             <div style="
                 background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
                 border-radius: 12px;
@@ -390,17 +388,17 @@ def render():
                     display: flex;
                     align-items: center;
                     gap: 8px;
-                ">📋 지원 비자</h3>
+                ">📋 {t('sidebar.supported_visas')}</h3>
         """, unsafe_allow_html=True)
         
         visa_info = [
-            ("🎓", "D-2 유학", "#3b82f6", ["D-2-1~4 학위과정", "D-2-5 연구", "D-2-6 교환학생"]),
-            ("📚", "D-4 연수", "#6366f1", ["D-4-1 한국어연수", "D-4-6 사설교육기관"]),
-            ("📰", "D-5 취재", "#8b5cf6", ["외신기자", "보도활동"]),
-            ("⛪", "D-6 종교", "#a855f7", ["선교활동", "사회복지"]),
-            ("🔍", "D-10 구직", "#10b981", ["D-10-1 일반구직", "D-10-2 기술창업"]),
-            ("💍", "F-6 결혼이민", "#ec4899", ["F-6-1 배우자", "F-6-2 자녀양육", "F-6-3 혼인단절"]),
-            ("✈️", "C-4 단기취업", "#f59e0b", ["C-4-1~4 계절근로", "C-4-5 흥행/모델"]),
+            ("🎓", t("visa_info.d2_name"), "#3b82f6", t("visa_info.d2_types")),
+            ("📚", t("visa_info.d4_name"), "#6366f1", t("visa_info.d4_types")),
+            ("📰", t("visa_info.d5_name"), "#8b5cf6", t("visa_info.d5_types")),
+            ("⛪", t("visa_info.d6_name"), "#a855f7", t("visa_info.d6_types")),
+            ("🔍", t("visa_info.d10_name"), "#10b981", t("visa_info.d10_types")),
+            ("💍", t("visa_info.f6_name"), "#ec4899", t("visa_info.f6_types")),
+            ("✈️", t("visa_info.c4_name"), "#f59e0b", t("visa_info.c4_types")),
         ]
         
         for icon, title, color, items in visa_info:
@@ -418,7 +416,7 @@ def render():
                         margin: 0;
                         padding-left: 1.25rem;
                         line-height: 1.6;
-                    ">{' · '.join(items)}</p>
+                    ">{items}</p>
                 </div>
             """, unsafe_allow_html=True)
         
@@ -436,21 +434,25 @@ def add_message(role: str, content: str):
 def generate_response(user_message: str):
     """RAG 기반 AI 응답 생성"""
     
-    with st.spinner("💭 답변 생성 중..."):
+    with st.spinner(f"💭 {t('ai_chat.generating')}"):
         try:
             rag_service = st.session_state.rag_service
             
             if rag_service:
+                # 현재 언어 확인하여 영어면 영어로 응답하도록 설정
+                current_lang = get_current_language()
+                
                 response, updated_history = rag_service.chat(
                     query=user_message,
-                    conversation_history=st.session_state.conversation_history
+                    conversation_history=st.session_state.conversation_history,
+                    language=current_lang  # 언어 파라미터 전달
                 )
                 st.session_state.conversation_history = updated_history
                 add_message("assistant", response)
             else:
-                add_message("assistant", "죄송합니다. 현재 AI 서비스에 연결할 수 없습니다. 잠시 후 다시 시도해주세요.")
+                add_message("assistant", t('ai_chat.error_service'))
             
         except Exception as e:
-            add_message("assistant", f"응답 생성 중 오류가 발생했습니다: {str(e)}")
+            add_message("assistant", f"{t('ai_chat.error_response')}: {str(e)}")
         
         st.rerun()

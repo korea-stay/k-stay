@@ -8,6 +8,7 @@ from config.settings import init_page_config, init_session_state
 from services.auth_service import AuthService, SessionManager
 from services.payment_service import PaymentService
 from pages import login, signup, main_dashboard, scenario_form, ai_chat, document_preview, my_documents, my_page
+from utils.i18n import t, init_language, get_current_language
 
 # 페이지 설정
 init_page_config()
@@ -15,9 +16,23 @@ init_page_config()
 # 세션 상태 초기화
 init_session_state()
 
+# 언어 초기화
+init_language()
+
 
 # CSS 스타일
 def load_css():
+    # Weglot 번역 서비스
+    import streamlit.components.v1 as components
+    components.html("""
+    <script type="text/javascript" src="https://cdn.weglot.com/weglot.min.js"></script>
+    <script>
+        Weglot.initialize({
+            api_key: 'wg_fe03e78df092c9ec92ae02e64e5114d09'
+        });
+    </script>
+    """, height=0)
+    
     st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
@@ -41,6 +56,15 @@ def load_css():
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     [data-testid="stSidebarNav"] { display: none; }
+    
+    /* 언어 선택 버튼 스타일 */
+    .lang-switch {
+        display: flex;
+        gap: 4px;
+        background: #f1f5f9;
+        padding: 4px;
+        border-radius: 8px;
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -48,10 +72,56 @@ def load_css():
 load_css()
 
 
+def render_language_switch():
+    """언어 선택 스위치 렌더링"""
+    current_lang = get_current_language()
+    
+    col1, col2, col3 = st.columns([6, 1, 1])
+    
+    with col2:
+        if current_lang == "ko":
+            st.markdown("""
+                <div style="
+                    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+                    color: white;
+                    padding: 6px 12px;
+                    border-radius: 6px;
+                    font-size: 0.8rem;
+                    font-weight: 600;
+                    text-align: center;
+                ">🇰🇷 한국어</div>
+            """, unsafe_allow_html=True)
+        else:
+            if st.button("🇰🇷 한국어", key="switch_ko", use_container_width=True):
+                st.session_state.language = "ko"
+                st.rerun()
+    
+    with col3:
+        if current_lang == "en":
+            st.markdown("""
+                <div style="
+                    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+                    color: white;
+                    padding: 6px 12px;
+                    border-radius: 6px;
+                    font-size: 0.8rem;
+                    font-weight: 600;
+                    text-align: center;
+                ">🇺🇸 EN</div>
+            """, unsafe_allow_html=True)
+        else:
+            if st.button("🇺🇸 EN", key="switch_en", use_container_width=True):
+                st.session_state.language = "en"
+                st.rerun()
+
+
 def render_authenticated_app():
     """인증된 사용자를 위한 메인 앱"""
     with st.sidebar:
         render_sidebar()
+    
+    # 페이지 상단 언어 선택
+    render_language_switch()
     
     current_page = st.session_state.get('current_page', 'dashboard')
     
@@ -81,29 +151,29 @@ def render_sidebar():
     user_data = st.session_state.get('user_data', {})
     st.markdown(f"""
         <div style="padding: 0.75rem; background: #f1f5f9; border-radius: 0.5rem; margin-bottom: 1.5rem; border: 1px solid #e2e8f0;">
-            <p style="color: #64748b; font-size: 0.8rem; margin: 0;">로그인 계정</p>
+            <p style="color: #64748b; font-size: 0.8rem; margin: 0;">{t('auth.logged_in_as')}</p>
             <p style="color: #1e293b; font-weight: 600; margin: 0.25rem 0 0 0; font-size: 0.9rem;">{user_data.get('given_name', 'Guest')} {user_data.get('surname', '')}</p>
         </div>
     """, unsafe_allow_html=True)
     
-    st.markdown('<p style="color: #64748b; font-size: 0.75rem; font-weight: 600; margin-bottom: 0.5rem; text-transform: uppercase;">Menu</p>', unsafe_allow_html=True)
+    st.markdown(f'<p style="color: #64748b; font-size: 0.75rem; font-weight: 600; margin-bottom: 0.5rem; text-transform: uppercase;">{t("common.menu")}</p>', unsafe_allow_html=True)
     
-    if st.button("🏠 대시보드", use_container_width=True):
+    if st.button(f"🏠 {t('sidebar.dashboard')}", use_container_width=True):
         st.session_state.current_page = 'dashboard'
         st.session_state.password_verified = False
         st.rerun()
     
-    if st.button("📁 내 문서함", use_container_width=True):
+    if st.button(f"📁 {t('sidebar.my_documents')}", use_container_width=True):
         st.session_state.current_page = 'my_documents'
         st.session_state.password_verified = False
         st.rerun()
     
-    if st.button("💬 AI 상담", use_container_width=True):
+    if st.button(f"💬 {t('sidebar.ai_chat')}", use_container_width=True):
         st.session_state.current_page = 'ai_chat'
         st.session_state.password_verified = False
         st.rerun()
     
-    if st.button("👤 마이페이지", use_container_width=True):
+    if st.button(f"👤 {t('sidebar.my_page')}", use_container_width=True):
         st.session_state.current_page = 'my_page'
         st.rerun()
     
@@ -113,35 +183,38 @@ def render_sidebar():
     is_paid = st.session_state.get('is_paid', False)
     
     if is_admin:
-        st.markdown('<div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: 1px solid #f59e0b; border-radius: 0.5rem; padding: 0.75rem; margin-bottom: 1rem;"><p style="margin: 0; font-weight: 600; color: #92400e; font-size: 0.85rem;">👑 관리자 계정</p></div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: 1px solid #f59e0b; border-radius: 0.5rem; padding: 0.75rem; margin-bottom: 1rem;"><p style="margin: 0; font-weight: 600; color: #92400e; font-size: 0.85rem;">👑 {t("sidebar.admin_account")}</p></div>', unsafe_allow_html=True)
     elif is_paid:
-        st.markdown('<div style="background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%); border: 1px solid #22c55e; border-radius: 0.5rem; padding: 0.75rem; margin-bottom: 1rem;"><p style="margin: 0; font-weight: 600; color: #166534; font-size: 0.85rem;">✨ Premium 활성화됨</p></div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%); border: 1px solid #22c55e; border-radius: 0.5rem; padding: 0.75rem; margin-bottom: 1rem;"><p style="margin: 0; font-weight: 600; color: #166534; font-size: 0.85rem;">✨ {t("sidebar.premium_active")}</p></div>', unsafe_allow_html=True)
     else:
-        st.markdown('<div style="background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 0.5rem; padding: 0.75rem; margin-bottom: 1rem;"><p style="margin: 0; color: #64748b; font-size: 0.85rem;">무료 플랜</p></div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 0.5rem; padding: 0.75rem; margin-bottom: 1rem;"><p style="margin: 0; color: #64748b; font-size: 0.85rem;">{t("sidebar.free_plan")}</p></div>', unsafe_allow_html=True)
     
     st.markdown("<br>", unsafe_allow_html=True)
     
-    if st.button("🚪 로그아웃", use_container_width=True):
+    if st.button(f"🚪 {t('common.logout')}", use_container_width=True):
         AuthService().sign_out()
         st.rerun()
 
 
 def render_auth_page():
     """로그인/회원가입 페이지"""
-    st.markdown("<br><br>", unsafe_allow_html=True)
+    # 페이지 상단 언어 선택
+    render_language_switch()
     
-    st.markdown("""
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    st.markdown(f"""
         <div style="text-align: center; margin-bottom: 2rem;">
             <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); border-radius: 1.5rem; display: inline-flex; align-items: center; justify-content: center; font-size: 2.5rem; margin-bottom: 1.5rem; box-shadow: 0 10px 40px rgba(37, 99, 235, 0.3);">🇰🇷</div>
-            <h1 style="font-size: 2.5rem; font-weight: 800; color: #1e293b; margin: 0.5rem 0;">K-Stay</h1>
-            <p style="color: #64748b; font-size: 1.1rem;">외국인 비자 서류 자동화 플랫폼</p>
+            <h1 style="font-size: 2.5rem; font-weight: 800; color: #1e293b; margin: 0.5rem 0;">{t('common.app_name')}</h1>
+            <p style="color: #64748b; font-size: 1.1rem;">{t('common.app_subtitle')}</p>
         </div>
     """, unsafe_allow_html=True)
     
     col1, col2, col3 = st.columns([1, 3, 1])
     
     with col2:
-        tab1, tab2 = st.tabs(["🔐 로그인", "📝 회원가입"])
+        tab1, tab2 = st.tabs([f"🔐 {t('common.login')}", f"📝 {t('common.signup')}"])
         
         with tab1:
             login.render()
@@ -153,9 +226,9 @@ def render_auth_page():
         
         auth_service = AuthService()
         if auth_service.is_supabase_connected():
-            st.success("✅ Supabase 연결됨")
+            st.success(f"✅ {t('auth.supabase_connected')}")
         else:
-            st.info("💡 테스트 모드")
+            st.info(f"💡 {t('auth.test_mode')}")
 
 
 def main():

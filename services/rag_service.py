@@ -937,7 +937,7 @@ class RAGService:
         
         # 인사/잡담 감지
         if self._is_greeting_or_smalltalk(query):
-            return self._generate_greeting_response(query, conversation_history)
+            return self._generate_greeting_response(query, conversation_history, language)
         
         if search_results is None:
             search_results = self.search_similar(query)
@@ -1024,10 +1024,22 @@ class RAGService:
         
         return False
     
-    def _generate_greeting_response(self, query: str, conversation_history: List[Dict] = None) -> RAGResponse:
+    def _generate_greeting_response(self, query: str, conversation_history: List[Dict] = None, language: str = "ko") -> RAGResponse:
         """인사/잡담/일상대화에 대한 응답 생성"""
-        messages = [
-            {"role": "system", "content": """당신은 K-Stay 비자 상담 AI입니다.
+        if language == "en":
+            system_content = """You are the K-Stay visa consultation AI.
+
+When a user greets you, respond briefly with a greeting and let them know you can help with visa-related questions.
+
+For casual talk unrelated to visas (food, weather, emotions, etc.):
+- Respond briefly and friendly, showing empathy
+- Naturally guide them to ask visa-related questions if they need help
+- Never provide visa information arbitrarily
+- Do not provide information unrelated to visas (food recommendations, weather info, etc.)
+
+Keep your response to 1-2 sentences. Respond in English."""
+        else:
+            system_content = """당신은 K-Stay 비자 상담 AI입니다.
 
 사용자가 인사하면 간단히 인사로 응답하고, 비자 관련 질문이 있으면 도움을 드릴 수 있다고 안내하세요.
 
@@ -1037,7 +1049,10 @@ class RAGService:
 - 절대로 비자 정보를 임의로 제공하지 마세요
 - 음식 추천, 날씨 정보 등 비자와 무관한 정보는 제공하지 마세요
 
-응답은 1-2문장으로 짧게 하세요."""},
+응답은 1-2문장으로 짧게 하세요."""
+        
+        messages = [
+            {"role": "system", "content": system_content},
             {"role": "user", "content": query}
         ]
         
@@ -1073,9 +1088,23 @@ class RAGService:
         
         return "\n".join(context_parts)
     
-    def _get_system_prompt(self, language: str) -> str:
-        """시스템 프롬프트"""
-        return """당신은 한국 비자 및 체류자격 전문 상담 AI입니다.
+    def _get_system_prompt(self, language: str = "ko") -> str:
+        """시스템 프롬프트 - 언어에 따라 다른 프롬프트 반환"""
+        if language == "en":
+            return """You are an AI consultant specializing in Korean visas and residency status.
+
+Role:
+- Answer accurately based on the provided reference materials.
+- Prioritize information from the reference materials.
+- Do not speculate on information not in the reference materials.
+
+Response Style:
+- Use friendly and easy-to-understand language.
+- Provide specific guidance on required documents, procedures, and timelines.
+- Emphasize important notes when necessary.
+- IMPORTANT: Respond in English."""
+        else:
+            return """당신은 한국 비자 및 체류자격 전문 상담 AI입니다.
 
 역할:
 - 제공된 참고 자료를 기반으로 정확하게 답변합니다.
@@ -1090,17 +1119,56 @@ class RAGService:
     
     # ==================== 대화 관리 ====================
     
+    def _translate_titles(self, titles: List[str]) -> List[str]:
+        """한국어 제목을 영어로 번역"""
+        if not titles:
+            return titles
+        
+        titles_text = "\n".join([f"{i+1}. {t}" for i, t in enumerate(titles)])
+        
+        try:
+            response = self.openai_client.chat.completions.create(
+                model=self.chat_model,
+                messages=[
+                    {"role": "system", "content": "Translate the following Korean titles to English. Keep visa codes (D-2, D-10, F-6, etc.) as is. Return only the translated titles, one per line, numbered."},
+                    {"role": "user", "content": titles_text}
+                ],
+                temperature=0.1,
+                max_tokens=200
+            )
+            
+            result = response.choices[0].message.content.strip()
+            # 번역된 결과 파싱
+            translated = []
+            for line in result.split("\n"):
+                # "1. Title" 형식에서 번호 제거
+                line = line.strip()
+                if line and line[0].isdigit():
+                    parts = line.split(". ", 1)
+                    if len(parts) > 1:
+                        translated.append(parts[1])
+                    else:
+                        translated.append(line)
+                elif line:
+                    translated.append(line)
+            
+            return translated if len(translated) == len(titles) else titles
+        except:
+            return titles
+    
     def chat(
         self,
         query: str,
         session_id: str = None,
-        conversation_history: List[Dict] = None
+        conversation_history: List[Dict] = None,
+        language: str = "ko"
     ) -> Tuple[str, List[Dict]]:
         """대화형 인터페이스"""
         
         rag_response = self.generate_response(
             query=query,
-            conversation_history=conversation_history
+            conversation_history=conversation_history,
+            language=language
         )
         
         # 참고자료가 있을 때만 출처 표시
@@ -1110,7 +1178,13 @@ class RAGService:
             for s in rag_response.sources[:3]:
                 title = s.metadata.get("title", s.chunk_id) if s.metadata else s.chunk_id
                 source_titles.append(title)
-            source_info = f"\n\n📚 참고: {', '.join(source_titles)}"
+            
+            # 영어 모드일 때 제목도 번역
+            if language == "en":
+                source_titles = self._translate_titles(source_titles)
+            
+            ref_label = "📚 Reference" if language == "en" else "📚 참고"
+            source_info = f"\n\n{ref_label}: {', '.join(source_titles)}"
         
         full_answer = rag_response.answer + source_info
         

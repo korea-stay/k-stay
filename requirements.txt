@@ -9,12 +9,10 @@ supabase>=2.0.0
 
 # AI & NLP
 openai>=1.0.0
-# langchain>=0.1.0  # Optional: for advanced RAG
-# sentence-transformers>=2.2.0  # Optional: for embeddings
+tiktoken>=0.5.0
 
 # Document Processing
 python-docx>=0.8.11
-# python-pptx>=0.6.21  # If needed for presentations
 
 # Payment
 stripe>=7.0.0
@@ -23,15 +21,10 @@ stripe>=7.0.0
 pandas>=2.0.0
 numpy>=1.24.0
 
-# Vector Database (choose one)
-# pinecone-client>=2.2.0
-# faiss-cpu>=1.7.4
-# weaviate-client>=3.0.0
-
 # Utilities
 python-dotenv>=1.0.0
 pydantic>=2.0.0
 
-# Development
-# pytest>=7.0.0
-# black>=23.0.0
+# PDF 처리 (선택사항)
+PyPDF2>=3.0.0
+pdfplumber>=0.10.0

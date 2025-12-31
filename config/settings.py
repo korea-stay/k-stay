@@ -776,70 +776,70 @@ LAYER2_VARIABLE_FIELDS = {
                         "required": True
                     },
                     {
-                        "data_key": "wage_hourly",
+                        "data_key": "employer_wage_hourly",
                         "label": "급 여 ( 시 급 )",
                         "label_en": "Wage Hourly",
                         "type": "text",
                         "required": True
                     },
                     {
-                        "data_key": "weekday_total_hours",
+                        "data_key": "employer_weekday_total_hours",
                         "label": "평  일 : 총	시간",
                         "label_en": "Weekday Total Hours",
                         "type": "text",
                         "required": True
                     },
                     {
-                        "data_key": "weekend_total_hours",
+                        "data_key": "employer_weekend_total_hours",
                         "label": "주말 : 총	시간",
                         "label_en": "Weekend Total Hours",
                         "type": "text",
                         "required": True
                     },
                     {
-                        "data_key": "working_hours_mon",
+                        "data_key": "employer_working_hours_mon",
                         "label": "월",
                         "label_en": "Working Hours Mon",
                         "type": "text",
                         "required": True
                     },
                     {
-                        "data_key": "working_hours_tue",
+                        "data_key": "employer_working_hours_tue",
                         "label": "화",
                         "label_en": "Working Hours Tue",
                         "type": "text",
                         "required": True
                     },
                     {
-                        "data_key": "working_hours_wed",
+                        "data_key": "employer_working_hours_wed",
                         "label": "수",
                         "label_en": "Working Hours Wed",
                         "type": "text",
                         "required": True
                     },
                     {
-                        "data_key": "working_hours_thu",
+                        "data_key": "employer_working_hours_thu",
                         "label": "목",
                         "label_en": "Working Hours Thu",
                         "type": "text",
                         "required": True
                     },
                     {
-                        "data_key": "working_hours_fri",
+                        "data_key": "employer_working_hours_fri",
                         "label": "금",
                         "label_en": "Working Hours Fri",
                         "type": "text",
                         "required": True
                     },
                     {
-                        "data_key": "working_hours_sat",
+                        "data_key": "employer_working_hours_sat",
                         "label": "토",
                         "label_en": "Working Hours Sat",
                         "type": "text",
                         "required": True
                     },
                     {
-                        "data_key": "working_hours_sun",
+                        "data_key": "employer_working_hours_sun",
                         "label": "일",
                         "label_en": "Working Hours Sun",
                         "type": "text",
@@ -1007,23 +1007,9 @@ LAYER2_VARIABLE_FIELDS = {
                         "required": True
                     },
                     {
-                        "data_key": "school_status",
-                        "label": "미취학[],  초[ ],     중[ ],   고[ ]",
-                        "label_en": "School Status",
-                        "type": "text",
-                        "required": True
-                    },
-                    {
                         "data_key": "school_name",
                         "label": "학교 이름 Name of School",
                         "label_en": "School Name",
-                        "type": "text",
-                        "required": True
-                    },
-                    {
-                        "data_key": "school_type",
-                        "label": "교육청 인가[], 교육청 비인가, 대안학교[] Accr",
-                        "label_en": "School Type",
                         "type": "text",
                         "required": True
                     },
@@ -1073,34 +1059,6 @@ LAYER2_VARIABLE_FIELDS = {
                         "data_key": "application_date",
                         "label": "신청일 Date of application",
                         "label_en": "Application Date",
-                        "type": "text",
-                        "required": True
-                    },
-                    {
-                        "data_key": "applicant_signature",
-                        "label": "신청인 서명 또는 인 Signature/Seal",
-                        "label_en": "Applicant Signature",
-                        "type": "text",
-                        "required": True
-                    },
-                    {
-                        "data_key": "consent_applicant_signature",
-                        "label": "신청인 Applicant",
-                        "label_en": "Consent Applicant Signature",
-                        "type": "text",
-                        "required": True
-                    },
-                    {
-                        "data_key": "consent_spouse_signature",
-                        "label": "신청인의 배우자 Spouse of applicant",
-                        "label_en": "Consent Spouse Signature",
-                        "type": "text",
-                        "required": True
-                    },
-                    {
-                        "data_key": "consent_parent_signature",
-                        "label": "신청인의 부 또는 모 Father/Mother of a",
-                        "label_en": "Consent Parent Signature",
                         "type": "text",
                         "required": True
                     },

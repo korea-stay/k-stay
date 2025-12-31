@@ -11,22 +11,6 @@ from dataclasses import dataclass
 from openai import OpenAI
 from supabase import create_client, Client
 
-# Streamlit secrets 사용 시도
-try:
-    import streamlit as st
-    USE_STREAMLIT = True
-except ImportError:
-    USE_STREAMLIT = False
-
-def get_secret(key: str, default: str = None) -> str:
-    """환경변수 또는 Streamlit secrets에서 값 가져오기"""
-    if USE_STREAMLIT:
-        try:
-            return st.secrets.get(key, os.getenv(key, default))
-        except:
-            return os.getenv(key, default)
-    return os.getenv(key, default)
-
 @dataclass
 class SearchResult:
     """검색 결과"""
@@ -55,12 +39,12 @@ class RAGService:
         max_context_chunks: int = 5
     ):
         self.openai_client = OpenAI(
-            api_key=openai_api_key or get_secret("OPENAI_API_KEY")
+            api_key=openai_api_key or os.getenv("OPENAI_API_KEY")
         )
         
         self.supabase: Client = create_client(
-            supabase_url or get_secret("SUPABASE_URL"),
-            supabase_key or get_secret("SUPABASE_KEY")
+            supabase_url or os.getenv("SUPABASE_URL"),
+            supabase_key or os.getenv("SUPABASE_KEY")
         )
         
         self.embedding_model = embedding_model
@@ -223,12 +207,10 @@ class RAGService:
                     return []  # 빈 패턴 반환 → 검색 안함
         
         # 비자 관련 키워드가 없으면 검색 안함
-        visa_keywords = ["비자", "visa", "체류", "자격", "f-6", "f6", "d-10", "d10", "d-2", "d2", "c-4", "c4", "d-4", "d4", "d-5", "d5", "d-6", "d6",
+        visa_keywords = ["비자", "visa", "체류", "자격", "f-6", "f6", "d-10", "d10", "d-2", "d2", "c-4", "c4",
                         "유학", "유학생", "대학", "학사", "석사", "박사", "아르바이트", "시간제", "학교",
                         "구직", "결혼", "이민", "혼인", "배우자", "서류", "신청", "연장", "변경",
-                        "단기취업", "계절근로", "근무처", "흥행", "모델", "강연",
-                        "일반연수", "어학연수", "한국어연수", "연수", "인턴", "후견인", "현장실습",
-                        "취재", "기자", "언론", "보도", "종교", "선교", "사회복지", "교회", "성당", "절"]
+                        "단기취업", "계절근로", "근무처", "흥행", "모델", "강연"]
         
         has_visa_keyword = any(kw in q for kw in visa_keywords)
         if not has_visa_keyword:
@@ -558,189 +540,6 @@ class RAGService:
             if not patterns:
                 patterns = ["c4_overview", "c4_seasonal_work", "c4_other_work"]
         
-        # === D-4 세부 유형 (일반연수) ===
-        if "d-4-1" in q or "d4-1" in q:
-            patterns.append("d4_status_change_language")
-        if "d-4-2" in q or "d4-2" in q:
-            if "k" in q or "인턴" in q:
-                patterns.append("d4_extension_internship")
-            else:
-                patterns.append("d4_graduate_training")
-        if "d-4-3" in q or "d4-3" in q:
-            patterns.append("d4_k12_student_eligibility")
-            patterns.append("d4_k12_student_requirements")
-        if "d-4-5" in q or "d4-5" in q:
-            patterns.append("d4_extension_korean_cooking")
-        if "d-4-6" in q or "d4-6" in q:
-            patterns.append("d4_excellent_institution_eligibility")
-            patterns.append("d4_excellent_institution_criteria")
-        if "d-4-7" in q or "d4-7" in q:
-            patterns.append("d4_status_change_language")
-        
-        # === D-4 주제별 ===
-        is_d4_query = "d-4" in q or "d4" in q or "일반연수" in q or "어학연수" in q or "한국어연수" in q or ("연수" in q and not "연수기관" in q)
-        
-        if is_d4_query and not is_f6_query and not is_d10_query and not is_d2_query and not is_c4_query:
-            if "어학" in q or "한국어" in q or "외국어" in q:
-                patterns.append("d4_status_change_language")
-                patterns.append("d4_language_documents")
-            
-            if "졸업" in q and "연수" in q:
-                patterns.append("d4_graduate_training")
-            
-            if "고등학교" in q or "중학교" in q or "초등학교" in q or "k12" in q:
-                patterns.append("d4_k12_student_eligibility")
-                patterns.append("d4_k12_student_requirements")
-                patterns.append("d4_k12_documents")
-            
-            if "후견인" in q or "후견" in q:
-                patterns.append("d4_k12_student_requirements")
-            
-            if "인턴" in q or "k-trainee" in q:
-                patterns.append("d4_extension_internship")
-            
-            if "우수" in q and ("사설" in q or "교육기관" in q):
-                patterns.append("d4_excellent_institution_eligibility")
-                patterns.append("d4_excellent_institution_criteria")
-                patterns.append("d4_excellent_trainee_criteria")
-            
-            if "한식" in q or "조리" in q:
-                patterns.append("d4_extension_korean_cooking")
-            
-            if "현장실습" in q or "실습" in q:
-                patterns.append("d4_field_training_requirements")
-                patterns.append("d4_field_training_rules")
-            
-            if "연장" in q or "기간" in q:
-                if "어학" in q or "한국어" in q:
-                    patterns.append("d4_extension_language_principle")
-                    patterns.append("d4_extension_language_documents")
-                else:
-                    patterns.append("d4_extension_language_principle")
-                    patterns.append("d4_extension_excellent")
-            
-            if "서류" in q or "제출" in q:
-                if "어학" in q or "한국어" in q:
-                    patterns.append("d4_language_documents")
-                elif "고등학교" in q or "중학교" in q:
-                    patterns.append("d4_k12_documents")
-                elif "우수" in q or "사설" in q:
-                    patterns.append("d4_excellent_documents")
-                else:
-                    patterns.append("d4_language_documents")
-            
-            if "학교" in q and "변경" in q:
-                patterns.append("d4_extension_language_principle")
-            
-            if "토픽" in q or "topik" in q:
-                patterns.append("d4_excellent_trainee_criteria")
-                patterns.append("d4_extension_language_principle")
-            
-            if "쿼터" in q or "인원" in q or "제재" in q:
-                patterns.append("d4_excellent_quota")
-            
-            if "취업" in q and "특례" in q:
-                patterns.append("d4_employment_special")
-            
-            if "e-7" in q or "e7" in q or "특정활동" in q:
-                patterns.append("d4_employment_special")
-            
-            if "재입국" in q:
-                patterns.append("d4_reentry_permit")
-            
-            if "등록" in q:
-                patterns.append("d4_alien_registration")
-                patterns.append("d4_registration_change")
-            
-            # D-4 일반 질문
-            if not patterns:
-                patterns = ["d4_overview", "d4_subtypes"]
-        
-        # === D-5 주제별 (취재) ===
-        is_d5_query = "d-5" in q or "d5" in q or "취재" in q or "기자" in q or "언론" in q or "보도" in q
-        
-        if is_d5_query and not is_f6_query and not is_d10_query and not is_d2_query and not is_c4_query and not is_d4_query:
-            if "회화" in q or "지도" in q or "e-2" in q:
-                patterns.append("d5_conversation_teaching")
-            
-            if "서류" in q or "제출" in q:
-                if "연장" in q:
-                    patterns.append("d5_extension_documents")
-                elif "변경" in q:
-                    patterns.append("d5_status_change_documents")
-                elif "등록" in q:
-                    patterns.append("d5_alien_registration")
-                else:
-                    patterns.append("d5_extension_documents")
-                    patterns.append("d5_status_change_documents")
-            
-            if "연장" in q or "기간" in q:
-                patterns.append("d5_extension_documents")
-            
-            if "변경" in q or "자격변경" in q:
-                patterns.append("d5_status_change_c1")
-                patterns.append("d5_status_change_german")
-            
-            if "재입국" in q:
-                patterns.append("d5_reentry_permit")
-            
-            if "등록" in q:
-                patterns.append("d5_alien_registration")
-                patterns.append("d5_registration_change")
-            
-            if "근무처" in q:
-                patterns.append("d5_workplace_change")
-            
-            # D-5 일반 질문
-            if not patterns:
-                patterns = ["d5_overview", "d5_eligibility"]
-        
-        # === D-6 주제별 (종교) ===
-        is_d6_query = "d-6" in q or "d6" in q or "종교" in q or "선교" in q or "사회복지" in q or "교회" in q or "성당" in q
-        
-        if is_d6_query and not is_f6_query and not is_d10_query and not is_d2_query and not is_c4_query and not is_d4_query and not is_d5_query:
-            if "회화" in q or "지도" in q or "e-2" in q:
-                patterns.append("d6_conversation_teaching")
-            
-            if "교수" in q or "e-1" in q or "겸직" in q:
-                patterns.append("d6_cross_activity")
-            
-            if "서류" in q or "제출" in q:
-                if "연장" in q:
-                    patterns.append("d6_extension_documents")
-                elif "변경" in q:
-                    patterns.append("d6_status_change_documents")
-                elif "등록" in q:
-                    patterns.append("d6_alien_registration")
-                else:
-                    patterns.append("d6_extension_documents")
-                    patterns.append("d6_status_change_documents")
-            
-            if "연장" in q or "기간" in q:
-                patterns.append("d6_extension_documents")
-            
-            if "변경" in q or "자격변경" in q:
-                patterns.append("d6_status_change_principle")
-                patterns.append("d6_status_change_german")
-                patterns.append("d6_status_change_canadian")
-            
-            if "캐나다" in q:
-                patterns.append("d6_status_change_canadian")
-            
-            if "재입국" in q:
-                patterns.append("d6_reentry_permit")
-            
-            if "등록" in q:
-                patterns.append("d6_alien_registration")
-                patterns.append("d6_registration_change")
-            
-            if "근무처" in q:
-                patterns.append("d6_workplace_change")
-            
-            # D-6 일반 질문
-            if not patterns:
-                patterns = ["d6_overview", "d6_eligibility"]
-        
         # === 기본값 ===
         if not patterns:
             # 비자 유형을 특정할 수 없는 경우 키워드로 판단
@@ -752,14 +551,8 @@ class RAGService:
                 patterns = ["d2_overview"]
             elif "단기취업" in q or "계절근로" in q or "흥행" in q or "모델" in q:
                 patterns = ["c4_overview"]
-            elif "일반연수" in q or "어학연수" in q or "한국어연수" in q or "연수" in q:
-                patterns = ["d4_overview"]
-            elif "취재" in q or "기자" in q or "언론" in q or "보도" in q:
-                patterns = ["d5_overview"]
-            elif "종교" in q or "선교" in q or "사회복지" in q:
-                patterns = ["d6_overview"]
             else:
-                patterns = ["f6_overview", "d10_overview", "d2_overview", "c4_overview", "d4_overview", "d5_overview", "d6_overview"]
+                patterns = ["f6_overview", "d10_overview", "d2_overview", "c4_overview"]
         
         return patterns
     

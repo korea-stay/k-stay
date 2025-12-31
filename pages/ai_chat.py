@@ -126,7 +126,7 @@ def render():
                     color: #64748b !important;
                     font-size: 0.9rem;
                     margin: 0.35rem 0 0 0;
-                ">D-2 유학 · D-10 구직 · F-6 결혼이민 · C-4 단기취업</p>
+                ">D-2 유학 · D-4 연수 · D-5 취재 · D-6 종교 · D-10 구직 · F-6 결혼 · C-4 단기취업</p>
             </div>
         </div>
     """, unsafe_allow_html=True)
@@ -152,8 +152,8 @@ def render():
     col1, col2, col3, col4 = st.columns(4)
     quick_questions = [
         ("🎓 D-2 유학", "D-2 유학비자 종류가 뭐가 있어요?"),
-        ("💼 유학생 알바", "유학생 아르바이트 몇시간까지 가능해요?"),
-        ("💍 F-6 결혼", "F-6 결혼이민 비자 신청 조건이 뭐예요?"),
+        ("📚 D-4 연수", "D-4 일반연수 비자는 뭐예요?"),
+        ("💍 F-6 결혼", "F-6 결혼이민 비자 조건이 뭐예요?"),
         ("🔍 D-10 구직", "D-10 구직비자 점수제는 어떻게 되나요?")
     ]
     
@@ -215,6 +215,30 @@ def render():
                                 font-size: 0.75rem;
                                 font-weight: 500;
                             ">D-2 유학</span>
+                            <span style="
+                                background: #e0e7ff;
+                                color: #3730a3;
+                                padding: 4px 10px;
+                                border-radius: 12px;
+                                font-size: 0.75rem;
+                                font-weight: 500;
+                            ">D-4 연수</span>
+                            <span style="
+                                background: #f3e8ff;
+                                color: #6b21a8;
+                                padding: 4px 10px;
+                                border-radius: 12px;
+                                font-size: 0.75rem;
+                                font-weight: 500;
+                            ">D-5 취재</span>
+                            <span style="
+                                background: #fae8ff;
+                                color: #86198f;
+                                padding: 4px 10px;
+                                border-radius: 12px;
+                                font-size: 0.75rem;
+                                font-weight: 500;
+                            ">D-6 종교</span>
                             <span style="
                                 background: #dcfce7;
                                 color: #166534;
@@ -371,6 +395,9 @@ def render():
         
         visa_info = [
             ("🎓", "D-2 유학", "#3b82f6", ["D-2-1~4 학위과정", "D-2-5 연구", "D-2-6 교환학생"]),
+            ("📚", "D-4 연수", "#6366f1", ["D-4-1 한국어연수", "D-4-6 사설교육기관"]),
+            ("📰", "D-5 취재", "#8b5cf6", ["외신기자", "보도활동"]),
+            ("⛪", "D-6 종교", "#a855f7", ["선교활동", "사회복지"]),
             ("🔍", "D-10 구직", "#10b981", ["D-10-1 일반구직", "D-10-2 기술창업"]),
             ("💍", "F-6 결혼이민", "#ec4899", ["F-6-1 배우자", "F-6-2 자녀양육", "F-6-3 혼인단절"]),
             ("✈️", "C-4 단기취업", "#f59e0b", ["C-4-1~4 계절근로", "C-4-5 흥행/모델"]),

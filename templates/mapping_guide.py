@@ -131,13 +131,13 @@ UNIFIED_APPLICATION_MAPPING = {
                     "data_key": "phone",
                     "layer": "universal",
                     "anchor_text": "전화 번호 Telephone No.",
-                    "strategy": "BELOW_CELL"
+                    "strategy": "NEXT_CELL"
                 },
                 {
                     "data_key": "mobile_phone",
                     "layer": "universal",
                     "anchor_text": "휴대 전화 Cell phone No.",
-                    "strategy": "BELOW_CELL"
+                    "strategy": "NEXT_CELL"
                 },
                 {
                     "data_key": "home_country_address",
@@ -146,22 +146,10 @@ UNIFIED_APPLICATION_MAPPING = {
                     "strategy": "NEXT_CELL"
                 },
                 {
-                    "data_key": "school_status",
-                    "layer": "variable",
-                    "anchor_text": "미취학[],  초[ ],     중[ ],   고[ ] Non-school[], Eleme",
-                    "strategy": "CHECKBOX"
-                },
-                {
                     "data_key": "school_name",
                     "layer": "variable",
                     "anchor_text": "학교 이름 Name of School",
                     "strategy": "NEXT_CELL"
-                },
-                {
-                    "data_key": "school_type",
-                    "layer": "variable",
-                    "anchor_text": "교육청 인가[], 교육청 비인가, 대안학교[] Accredited school by Edu",
-                    "strategy": "CHECKBOX"
                 },
                 {
                     "data_key": "current_workplace_name",
@@ -209,30 +197,6 @@ UNIFIED_APPLICATION_MAPPING = {
                     "data_key": "application_date",
                     "layer": "variable",
                     "anchor_text": "신청일 Date of application",
-                    "strategy": "NEXT_CELL"
-                },
-                {
-                    "data_key": "applicant_signature",
-                    "layer": "variable",
-                    "anchor_text": "신청인 서명 또는 인 Signature/Seal",
-                    "strategy": "BELOW_CELL"
-                },
-                {
-                    "data_key": "consent_applicant_signature",
-                    "layer": "variable",
-                    "anchor_text": "신청인 Applicant",
-                    "strategy": "NEXT_CELL"
-                },
-                {
-                    "data_key": "consent_spouse_signature",
-                    "layer": "variable",
-                    "anchor_text": "신청인의 배우자 Spouse of applicant",
-                    "strategy": "NEXT_CELL"
-                },
-                {
-                    "data_key": "consent_parent_signature",
-                    "layer": "variable",
-                    "anchor_text": "신청인의 부 또는 모 Father/Mother of applicant",
                     "strategy": "NEXT_CELL"
                 },
             ]
@@ -1774,63 +1738,66 @@ PART_TIME_WORK_MAPPING = {
                     "strategy": "NEXT_CELL"
                 },
                 {
-                    "data_key": "wage_hourly",
+                    "data_key": "employer_wage_hourly",
                     "layer": "variable",
                     "anchor_text": "급 여 ( 시 급 )",
                     "strategy": "NEXT_CELL"
                 },
                 {
-                    "data_key": "weekday_total_hours",
+                    "data_key": "employer_weekday_total_hours",
                     "layer": "variable",
                     "anchor_text": "평  일 : 총	시간",
                     "strategy": "APPEND_TO_SAME_CELL"
                 },
                 {
-                    "data_key": "weekend_total_hours",
+                    "data_key": "employer_weekend_total_hours",
                     "layer": "variable",
                     "anchor_text": "주말 : 총	시간",
                     "strategy": "APPEND_TO_SAME_CELL"
                 },
                 {
-                    "data_key": "working_hours_mon",
+                    "data_key": "employer_working_hours_mon",
                     "layer": "variable",
                     "anchor_text": "월",
                     "strategy": "BELOW_CELL"
                 },
                 {
-                    "data_key": "working_hours_tue",
+                    "data_key": "employer_working_hours_tue",
                     "layer": "variable",
                     "anchor_text": "화",
+                    "index": 5,
                     "strategy": "BELOW_CELL"
                 },
                 {
-                    "data_key": "working_hours_wed",
+                    "data_key": "employer_working_hours_wed",
                     "layer": "variable",
                     "anchor_text": "수",
+                    "index": 5,
                     "strategy": "BELOW_CELL"
                 },
                 {
-                    "data_key": "working_hours_thu",
+                    "data_key": "employer_working_hours_thu",
                     "layer": "variable",
                     "anchor_text": "목",
                     "strategy": "BELOW_CELL"
                 },
                 {
-                    "data_key": "working_hours_fri",
+                    "data_key": "employer_working_hours_fri",
                     "layer": "variable",
                     "anchor_text": "금",
                     "strategy": "BELOW_CELL"
                 },
                 {
-                    "data_key": "working_hours_sat",
+                    "data_key": "employer_working_hours_sat",
                     "layer": "variable",
                     "anchor_text": "토",
                     "strategy": "BELOW_CELL"
                 },
                 {
-                    "data_key": "working_hours_sun",
+                    "data_key": "employer_working_hours_sun",
                     "layer": "variable",
                     "anchor_text": "일",
+                    "index": 11,
                     "strategy": "BELOW_CELL"
                 },
             ]

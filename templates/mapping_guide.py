@@ -1325,6 +1325,87 @@ FAMILY_INVITATION_MAPPING = {
                 },
             ]
         },
+        # 2. 초청인의 가족사항
+        {
+            "section_name": "초청인의 가족사항",
+            "target": "other_inviter",
+            "fields": [
+                {
+                    "data_key": "household_members",
+                    "anchor_text": "2. 초청인의 가족사항",
+                    "strategy": "TABLE_ROWS",
+                    "table_config": {
+                        "header_row_text": ["관계", "성명", "국적", "생년월일", "연락처"],
+                        "start_row_offset": 1,
+                        "max_rows": 10,
+                        "columns": [
+                            {"key": "relationship", "col_index": 0},
+                            {"key": "name", "col_index": 1},
+                            {"key": "nationality", "col_index": 2},
+                            {"key": "birth_date", "col_index": 3},
+                            {"key": "phone", "col_index": 4},
+                        ]
+                    }
+                }
+            ]
+        },
+
+        # 4. 초청 전력 (헤더와 인덱스 정밀 수정)
+        {
+            "section_name": "초청 전력",
+            "target": "other_inviter",
+            "fields": [
+                {
+                    "data_key": "invitation_history",
+                    "anchor_text": "4. 초청 전력",
+                    "strategy": "TABLE_ROWS",
+                    "table_config": {
+                        "must_contain": ["초청횟수", "체류"],
+                        # [중요] '초청 횟수'는 이 표에만 있는 단어이므로 반드시 포함
+                        "header_row_text": ["관계", "성명", "국적", "생년월일", "초청 횟수", "체류"],
+                        "start_row_offset": 1,
+                        "max_rows": 5,
+                        "columns": [
+                            {"key": "relationship", "col_index": 0},  # 관계
+                            {"key": "name", "col_index": 1},          # 성명(영문 성명) - 키 이름 'name'으로 통일
+                            {"key": "nationality", "col_index": 2},   # 국적
+                            {"key": "birth_date", "col_index": 3},    # 생년월일
+                            {"key": "invite_count", "col_index": 4},  # 초청 횟수
+                            {"key": "is_staying", "col_index": 5},    # 체류 여부
+                        ]
+                    }
+                }
+            ]
+        },
+
+        # 6. 피초청인 가족관계 (헤더와 인덱스 정밀 수정)
+        {
+            "section_name": "피초청인 인적사항 및 가족관계",
+            "target": "self",
+            "fields": [
+                {
+                    "data_key": "invitee_family_members",
+                    "anchor_text": "6. 피초청인 인적사항 및 가족관계",
+                    "strategy": "TABLE_ROWS",
+                    "table_config": {
+                        # [중요] '거주지'는 이 표에만 있는 단어이므로 반드시 포함
+                        "must_contain": ["거주지"],
+                        "header_row_text": ["관계", "성명", "국적", "거주지", "생년월일", "연락처"],
+                        "start_row_offset": 1,
+                        "max_rows": 8,
+                        "columns": [
+                            # 실제 문서 순서: 관계 -> 성명 -> 국적 -> 거주지 -> 생년월일 -> 연락처
+                            {"key": "relationship", "col_index": 0},  # 관계
+                            {"key": "name", "col_index": 1},          # 성명
+                            {"key": "nationality", "col_index": 2},   # 국적
+                            {"key": "residence", "col_index": 3},     # 거주지 (순서 주의! 4번 아님)
+                            {"key": "birth_date", "col_index": 4},    # 생년월일
+                            {"key": "phone", "col_index": 5},         # 연락처
+                        ]
+                    }
+                }
+            ]
+        },
         {
             "section_name": "초청인의 가족사항",
             "section_name_en": "Inviter's Family Information",
@@ -1914,6 +1995,7 @@ GUARANTEE_LETTER_MAPPING = {
         {
             "section_name": "피보증 외국인",
             "section_name_en": "Guaranteed Foreigner",
+            "table_match_text": "피보증외국인",
             "target": "self",
             "target_prefix": "",
             "fields": [
@@ -1983,6 +2065,7 @@ GUARANTEE_LETTER_MAPPING = {
         {
             "section_name": "신원보증인",
             "section_name_en": "Guarantor",
+            "table_match_text": "신원보증인",
             "target": "other_guarantor",
             "target_prefix": "guarantor_",
             "fields": [
@@ -2003,6 +2086,7 @@ GUARANTEE_LETTER_MAPPING = {
                     "data_key": "guarantor_nationality",
                     "layer": "variable",
                     "anchor_text": "국적",
+                    "index": 40,
                     "strategy": "APPEND_TO_SAME_CELL"
                 },
                 {
@@ -2028,6 +2112,7 @@ GUARANTEE_LETTER_MAPPING = {
                     "data_key": "guarantor_address",
                     "layer": "variable",
                     "anchor_text": "주소",
+                    "index": 40,
                     "strategy": "APPEND_TO_SAME_CELL"
                 },
                 {
@@ -2092,6 +2177,9 @@ NATURALIZATION_APPLICATION_MAPPING = {
     "document_name": "귀화허가신청서",
     "type": "form",
     "sections": [
+        # ============================================================
+        # 섹션 1: 신청인 인적사항
+        # ============================================================
         {
             "section_name": "신청인 인적사항",
             "section_name_en": "Applicant Personal Information",
@@ -2102,451 +2190,267 @@ NATURALIZATION_APPLICATION_MAPPING = {
                     "data_key": "nationality",
                     "layer": "universal",
                     "anchor_text": "현재 국적",
-                    "strategy": "NEXT_CELL"
+                    "strategy": "APPEND_TO_SAME_CELL"
                 },
                 {
                     "data_key": "birth_place",
                     "layer": "variable",
                     "anchor_text": "출생지(국가 및 도시명)",
-                    "strategy": "NEXT_CELL"
+                    "strategy": "APPEND_TO_SAME_CELL"
                 },
                 {
                     "data_key": "full_name",
                     "layer": "universal",
                     "anchor_text": "성명(한글)",
-                    "strategy": "NEXT_CELL",
-                    "formatter": "FULL_NAME_KR"
-                },
-                {
-                    "data_key": "gender",
-                    "layer": "universal",
-                    "anchor_text": "성별",
                     "strategy": "APPEND_TO_SAME_CELL",
-                    "value_map": "GENDER"
+                    "formatter": "FULL_NAME_KR"
                 },
                 {
                     "data_key": "full_name_en",
                     "layer": "variable",
                     "anchor_text": "성명(영문)",
-                    "strategy": "NEXT_CELL"
+                    "strategy": "APPEND_TO_SAME_CELL"
                 },
                 {
                     "data_key": "alien_registration_no",
                     "layer": "universal",
                     "anchor_text": "외국인등록번호",
-                    "strategy": "NEXT_CELL"
-                },
-                {
-                    "data_key": "phone_mobile",
-                    "layer": "universal",
-                    "anchor_text": "전화번호 (휴대폰)",
                     "strategy": "APPEND_TO_SAME_CELL"
                 },
                 {
-                    "data_key": "phone_home",
-                    "layer": "variable",
-                    "anchor_text": "(자택)",
+                    "data_key": "phone",
+                    "layer": "universal",
+                    "anchor_text": "전화번호",
                     "strategy": "APPEND_TO_SAME_CELL"
                 },
                 {
                     "data_key": "email",
                     "layer": "universal",
                     "anchor_text": "전자우편(E-mail)",
-                    "strategy": "NEXT_CELL"
+                    "strategy": "APPEND_TO_SAME_CELL"
                 },
                 {
                     "data_key": "address",
                     "layer": "universal",
                     "anchor_text": "주소",
-                    "strategy": "NEXT_CELL"
+                    "strategy": "APPEND_TO_SAME_CELL"
                 },
                 {
                     "data_key": "intended_registered_domicile",
                     "layer": "variable",
                     "anchor_text": "예정 등록기준지",
-                    "strategy": "BELOW_CELL"
+                    "strategy": "APPEND_TO_SAME_CELL"
                 },
             ]
         },
+        # ============================================================
+        # 섹션 2: 귀화 유형 체크박스
+        # ============================================================
         {
-            "section_name": "가족사항",
-            "section_name_en": "Family Members",
-            "target": "other_family",
-            "target_prefix": "family_",
+            "section_name": "귀화 유형",
+            "section_name_en": "Naturalization Type",
+            "target": "self",
+            "target_prefix": "",
             "fields": [
+                # -----------------------------------------------------
+                # 일반귀화
+                # -----------------------------------------------------
                 {
-                    "data_key": "family_name",
+                    "data_key": "naturalization_sub_type",
                     "layer": "variable",
-                    "anchor_text": "성명",
-                    "strategy": "BELOW_CELL"
+                    "anchor_text": ["「민법」상 성년이며 영주자격(F5)을 가지고 있는 사람"],
+                    "strategy": "HIERARCHICAL_CHECKBOX",
+                    "checkbox_config": {
+                        "category": "general",
+                        "value": "general_permanent_resident",
+                        "parent_anchor": "일반귀화"
+                    }
+                },
+                # -----------------------------------------------------
+                # 간이귀화
+                # -----------------------------------------------------
+                {
+                    "data_key": "naturalization_sub_type",
+                    "layer": "variable",
+                    "anchor_text": ["부 또는 모가 대한민국의 국민이었던 사람"],
+                    "strategy": "HIERARCHICAL_CHECKBOX",
+                    "checkbox_config": {
+                        "category": "simplified",
+                        "value": "simplified_parent_korean",
+                        "parent_anchor": "간이귀화"
+                    }
                 },
                 {
-                    "data_key": "family_birth_date",
+                    "data_key": "naturalization_sub_type",
                     "layer": "variable",
-                    "anchor_text": "생년월일",
-                    "strategy": "BELOW_CELL"
+                    "anchor_text": ["대한민국에서 출생한 사람으로서 부 또는 모가 대한민국에서 출생한 사람"],
+                    "strategy": "HIERARCHICAL_CHECKBOX",
+                    "checkbox_config": {
+                        "category": "simplified",
+                        "value": "simplified_born_in_korea",
+                        "parent_anchor": "간이귀화"
+                    }
                 },
                 {
-                    "data_key": "family_gender",
+                    "data_key": "naturalization_sub_type",
                     "layer": "variable",
-                    "anchor_text": "성별",
-                    "strategy": "BELOW_CELL"
+                    "anchor_text": ["대한민국 국민의 양자(養子)로서 입양 당시 대한민국의 「민법」상 성년이었던 사람"],
+                    "strategy": "HIERARCHICAL_CHECKBOX",
+                    "checkbox_config": {
+                        "category": "simplified",
+                        "value": "simplified_adopted",
+                        "parent_anchor": "간이귀화"
+                    }
+                },
+                # -----------------------------------------------------
+                # 혼인귀화
+                # -----------------------------------------------------
+                {
+                    "data_key": "naturalization_sub_type",
+                    "layer": "variable",
+                    "anchor_text": ["배우자와 혼인한 상태로 대한민국에 2년 이상 거주한 사람"],
+                    "strategy": "HIERARCHICAL_CHECKBOX",
+                    "checkbox_config": {
+                        "category": "marriage",
+                        "value": "marriage_2years",
+                        "parent_anchor": "혼인귀화"
+                    }
                 },
                 {
-                    "data_key": "family_nationality",
+                    "data_key": "naturalization_sub_type",
                     "layer": "variable",
-                    "anchor_text": "국적 (거주지)",
-                    "strategy": "BELOW_CELL"
+                    "anchor_text": ["배우자와 혼인한 후 3년이 지나고 혼인한 상태로 대한민국에 1년 이상 거주한 사람"],
+                    "strategy": "HIERARCHICAL_CHECKBOX",
+                    "checkbox_config": {
+                        "category": "marriage",
+                        "value": "marriage_3years_1year",
+                        "parent_anchor": "혼인귀화"
+                    }
                 },
                 {
-                    "data_key": "family_phone",
+                    "data_key": "naturalization_sub_type",
                     "layer": "variable",
-                    "anchor_text": "연락처",
-                    "strategy": "BELOW_CELL"
+                    "anchor_text": ["배우자의 사망", "실종 그 밖에 자신에게 책임이 없는 사유로 혼인생활 유지가 불가한"],
+                    "strategy": "HIERARCHICAL_CHECKBOX",
+                    "checkbox_config": {
+                        "category": "marriage",
+                        "value": "marriage_spouse_unavailable",
+                        "parent_anchor": "혼인귀화"
+                    }
                 },
                 {
-                    "data_key": "family_former_korean_national",
+                    "data_key": "naturalization_sub_type",
                     "layer": "variable",
-                    "anchor_text": "과거 한국국적 보유자",
-                    "strategy": "BELOW_CELL"
+                    "anchor_text": ["배우자와의 혼인에 따라 출생한 미성년의 자녀를 양육하고 있거나 양육할 사람"],
+                    "strategy": "HIERARCHICAL_CHECKBOX",
+                    "checkbox_config": {
+                        "category": "marriage",
+                        "value": "marriage_raising_child",
+                        "parent_anchor": "혼인귀화"
+                    }
+                },
+                # -----------------------------------------------------
+                # 특별귀화
+                # -----------------------------------------------------
+                {
+                    "data_key": "naturalization_sub_type",
+                    "layer": "variable",
+                    "anchor_text": ["부 또는 모가 대한민국의 국민인 사람, 입양 당시 「민법」상 미성년이었던 사람"],
+                    "strategy": "HIERARCHICAL_CHECKBOX",
+                    "checkbox_config": {
+                        "category": "special",
+                        "value": "special_minor_adoptee",
+                        "parent_anchor": "특별귀화"
+                    }
                 },
                 {
-                    "data_key": "family_dependent_application",
+                    "data_key": "naturalization_sub_type",
                     "layer": "variable",
-                    "anchor_text": "수반취득 신청자",
-                    "strategy": "BELOW_CELL"
+                    "anchor_text": ["대한민국에 특별한 공로가 있는 사람"],
+                    "strategy": "HIERARCHICAL_CHECKBOX",
+                    "checkbox_config": {
+                        "category": "special",
+                        "value": "special_merit",
+                        "parent_anchor": "특별귀화",
+                        "has_sub_options": True
+                    }
+                },
+                # 특별귀화 - 공로자 하위 옵션
+                {
+                    "data_key": "special_merit_type",
+                    "layer": "variable",
+                    "anchor_text": ["독립유공자"],
+                    "strategy": "HIERARCHICAL_CHECKBOX",
+                    "checkbox_config": {
+                        "category": "special",
+                        "parent_value": "special_merit",
+                        "value": "special_merit_independence",
+                        "is_nested": True
+                    }
+                },
+                {
+                    "data_key": "special_merit_type",
+                    "layer": "variable",
+                    "anchor_text": ["국가유공자"],
+                    "strategy": "HIERARCHICAL_CHECKBOX",
+                    "checkbox_config": {
+                        "category": "special",
+                        "parent_value": "special_merit",
+                        "value": "special_merit_national",
+                        "is_nested": True
+                    }
+                },
+                {
+                    "data_key": "special_merit_type",
+                    "layer": "variable",
+                    "anchor_text": ["국익기여자"],
+                    "strategy": "HIERARCHICAL_CHECKBOX",
+                    "checkbox_config": {
+                        "category": "special",
+                        "parent_value": "special_merit",
+                        "value": "special_merit_national_interest",
+                        "is_nested": True
+                    }
+                },
+                {
+                    "data_key": "naturalization_sub_type",
+                    "layer": "variable",
+                    "anchor_text": ["과학", "경제", "문화", "체육 등 특정 분야에서 매우 우수한 능력을 보유한 사람"],
+                    "strategy": "HIERARCHICAL_CHECKBOX",
+                    "checkbox_config": {
+                        "category": "special",
+                        "value": "special_excellence",
+                        "parent_anchor": "특별귀화"
+                    }
                 },
             ]
         },
+        # ============================================================
+        # 섹션 3: 수반취득
+        # ============================================================
         {
-            "section_name": "배우자",
-            "section_name_en": "Spouse",
-            "target": "other_spouse",
-            "target_prefix": "spouse_",
-            "fields": [
-                {
-                    "data_key": "spouse_name",
-                    "layer": "variable",
-                    "anchor_text": "배우자",
-                    "strategy": "NEXT_CELL"
-                },
-            ]
-        },
-        {
-            "section_name": "국내 연고자 또는 동거인",
-            "section_name_en": "Domestic Relative or Cohabitant",
-            "target": "other_contact",
-            "target_prefix": "contact_",
-            "fields": [
-                {
-                    "data_key": "contact_relation",
-                    "layer": "variable",
-                    "anchor_text": "관계",
-                    "strategy": "BELOW_CELL"
-                },
-                {
-                    "data_key": "contact_name",
-                    "layer": "variable",
-                    "anchor_text": "성명",
-                    "strategy": "BELOW_CELL"
-                },
-                {
-                    "data_key": "contact_birth_date",
-                    "layer": "variable",
-                    "anchor_text": "생년월일",
-                    "strategy": "BELOW_CELL"
-                },
-                {
-                    "data_key": "contact_nationality",
-                    "layer": "variable",
-                    "anchor_text": "국적 (거주지)",
-                    "strategy": "BELOW_CELL"
-                },
-                {
-                    "data_key": "contact_phone",
-                    "layer": "variable",
-                    "anchor_text": "연락처",
-                    "strategy": "BELOW_CELL"
-                },
-            ]
-        },
-        {
-            "section_name": "생계유지능력(신청인)",
-            "section_name_en": "Livelihood Ability (Applicant)",
+            "section_name": "수반취득",
+            "section_name_en": "Accompanying Acquisition",
             "target": "self",
             "target_prefix": "",
             "fields": [
                 {
-                    "data_key": "occupation",
+                    "data_key": "accompanying_acquisition",
                     "layer": "variable",
-                    "anchor_text": "직업",
-                    "strategy": "NEXT_CELL"
-                },
-                {
-                    "data_key": "monthly_income",
-                    "layer": "variable",
-                    "anchor_text": "월 평균 소득액(최근 6개월간)",
-                    "strategy": "NEXT_CELL"
-                },
-                {
-                    "data_key": "last_year_income",
-                    "layer": "variable",
-                    "anchor_text": "전년도 소득액(세무서장 발행 소득금액증명원상 소득)",
-                    "strategy": "NEXT_CELL"
-                },
-                {
-                    "data_key": "real_estate_assets_amount",
-                    "layer": "variable",
-                    "anchor_text": "부동산(보증금 등) 만원",
-                    "strategy": "NEXT_CELL"
-                },
-                {
-                    "data_key": "financial_assets_amount",
-                    "layer": "variable",
-                    "anchor_text": "금융재산 만원",
-                    "strategy": "NEXT_CELL"
-                },
-            ]
-        },
-        {
-            "section_name": "법위반 사항",
-            "section_name_en": "Violations and Criminal/Custody Records",
-            "target": "self",
-            "target_prefix": "",
-            "fields": [
-                {
-                    "data_key": "offense_date",
-                    "layer": "variable",
-                    "anchor_text": "일자",
-                    "strategy": "BELOW_CELL"
-                },
-                {
-                    "data_key": "offense_details",
-                    "layer": "variable",
-                    "anchor_text": "위반내용(죄명)",
-                    "strategy": "BELOW_CELL"
-                },
-                {
-                    "data_key": "disposition_result",
-                    "layer": "variable",
-                    "anchor_text": "처분결과",
-                    "strategy": "BELOW_CELL"
-                },
-            ]
-        },
-        {
-            "section_name": "체납사항",
-            "section_name_en": "Arrears",
-            "target": "self",
-            "target_prefix": "",
-            "fields": [
-                {
-                    "data_key": "tax_arrears_amount",
-                    "layer": "variable",
-                    "anchor_text": "국세",
-                    "strategy": "APPEND_TO_SAME_CELL"
-                },
-                {
-                    "data_key": "health_insurance_arrears_amount",
-                    "layer": "variable",
-                    "anchor_text": "건강보험료",
-                    "strategy": "APPEND_TO_SAME_CELL"
-                },
-            ]
-        },
-        {
-            "section_name": "국민선서 및 국적증서수여",
-            "section_name_en": "Oath and Nationality Certificate",
-            "target": "self",
-            "target_prefix": "",
-            "fields": [
-                {
-                    "data_key": "oath_participation",
-                    "layer": "variable",
-                    "anchor_text": "국민선서의 내용을 확인하였으며, 국적증서수여식에 참석하여 국민선서를 하겠습니다.",
-                    "strategy": "APPEND_TO_SAME_CELL"
-                },
-                {
-                    "data_key": "law_compliance_agree",
-                    "layer": "variable",
-                    "anchor_text": "대한민국 국적 취득 후 대한민국의 헌법과 법률을 준수하겠습니다.",
-                    "strategy": "APPEND_TO_SAME_CELL"
-                },
-                {
-                    "data_key": "four_duties_ack",
-                    "layer": "variable",
-                    "anchor_text": "국민의 4대 의무",
-                    "strategy": "APPEND_TO_SAME_CELL"
-                },
-            ]
-        },
-        {
-            "section_name": "건강정보",
-            "section_name_en": "Health Information",
-            "target": "self",
-            "target_prefix": "",
-            "fields": [
-                {
-                    "data_key": "disability_type",
-                    "layer": "variable",
-                    "anchor_text": "장애 종류",
-                    "strategy": "APPEND_TO_SAME_CELL"
-                },
-                {
-                    "data_key": "disability_grade",
-                    "layer": "variable",
-                    "anchor_text": "장애 구분",
-                    "strategy": "APPEND_TO_SAME_CELL"
-                },
-                {
-                    "data_key": "disease_type",
-                    "layer": "variable",
-                    "anchor_text": "질병 종류",
-                    "strategy": "APPEND_TO_SAME_CELL"
-                },
-                {
-                    "data_key": "disease_status",
-                    "layer": "variable",
-                    "anchor_text": "질병 구분",
-                    "strategy": "APPEND_TO_SAME_CELL"
-                },
-            ]
-        },
-        {
-            "section_name": "참고사항",
-            "section_name_en": "Additional Information",
-            "target": "self",
-            "target_prefix": "",
-            "fields": [
-                {
-                    "data_key": "award_name",
-                    "layer": "variable",
-                    "anchor_text": "수상명",
-                    "strategy": "APPEND_TO_SAME_CELL"
-                },
-                {
-                    "data_key": "award_issuer",
-                    "layer": "variable",
-                    "anchor_text": "수여자",
-                    "strategy": "APPEND_TO_SAME_CELL"
-                },
-                {
-                    "data_key": "license_name",
-                    "layer": "variable",
-                    "anchor_text": "자격(면허)명",
-                    "strategy": "APPEND_TO_SAME_CELL"
-                },
-                {
-                    "data_key": "license_grade",
-                    "layer": "variable",
-                    "anchor_text": "등급",
-                    "strategy": "APPEND_TO_SAME_CELL"
-                },
-                {
-                    "data_key": "volunteer_activity",
-                    "layer": "variable",
-                    "anchor_text": "봉사활동",
-                    "strategy": "APPEND_TO_SAME_CELL"
-                },
-                {
-                    "data_key": "community_activity",
-                    "layer": "variable",
-                    "anchor_text": "지역사회활동",
-                    "strategy": "APPEND_TO_SAME_CELL"
-                },
-                {
-                    "data_key": "organization_name",
-                    "layer": "variable",
-                    "anchor_text": "단체명",
-                    "strategy": "APPEND_TO_SAME_CELL"
-                },
-                {
-                    "data_key": "activity_period",
-                    "layer": "variable",
-                    "anchor_text": "활동기간",
-                    "strategy": "APPEND_TO_SAME_CELL"
-                },
-                {
-                    "data_key": "commendation_for_good_deed",
-                    "layer": "variable",
-                    "anchor_text": "선행으로 인한 훈장ㆍ표창 수여",
-                    "strategy": "APPEND_TO_SAME_CELL"
-                },
-                {
-                    "data_key": "blood_donation_times",
-                    "layer": "variable",
-                    "anchor_text": "횟수",
-                    "strategy": "APPEND_TO_SAME_CELL"
-                },
-            ]
-        },
-        {
-            "section_name": "수반취득(자녀)",
-            "section_name_en": "Accompanying Naturalization (Child)",
-            "target": "other_family",
-            "target_prefix": "child_",
-            "fields": [
-                {
-                    "data_key": "child_nationality",
-                    "layer": "variable",
-                    "anchor_text": "현재 국적",
-                    "strategy": "NEXT_CELL"
-                },
-                {
-                    "data_key": "child_birth_place",
-                    "layer": "variable",
-                    "anchor_text": "출생지(국가 및 도시명)",
-                    "strategy": "NEXT_CELL"
-                },
-                {
-                    "data_key": "child_name_kr",
-                    "layer": "variable",
-                    "anchor_text": "성명(한글)",
-                    "strategy": "NEXT_CELL"
-                },
-                {
-                    "data_key": "child_gender",
-                    "layer": "variable",
-                    "anchor_text": "성별",
-                    "strategy": "APPEND_TO_SAME_CELL",
-                    "value_map": "GENDER"
-                },
-                {
-                    "data_key": "child_name_en",
-                    "layer": "variable",
-                    "anchor_text": "성명(영문)",
-                    "strategy": "NEXT_CELL"
-                },
-                {
-                    "data_key": "child_alien_registration_no",
-                    "layer": "variable",
-                    "anchor_text": "외국인등록번호",
-                    "strategy": "NEXT_CELL"
-                },
-                {
-                    "data_key": "child_intended_registered_domicile",
-                    "layer": "variable",
-                    "anchor_text": "예정 등록기준지",
-                    "strategy": "BELOW_CELL"
-                },
-            ]
-        },
-        {
-            "section_name": "신청인 서명",
-            "section_name_en": "Applicant Signature",
-            "target": "self",
-            "target_prefix": "",
-            "fields": [
-                {
-                    "data_key": "signature_name",
-                    "layer": "variable",
-                    "anchor_text": "신청인 Applicant’s Name",
-                    "strategy": "NEXT_CELL"
-                },
+                    "anchor_text": ["만 19세 미만의 자녀"],
+                    "strategy": "CHECKBOX_WITH_VALUE",
+                    "checkbox_config": {
+                        "value_field": "accompanying_children_count",
+                        "value_placeholder": "(   )",
+                        "description": "명에 대하여 신청인과 함께 국적 취득을 신청합니다."
+                    }
+                }
             ]
         },
     ]
 }
+
+
 
 # ======================================================================
 # 외국인배우자초청장

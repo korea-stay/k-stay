@@ -1,6 +1,7 @@
 """
 K-Stay Scenario Form Page - Redesigned
 서류 기반 Step-by-Step UI with Progress Tracking
+TABLE_ROWS 동적 테이블 입력 지원
 
 핵심 개선사항:
 1. 서류 단위로 스텝 분리 (탭 네비게이션)
@@ -8,6 +9,7 @@ K-Stay Scenario Form Page - Redesigned
 3. 중복 필드 자동 동기화
 4. 카드 기반 깔끔한 섹션 UI
 5. 서류별 설명 및 맥락 제공
+6. TABLE_ROWS 동적 테이블 입력 (가족, 초청 이력 등)
 """
 
 import streamlit as st
@@ -27,6 +29,7 @@ from config.settings import (
     get_layer3_fields,
     get_danger_patterns,
     get_narrative_config,
+    get_table_rows_fields,  # ★ TABLE_ROWS 필드 가져오기
 )
 from services.payment_service import PaymentService
 
@@ -34,6 +37,102 @@ from services.payment_service import PaymentService
 # =============================================================================
 # 서류-필드 매핑 정의 (시나리오별)
 # =============================================================================
+NATURALIZATION_TYPE_OPTIONS = {
+    "general": {
+        "label": "일반귀화",
+        "label_en": "General Naturalization",
+        "requirement": "※ 국내 5년 이상 체류",
+        "color": "#3b82f6",
+        "sub_options": [
+            {
+                "value": "general_permanent_resident",
+                "label": "「민법」상 성년이며 영주자격(F5)을 가지고 있는 사람",
+                "label_en": "Adult under Civil Act with permanent residence (F5)"
+            }
+        ]
+    },
+    "simplified": {
+        "label": "간이귀화",
+        "label_en": "Simplified Naturalization",
+        "requirement": "※ 국내 3년 이상 체류",
+        "color": "#10b981",
+        "sub_options": [
+            {
+                "value": "simplified_parent_korean",
+                "label": "부 또는 모가 대한민국의 국민이었던 사람",
+                "label_en": "Person whose parent was a Korean national"
+            },
+            {
+                "value": "simplified_born_in_korea",
+                "label": "대한민국에서 출생한 사람으로서 부 또는 모가 대한민국에서 출생한 사람",
+                "label_en": "Person born in Korea whose parent was also born in Korea"
+            },
+            {
+                "value": "simplified_adopted",
+                "label": "대한민국 국민의 양자(養子)로서 입양 당시 대한민국의 「민법」상 성년이었던 사람",
+                "label_en": "Adult adoptee of Korean national at time of adoption"
+            }
+        ]
+    },
+    "marriage": {
+        "label": "혼인귀화",
+        "label_en": "Marriage Naturalization",
+        "requirement": "※ 한국인과의 혼인에 한함",
+        "color": "#ec4899",
+        "sub_options": [
+            {
+                "value": "marriage_2years",
+                "label": "배우자와 혼인한 상태로 대한민국에 2년 이상 거주한 사람",
+                "label_en": "Person married and residing in Korea for 2+ years"
+            },
+            {
+                "value": "marriage_3years_1year",
+                "label": "배우자와 혼인한 후 3년이 지나고 혼인한 상태로 대한민국에 1년 이상 거주한 사람",
+                "label_en": "Person married 3+ years and residing in Korea for 1+ year"
+            },
+            {
+                "value": "marriage_spouse_unavailable",
+                "label": "배우자의 사망ㆍ실종 그 밖에 자신에게 책임이 없는 사유로 혼인생활 유지가 불가한 사람",
+                "label_en": "Person unable to maintain marriage due to spouse's death/disappearance"
+            },
+            {
+                "value": "marriage_raising_child",
+                "label": "배우자와의 혼인에 따라 출생한 미성년의 자녀를 양육하고 있거나 양육할 사람",
+                "label_en": "Person raising minor child from the marriage"
+            }
+        ]
+    },
+    "special": {
+        "label": "특별귀화",
+        "label_en": "Special Naturalization",
+        "requirement": "특별 귀화",
+        "color": "#f59e0b",
+        "sub_options": [
+            {
+                "value": "special_minor_adoptee",
+                "label": "부 또는 모가 대한민국의 국민인 사람, 입양 당시 「민법」상 미성년이었던 사람",
+                "label_en": "Person whose parent is Korean, or minor adoptee at time of adoption"
+            },
+            {
+                "value": "special_merit",
+                "label": "대한민국에 특별한 공로가 있는 사람",
+                "label_en": "Person with special merit to Korea",
+                "has_sub_options": True,
+                "sub_options": [
+                    {"value": "special_merit_independence", "label": "독립유공자", "label_en": "Independence activist"},
+                    {"value": "special_merit_national", "label": "국가유공자", "label_en": "National merit"},
+                    {"value": "special_merit_national_interest", "label": "국익기여자", "label_en": "National interest contributor"}
+                ]
+            },
+            {
+                "value": "special_excellence",
+                "label": "과학ㆍ경제ㆍ문화ㆍ체육 등 특정 분야에서 매우 우수한 능력을 보유한 사람",
+                "label_en": "Person with exceptional ability in science, economy, culture, sports, etc."
+            }
+        ]
+    }
+}
+
 
 DOCUMENT_FIELD_MAPPING = {
     "A": {  # 구직 준비 (D-10)
@@ -166,23 +265,20 @@ DOCUMENT_FIELD_MAPPING = {
                     "name": "근무 조건",
                     "name_en": "Work Conditions",
                     "icon": "📅",
-                    "fields": ["employment_period",                     "employer_wage_hourly",           # wage_hourly → employer_wage_hourly
-                    "employer_weekday_total_hours",   # 수정!
-                    "employer_weekend_total_hours"    # 수정!
-                    ]
+                    "fields": ["employment_period", "employer_wage_hourly", "employer_weekday_total_hours", "employer_weekend_total_hours"]
                 },
                 {
                     "name": "요일별 근무시간",
                     "name_en": "Daily Work Hours",
                     "icon": "🕐",
                     "fields": [
-                        "employer_working_hours_mon",     # 수정!
-                        "employer_working_hours_tue",     # 수정!
-                        "employer_working_hours_wed",     # 수정!
-                        "employer_working_hours_thu",     # 수정!
-                        "employer_working_hours_fri",     # 수정!
-                        "employer_working_hours_sat",     # 수정!
-                        "employer_working_hours_sun"      # 수정!
+                        "employer_working_hours_mon",
+                        "employer_working_hours_tue",
+                        "employer_working_hours_wed",
+                        "employer_working_hours_thu",
+                        "employer_working_hours_fri",
+                        "employer_working_hours_sat",
+                        "employer_working_hours_sun"
                     ]
                 }
             ]
@@ -488,40 +584,11 @@ DOCUMENT_FIELD_MAPPING = {
                     "fields": ["birth_place", "full_name_en", "phone_home", "intended_registered_domicile", "occupation"]
                 },
                 {
-                    "name": "소득/재산 정보",
-                    "name_en": "Income & Assets",
-                    "icon": "💰",
-                    "fields": ["monthly_income", "last_year_income", "real_estate_assets_amount", "financial_assets_amount"]
-                },
-                {
-                    "name": "위반 이력",
-                    "name_en": "Violation History",
-                    "icon": "⚖️",
-                    "fields": ["offense_date", "offense_details", "disposition_result", "tax_arrears_amount", "health_insurance_arrears_amount"]
-                },
-                {
-                    "name": "국민 의무 동의",
-                    "name_en": "Citizen Duties Agreement",
-                    "icon": "🇰🇷",
-                    "fields": ["oath_participation", "law_compliance_agree", "four_duties_ack"]
-                },
-                {
-                    "name": "건강/장애 사항",
-                    "name_en": "Health/Disability",
-                    "icon": "🏥",
-                    "fields": ["disability_type", "disability_grade", "disease_type", "disease_status"]
-                },
-                {
-                    "name": "자격/수상/활동",
-                    "name_en": "Qualifications & Activities",
-                    "icon": "🏆",
-                    "fields": ["award_name", "award_issuer", "license_name", "license_grade", "volunteer_activity", "community_activity", "organization_name", "activity_period", "commendation_for_good_deed", "blood_donation_times"]
-                },
-                {
-                    "name": "서명",
-                    "name_en": "Signature",
-                    "icon": "✍️",
-                    "fields": ["signature_name"]
+                    "name": "귀화 유형",
+                    "name_en": "Naturalization Type",
+                    "icon": "📋",
+                    "fields": ["naturalization_type", "naturalization_sub_type", "special_merit_type"],
+                    "custom_renderer": "render_naturalization_type_selector"
                 }
             ]
         },
@@ -567,6 +634,208 @@ def get_all_field_definitions(scenario_id: str) -> Dict[str, Dict]:
 
 
 # =============================================================================
+# ★★★ TABLE_ROWS 동적 테이블 입력 UI ★★★
+# =============================================================================
+
+def render_table_input_section(table_key: str, table_config: dict, section_title: str = None):
+    """
+    동적 테이블 입력 UI 렌더링
+    
+    Args:
+        table_key: form_data에서 사용할 키 (예: "household_members")
+        table_config: 테이블 설정 (columns, min_rows, max_rows 등)
+        section_title: 섹션 제목 (옵션)
+    """
+    
+    columns = table_config.get("columns", [])
+    max_rows = table_config.get("max_rows", 10)
+    min_rows = table_config.get("min_rows", 0)
+    
+    # 세션 상태 초기화
+    if 'form_data' not in st.session_state:
+        st.session_state.form_data = {}
+    
+    if table_key not in st.session_state.form_data:
+        st.session_state.form_data[table_key] = [{}] if min_rows > 0 else []
+    
+    rows_data = st.session_state.form_data[table_key]
+    
+    # 최소 행 보장
+    while len(rows_data) < min_rows:
+        rows_data.append({})
+    
+    # 빈 배열이면 최소 1행 추가
+    if not rows_data:
+        rows_data = [{}]
+        st.session_state.form_data[table_key] = rows_data
+    
+    # 섹션 제목
+    if section_title:
+        st.markdown(f"""
+            <div style="
+                background: linear-gradient(90deg, #fef3c7, #fde68a);
+                padding: 12px 16px;
+                border-radius: 8px;
+                margin-bottom: 12px;
+                border-left: 4px solid #f59e0b;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            ">
+                <span style="font-size: 1.2rem;">📋</span>
+                <span style="font-weight: 600; color: #92400e;">{section_title}</span>
+                <span style="
+                    margin-left: auto;
+                    background: #fbbf24;
+                    color: #78350f;
+                    font-size: 0.7rem;
+                    padding: 2px 8px;
+                    border-radius: 10px;
+                ">{len(rows_data)}행</span>
+            </div>
+        """, unsafe_allow_html=True)
+    
+    # 테이블 헤더
+    num_cols = len(columns)
+    header_cols = st.columns([3] * num_cols + [1])
+    
+    for idx, col_config in enumerate(columns):
+        required_mark = " *" if col_config.get("required", False) else ""
+        header_cols[idx].markdown(f"**{col_config.get('label', '')}{required_mark}**")
+    header_cols[-1].markdown("**삭제**")
+    
+    # 행 렌더링
+    rows_to_delete = []
+    
+    for row_idx, row_data in enumerate(rows_data):
+        row_cols = st.columns([3] * num_cols + [1])
+        
+        for col_idx, col_config in enumerate(columns):
+            col_key = col_config.get("key")
+            col_type = col_config.get("type", "text")
+            col_options = col_config.get("options", [])
+            widget_key = f"{table_key}_{row_idx}_{col_key}"
+            current_value = row_data.get(col_key, "")
+            
+            with row_cols[col_idx]:
+                if col_type == "select" and col_options:
+                    options_list = [""] + col_options
+                    idx_val = options_list.index(current_value) if current_value in options_list else 0
+                    new_value = st.selectbox(
+                        f"{col_key}_{row_idx}",
+                        options_list,
+                        index=idx_val,
+                        key=widget_key,
+                        label_visibility="collapsed"
+                    )
+                elif col_type == "date":
+                    date_val = None
+                    if current_value:
+                        try:
+                            date_val = datetime.strptime(current_value, "%Y-%m-%d").date()
+                        except:
+                            pass
+                    new_value = st.date_input(
+                        f"{col_key}_{row_idx}",
+                        value=date_val,
+                        key=widget_key,
+                        label_visibility="collapsed"
+                    )
+                    new_value = new_value.strftime("%Y-%m-%d") if new_value else ""
+                else:
+                    new_value = st.text_input(
+                        f"{col_key}_{row_idx}",
+                        value=current_value,
+                        key=widget_key,
+                        label_visibility="collapsed"
+                    )
+                
+                rows_data[row_idx][col_key] = new_value
+        
+        # 삭제 버튼
+        with row_cols[-1]:
+            if len(rows_data) > min_rows:
+                if st.button("🗑️", key=f"del_{table_key}_{row_idx}", help="이 행 삭제"):
+                    rows_to_delete.append(row_idx)
+            else:
+                st.write("")  # 빈 공간
+    
+    # 삭제 처리
+    if rows_to_delete:
+        for idx in sorted(rows_to_delete, reverse=True):
+            rows_data.pop(idx)
+        st.session_state.form_data[table_key] = rows_data
+        st.rerun()
+    
+    # 행 추가 버튼
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        if len(rows_data) < max_rows:
+            if st.button(f"➕ 행 추가 ({len(rows_data)}/{max_rows})", key=f"add_{table_key}", use_container_width=True):
+                rows_data.append({})
+                st.session_state.form_data[table_key] = rows_data
+                st.rerun()
+        else:
+            st.info(f"최대 {max_rows}개 행까지 입력 가능합니다.")
+    
+    st.markdown("---")
+
+
+# pages/scenario_form.py
+
+def render_phase2_table_rows_section(scenario_id: str, current_doc_name: str):  # <--- current_doc_name 인자 추가
+    """
+    Phase 2에서 TABLE_ROWS 섹션 렌더링
+    현재 문서(current_doc_name)에 해당하는 테이블만 필터링하여 표시
+    """
+    
+    # TABLE_ROWS 필드 가져오기
+    table_fields = get_table_rows_fields(scenario_id)
+    
+    if not table_fields:
+        return
+    
+    # 현재 문서에 해당하는 테이블이 있는지 확인 및 필터링
+    relevant_tables = {}
+    for key, config in table_fields.items():
+        # 설정에서 target_doc을 가져옴 (없으면 모든 문서에 표시될 위험이 있으므로 체크 필요)
+        target_doc = config.get('target_doc')
+        
+        # target_doc이 설정되어 있고, 현재 문서와 일치하는 경우에만 추가
+        if target_doc and target_doc == current_doc_name:
+            relevant_tables[key] = config
+            
+    if not relevant_tables:
+        return  # 이 문서에 표시할 테이블이 없으면 종료
+
+    # 테이블 섹션 헤더 (해당 문서에 테이블이 있을 때만 표시)
+    st.markdown("""
+        <div style="
+            background: linear-gradient(135deg, #fef3c7, #fde68a);
+            border: 1px solid #f59e0b;
+            border-radius: 12px;
+            padding: 1rem;
+            margin: 1rem 0;
+        ">
+            <div style="font-weight: 600; color: #92400e; margin-bottom: 4px;">
+                📊 추가 정보 (테이블 형식)
+            </div>
+            <div style="font-size: 0.8rem; color: #a16207;">
+                아래 테이블에 필요한 정보를 입력해주세요.
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    # 필터링된 테이블만 렌더링
+    for table_key, table_config in relevant_tables.items():
+        render_table_input_section(
+            table_key=table_key,
+            table_config=table_config,
+            section_title=table_config.get('label', table_key)
+        )
+
+
+# =============================================================================
 # 메인 렌더 함수
 # =============================================================================
 
@@ -599,7 +868,7 @@ def render():
     if current_step == 1:
         render_phase1_universal_fact(scenario)
     elif current_step == 2:
-        render_phase2_document_based(scenario)  # 새로운 Phase 2
+        render_phase2_document_based(scenario)
     elif current_step == 3:
         render_phase3_narrative(scenario)
     elif current_step == 4:
@@ -820,11 +1089,11 @@ def render_phase1_universal_fact(scenario):
 
 
 # =============================================================================
-# Phase 2: Document-Based Form (새로운 UI)
+# Phase 2: Document-Based Form (★ TABLE_ROWS 포함 ★)
 # =============================================================================
 
 def render_phase2_document_based(scenario):
-    """Phase 2: 서류 기반 스텝 폼"""
+    """Phase 2: 서류 기반 스텝 폼 + TABLE_ROWS 테이블"""
     
     scenario_id = scenario.id
     doc_mapping = DOCUMENT_FIELD_MAPPING.get(scenario_id, {})
@@ -889,9 +1158,6 @@ def render_phase2_document_based(scenario):
                     <p style="margin: 4px 0 0 0; opacity: 0.9; font-size: 0.9rem;">
                         {current_doc_info.get('description', '')}
                     </p>
-                    <p style="margin: 2px 0 0 0; opacity: 0.7; font-size: 0.8rem;">
-                        {current_doc_info.get('description_en', '')}
-                    </p>
                 </div>
             </div>
             <div style="
@@ -913,50 +1179,68 @@ def render_phase2_document_based(scenario):
     
     sections = current_doc_info.get('sections', [])
     
-    with st.form(f"doc_form_{current_doc_name}"):
-        for section in sections:
-            render_section_card(section, all_field_defs, scenario_id)
+    # 1. 일반 필드 섹션 (for 문과 같은 레벨로 들여쓰기 주의)
+    
+    for section in sections:
+        # 1. 일단 기본 카드(제목, 아이콘 등)를 그립니다.
+        # 주의: fields에 있는 항목들이 텍스트 입력창으로 중복 표시될 수 있으니
+        # 매핑에서 fields 리스트를 비워두거나 조정이 필요할 수 있습니다.
+        render_section_card(section, all_field_defs, scenario_id)
         
-        st.markdown("<br>", unsafe_allow_html=True)
-        
-        # 네비게이션 버튼
-        col1, col2, col3 = st.columns([1, 1, 1])
-        
-        with col1:
-            if current_idx > 0:
-                prev_btn = st.form_submit_button("← 이전 서류", use_container_width=True)
-            else:
-                prev_btn = st.form_submit_button("← Phase 1로", use_container_width=True)
-        
-        with col2:
-            save_btn = st.form_submit_button("💾 임시 저장", use_container_width=True)
-        
-        with col3:
-            if current_idx < total_docs - 1:
-                next_btn = st.form_submit_button("다음 서류 →", type="primary", use_container_width=True)
-            else:
-                next_btn = st.form_submit_button("서술형 작성 →", type="primary", use_container_width=True)
-        
-        # 버튼 액션 처리
-        if prev_btn:
-            save_current_form_data(sections, all_field_defs)
-            if current_idx > 0:
-                st.session_state.current_doc_index = current_idx - 1
-            else:
-                st.session_state.form_step = 1
-            st.rerun()
-        
-        if save_btn:
-            save_current_form_data(sections, all_field_defs)
-            st.success("✓ 임시 저장되었습니다!")
-        
-        if next_btn:
-            save_current_form_data(sections, all_field_defs)
-            if current_idx < total_docs - 1:
-                st.session_state.current_doc_index = current_idx + 1
-            else:
-                st.session_state.form_step = 3
-            st.rerun()
+        # 2. 커스텀 렌더러가 있다면 그 아래에 추가로 그립니다.
+        custom_renderer = section.get('custom_renderer')
+        if custom_renderer == "render_naturalization_type_selector":
+            render_naturalization_type_selector()
+    
+    # 2. ★★★ TABLE_ROWS 테이블 렌더링 ★★★
+    # (이 줄이 for문 바깥으로 나와야 하며, def render... 바로 아래 레벨이어야 합니다)
+    render_phase2_table_rows_section(scenario_id, current_doc_name)
+    
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    # 3. 네비게이션 버튼
+    col1, col2, col3 = st.columns([1, 1, 1])
+    
+    # 버튼 변수 초기화
+    btn_prev = False
+    btn_save = False
+    btn_next = False
+    
+    with col1:
+        if current_idx > 0:
+            btn_prev = st.button("← 이전 서류", use_container_width=True)
+        else:
+            btn_prev = st.button("← Phase 1로", use_container_width=True)
+    
+    with col2:
+        btn_save = st.button("💾 임시 저장", use_container_width=True)
+    
+    with col3:
+        if current_idx < total_docs - 1:
+            btn_next = st.button("다음 서류 →", type="primary", use_container_width=True)
+        else:
+            btn_next = st.button("서술형 작성 →", type="primary", use_container_width=True)
+    
+    # 버튼 액션 처리
+    if btn_prev:
+        save_current_form_data(sections, all_field_defs)
+        if current_idx > 0:
+            st.session_state.current_doc_index = current_idx - 1
+        else:
+            st.session_state.form_step = 1
+        st.rerun()
+    
+    if btn_save:
+        save_current_form_data(sections, all_field_defs)
+        st.success("✓ 임시 저장되었습니다!")
+    
+    if btn_next:
+        save_current_form_data(sections, all_field_defs)
+        if current_idx < total_docs - 1:
+            st.session_state.current_doc_index = current_idx + 1
+        else:
+            st.session_state.form_step = 3
+        st.rerun()
 
 
 def render_document_tabs(docs: List[str], current_idx: int, doc_mapping: Dict, all_field_defs: Dict):
@@ -1122,8 +1406,6 @@ def render_section_card(section: Dict, all_field_defs: Dict, scenario_id: str):
             
             with col:
                 render_styled_field(field_key, field_def)
-    else:
-        st.info("이 섹션에 해당하는 필드가 없습니다.")
     
     st.markdown("</div></div>", unsafe_allow_html=True)
 
@@ -1720,3 +2002,538 @@ def generate_documents(scenario):
     import time
     time.sleep(0.5)
     st.rerun()
+
+    
+
+def render_naturalization_type_selector():
+    """
+    귀화 유형 선택 UI 렌더링
+    
+    이 함수는 시나리오 F(국적 귀화)의 Phase 2에서 호출됩니다.
+    """
+    
+    st.markdown("""
+        <div style="
+            background: linear-gradient(135deg, #fef3c7, #fde68a);
+            border: 2px solid #f59e0b;
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        ">
+            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+                <span style="font-size: 2rem;">🏛️</span>
+                <div>
+                    <h3 style="margin: 0; color: #92400e; font-size: 1.2rem;">귀화 유형 선택</h3>
+                    <p style="margin: 4px 0 0 0; color: #a16207; font-size: 0.85rem;">
+                        해당하는 귀화 유형과 세부 조건을 선택해주세요.
+                    </p>
+                </div>
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    # 세션 상태 초기화
+    if 'form_data' not in st.session_state:
+        st.session_state.form_data = {}
+    
+    # Step 1: 대분류 선택
+    st.markdown("### 1️⃣ 귀화 유형 선택")
+    
+    selected_category = st.session_state.form_data.get('naturalization_type', None)
+    
+    cols = st.columns(4)
+    
+    for idx, (category_key, category) in enumerate(NATURALIZATION_TYPE_OPTIONS.items()):
+        with cols[idx]:
+            is_selected = selected_category == category_key
+            
+            # 카드 스타일
+            bg_color = f"{category['color']}20" if is_selected else "#f8fafc"
+            border_color = category['color'] if is_selected else "#e2e8f0"
+            
+            st.markdown(f"""
+                <div style="
+                    background: {bg_color};
+                    border: 2px solid {border_color};
+                    border-radius: 12px;
+                    padding: 1rem;
+                    text-align: center;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                    min-height: 120px;
+                ">
+                    <div style="font-weight: 700; color: {category['color']}; font-size: 1rem;">
+                        {category['label']}
+                    </div>
+                    <div style="font-size: 0.7rem; color: #64748b; margin-top: 4px;">
+                        {category['label_en']}
+                    </div>
+                    <div style="
+                        font-size: 0.65rem; 
+                        color: #94a3b8; 
+                        margin-top: 8px;
+                        background: white;
+                        padding: 4px 8px;
+                        border-radius: 6px;
+                    ">
+                        {category.get('requirement', '')}
+                    </div>
+                </div>
+            """, unsafe_allow_html=True)
+            
+            if st.button(
+                "✓ 선택" if is_selected else "선택",
+                key=f"nat_cat_{category_key}",
+                use_container_width=True,
+                type="primary" if is_selected else "secondary"
+            ):
+                st.session_state.form_data['naturalization_type'] = category_key
+                st.session_state.form_data['naturalization_sub_type'] = None  # 하위 선택 초기화
+                st.session_state.form_data['special_merit_type'] = None
+                st.rerun()
+    
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    # Step 2: 세부 조건 선택
+    if selected_category:
+        category_data = NATURALIZATION_TYPE_OPTIONS.get(selected_category, {})
+        sub_options = category_data.get('sub_options', [])
+        
+        st.markdown(f"### 2️⃣ 세부 조건 선택 ({category_data['label']})")
+        
+        selected_sub = st.session_state.form_data.get('naturalization_sub_type', None)
+        
+        for sub_option in sub_options:
+            value = sub_option['value']
+            is_selected = selected_sub == value
+            has_nested = sub_option.get('has_sub_options', False)
+            
+            # 라디오 버튼 스타일의 선택 카드
+            border_color = category_data['color'] if is_selected else "#e2e8f0"
+            bg_color = f"{category_data['color']}10" if is_selected else "white"
+            
+            col1, col2 = st.columns([0.05, 0.95])
+            
+            with col1:
+                # 체크마크 또는 빈 원
+                if is_selected:
+                    st.markdown(f"""
+                        <div style="
+                            width: 24px;
+                            height: 24px;
+                            border-radius: 50%;
+                            background: {category_data['color']};
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            color: white;
+                            font-size: 14px;
+                            margin-top: 10px;
+                        ">✓</div>
+                    """, unsafe_allow_html=True)
+                else:
+                    st.markdown(f"""
+                        <div style="
+                            width: 24px;
+                            height: 24px;
+                            border-radius: 50%;
+                            border: 2px solid #d1d5db;
+                            margin-top: 10px;
+                        "></div>
+                    """, unsafe_allow_html=True)
+            
+            with col2:
+                st.markdown(f"""
+                    <div style="
+                        background: {bg_color};
+                        border: 2px solid {border_color};
+                        border-radius: 10px;
+                        padding: 12px 16px;
+                        margin-bottom: 8px;
+                    ">
+                        <div style="font-size: 0.9rem; color: #1e293b;">
+                            {sub_option['label']}
+                        </div>
+                        <div style="font-size: 0.75rem; color: #64748b; margin-top: 4px;">
+                            {sub_option['label_en']}
+                        </div>
+                    </div>
+                """, unsafe_allow_html=True)
+                
+                if st.button(
+                    "선택",
+                    key=f"nat_sub_{value}",
+                    use_container_width=True
+                ):
+                    st.session_state.form_data['naturalization_sub_type'] = value
+                    if not has_nested:
+                        st.session_state.form_data['special_merit_type'] = None
+                    st.rerun()
+            
+            # 중첩 옵션 (특별귀화 - 공로자)
+            if is_selected and has_nested:
+                nested_options = sub_option.get('sub_options', [])
+                selected_nested = st.session_state.form_data.get('special_merit_type', None)
+                
+                st.markdown("""
+                    <div style="margin-left: 40px; margin-bottom: 16px;">
+                        <div style="font-size: 0.85rem; color: #64748b; margin-bottom: 8px;">
+                            ▸ 공로 유형을 선택하세요:
+                        </div>
+                    </div>
+                """, unsafe_allow_html=True)
+                
+                nested_cols = st.columns(3)
+                
+                for n_idx, nested_opt in enumerate(nested_options):
+                    with nested_cols[n_idx]:
+                        n_value = nested_opt['value']
+                        n_selected = selected_nested == n_value
+                        
+                        st.markdown(f"""
+                            <div style="
+                                background: {'#fef3c7' if n_selected else 'white'};
+                                border: 2px solid {'#f59e0b' if n_selected else '#e2e8f0'};
+                                border-radius: 8px;
+                                padding: 10px;
+                                text-align: center;
+                                margin-left: 40px;
+                            ">
+                                <div style="font-size: 0.85rem; font-weight: 600; color: #1e293b;">
+                                    {nested_opt['label']}
+                                </div>
+                                <div style="font-size: 0.7rem; color: #64748b;">
+                                    {nested_opt['label_en']}
+                                </div>
+                            </div>
+                        """, unsafe_allow_html=True)
+                        
+                        if st.button(
+                            "✓" if n_selected else "선택",
+                            key=f"nat_nested_{n_value}",
+                            use_container_width=True
+                        ):
+                            st.session_state.form_data['special_merit_type'] = n_value
+                            st.rerun()
+        
+        st.markdown("<br>", unsafe_allow_html=True)
+    
+    # Step 3: 수반취득 (선택사항)
+    st.markdown("### 3️⃣ 수반취득 (선택사항)")
+    
+    st.markdown("""
+        <div style="
+            background: #f0f9ff;
+            border: 1px solid #bae6fd;
+            border-radius: 10px;
+            padding: 1rem;
+            margin-bottom: 12px;
+        ">
+            <div style="font-size: 0.85rem; color: #0369a1;">
+                ℹ️ 만 19세 미만의 자녀가 있는 경우, 신청인과 함께 국적 취득을 신청할 수 있습니다.
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    col1, col2 = st.columns([1, 2])
+    
+    with col1:
+        accompanying = st.checkbox(
+            "수반취득 신청",
+            value=st.session_state.form_data.get('accompanying_acquisition', False),
+            key="accompanying_checkbox"
+        )
+        st.session_state.form_data['accompanying_acquisition'] = accompanying
+    
+    with col2:
+        if accompanying:
+            count = st.number_input(
+                "자녀 수",
+                min_value=1,
+                max_value=10,
+                value=st.session_state.form_data.get('accompanying_children_count', 1),
+                key="accompanying_count"
+            )
+            st.session_state.form_data['accompanying_children_count'] = count
+    
+    st.markdown("---")
+    
+    # 선택 요약
+    render_naturalization_selection_summary()
+
+
+def render_naturalization_selection_summary():
+    """귀화 유형 선택 요약 표시"""
+    
+    form_data = st.session_state.get('form_data', {})
+    
+    nat_type = form_data.get('naturalization_type')
+    nat_sub = form_data.get('naturalization_sub_type')
+    merit_type = form_data.get('special_merit_type')
+    accompanying = form_data.get('accompanying_acquisition', False)
+    child_count = form_data.get('accompanying_children_count', 0)
+    
+    if not nat_type or not nat_sub:
+        st.warning("⚠️ 귀화 유형과 세부 조건을 모두 선택해주세요.")
+        return
+    
+    # 선택된 정보 가져오기
+    category = NATURALIZATION_TYPE_OPTIONS.get(nat_type, {})
+    sub_option = None
+    for opt in category.get('sub_options', []):
+        if opt['value'] == nat_sub:
+            sub_option = opt
+            break
+    
+    if not sub_option:
+        return
+    
+    st.markdown(f"""
+        <div style="
+            background: linear-gradient(135deg, #ecfdf5, #d1fae5);
+            border: 2px solid #34d399;
+            border-radius: 12px;
+            padding: 1.5rem;
+        ">
+            <div style="font-weight: 700; color: #065f46; font-size: 1rem; margin-bottom: 12px;">
+                ✅ 선택 완료
+            </div>
+            <div style="display: grid; gap: 8px;">
+                <div>
+                    <span style="color: #6b7280; font-size: 0.8rem;">귀화 유형:</span>
+                    <span style="color: #1e293b; font-weight: 600; margin-left: 8px;">
+                        {category['label']}
+                    </span>
+                </div>
+                <div>
+                    <span style="color: #6b7280; font-size: 0.8rem;">세부 조건:</span>
+                    <span style="color: #1e293b; font-weight: 500; margin-left: 8px; font-size: 0.9rem;">
+                        {sub_option['label'][:60]}...
+                    </span>
+                </div>
+    """, unsafe_allow_html=True)
+    
+    # 공로 유형 (해당 시)
+    if merit_type:
+        merit_label = ""
+        for opt in sub_option.get('sub_options', []):
+            if opt['value'] == merit_type:
+                merit_label = opt['label']
+                break
+        
+        st.markdown(f"""
+                <div>
+                    <span style="color: #6b7280; font-size: 0.8rem;">공로 유형:</span>
+                    <span style="color: #f59e0b; font-weight: 600; margin-left: 8px;">
+                        {merit_label}
+                    </span>
+                </div>
+        """, unsafe_allow_html=True)
+    
+    # 수반취득 (해당 시)
+    if accompanying and child_count > 0:
+        st.markdown(f"""
+                <div>
+                    <span style="color: #6b7280; font-size: 0.8rem;">수반취득:</span>
+                    <span style="color: #3b82f6; font-weight: 600; margin-left: 8px;">
+                        만 19세 미만 자녀 {child_count}명
+                    </span>
+                </div>
+        """, unsafe_allow_html=True)
+    
+    st.markdown("</div></div>", unsafe_allow_html=True)
+
+
+# =============================================================================
+# Phase 2 렌더링에 귀화 유형 선택 통합
+# =============================================================================
+
+def render_phase2_naturalization_section(scenario_id: str, current_doc_name: str):
+    """
+    Phase 2에서 귀화 유형 선택 섹션 렌더링
+    
+    이 함수는 시나리오 F의 '귀화허가신청서' 문서를 작성할 때 호출됩니다.
+    """
+    
+    if scenario_id != "F":
+        return
+    
+    if current_doc_name != "귀화허가신청서":
+        return
+    
+    # 귀화 유형 선택 UI 렌더링
+    render_naturalization_type_selector()
+
+
+# =============================================================================
+# DOCUMENT_FIELD_MAPPING["F"] 업데이트 - scenario_form.py용
+# =============================================================================
+
+NATURALIZATION_DOCUMENT_FIELD_MAPPING = {
+    "귀화허가신청서": {
+        "icon": "🏛️",
+        "description": "귀화 허가 신청 기본 정보",
+        "description_en": "Naturalization application basic info",
+        "sections": [
+            {
+                "name": "신청인 인적사항",
+                "name_en": "Applicant Personal Info",
+                "icon": "👤",
+                "fields": ["birth_place", "full_name_en", "intended_registered_domicile"]
+            },
+            {
+                "name": "귀화 유형",
+                "name_en": "Naturalization Type",
+                "icon": "📋",
+                "fields": ["naturalization_type", "naturalization_sub_type", "special_merit_type"],
+                "custom_renderer": "render_naturalization_type_selector"
+            },
+            {
+                "name": "수반취득",
+                "name_en": "Accompanying Acquisition",
+                "icon": "👨‍👩‍👧",
+                "fields": ["accompanying_acquisition", "accompanying_children_count"]
+            }
+        ]
+    },
+    "신원보증서": {
+        "icon": "🤝",
+        "description": "신원보증인의 보증 내용",
+        "description_en": "Guarantor's guarantee details",
+        "sections": [
+            {
+                "name": "보증인 정보",
+                "name_en": "Guarantor Info",
+                "icon": "👤",
+                "fields": [
+                    "guarantor_name", "guarantor_name_hanja", "guarantor_nationality",
+                    "guarantor_gender", "guarantor_passport_or_birth", "guarantor_phone",
+                    "guarantor_address", "guarantor_relationship", "guarantor_employer",
+                    "guarantor_position", "guarantor_employer_address",
+                    "guarantor_guarantee_period", "guarantor_signature_date", "guarantor_signature"
+                ]
+            }
+        ]
+    }
+}
+
+
+# =============================================================================
+# LAYER2_VARIABLE_FIELDS["F"] 업데이트 - settings.py용
+# =============================================================================
+
+NATURALIZATION_LAYER2_FIELDS = {
+    "scenario_name": "국적 귀화",
+    "scenario_name_en": "Naturalization",
+    "visa_type": "귀화",
+    "field_groups": [
+        {
+            "target": "self",
+            "group_name": "신청인 인적사항",
+            "group_name_en": "Applicant Personal Information",
+            "fields": [
+                {
+                    "data_key": "birth_place",
+                    "label": "출생지(국가 및 도시명)",
+                    "label_en": "Birth Place (Country and City)",
+                    "type": "text",
+                    "required": True,
+                    "placeholder": "예: 중국 베이징"
+                },
+                {
+                    "data_key": "full_name_en",
+                    "label": "성명(영문)",
+                    "label_en": "Full Name (English)",
+                    "type": "text",
+                    "required": True,
+                    "placeholder": "HONG GILDONG"
+                },
+                {
+                    "data_key": "intended_registered_domicile",
+                    "label": "예정 등록기준지",
+                    "label_en": "Intended Registered Domicile",
+                    "type": "text",
+                    "required": True,
+                    "placeholder": "서울특별시 강남구"
+                },
+                # 귀화 유형 (계층적 선택)
+                {
+                    "data_key": "naturalization_type",
+                    "label": "귀화 유형",
+                    "label_en": "Naturalization Type",
+                    "type": "hierarchical_select",
+                    "required": True,
+                    "options": ["general", "simplified", "marriage", "special"],
+                    "option_labels": {
+                        "general": "일반귀화 (국내 5년 이상 체류)",
+                        "simplified": "간이귀화 (국내 3년 이상 체류)",
+                        "marriage": "혼인귀화 (한국인과의 혼인에 한함)",
+                        "special": "특별귀화"
+                    }
+                },
+                {
+                    "data_key": "naturalization_sub_type",
+                    "label": "귀화 세부 조건",
+                    "label_en": "Naturalization Sub-condition",
+                    "type": "dependent_select",
+                    "depends_on": "naturalization_type",
+                    "required": True
+                },
+                {
+                    "data_key": "special_merit_type",
+                    "label": "공로 유형",
+                    "label_en": "Merit Type",
+                    "type": "dependent_select",
+                    "depends_on": "naturalization_sub_type",
+                    "condition_value": "special_merit",
+                    "required": False,
+                    "options": ["special_merit_independence", "special_merit_national", "special_merit_national_interest"],
+                    "option_labels": {
+                        "special_merit_independence": "독립유공자",
+                        "special_merit_national": "국가유공자",
+                        "special_merit_national_interest": "국익기여자"
+                    }
+                },
+                {
+                    "data_key": "accompanying_acquisition",
+                    "label": "수반취득 여부",
+                    "label_en": "Accompanying Acquisition",
+                    "type": "checkbox",
+                    "required": False,
+                    "hint": "만 19세 미만의 자녀와 함께 국적 취득을 신청하는 경우 선택"
+                },
+                {
+                    "data_key": "accompanying_children_count",
+                    "label": "수반취득 자녀 수",
+                    "label_en": "Number of Accompanying Children",
+                    "type": "number",
+                    "min_value": 0,
+                    "max_value": 10,
+                    "depends_on": "accompanying_acquisition",
+                    "required": False
+                }
+            ]
+        },
+        {
+            "target": "other_guarantor",
+            "group_name": "신원보증인",
+            "group_name_en": "Guarantor",
+            "fields": [
+                {"data_key": "guarantor_name", "label": "성명", "label_en": "Guarantor Name", "type": "text", "required": True},
+                {"data_key": "guarantor_name_hanja", "label": "한자 성명", "label_en": "Name in Chinese", "type": "text", "required": False},
+                {"data_key": "guarantor_nationality", "label": "국적", "label_en": "Nationality", "type": "text", "required": True},
+                {"data_key": "guarantor_gender", "label": "성별", "label_en": "Gender", "type": "select", "options": ["Male", "Female"], "required": True},
+                {"data_key": "guarantor_passport_or_birth", "label": "여권번호 또는 생년월일", "label_en": "Passport No. or DOB", "type": "text", "required": True},
+                {"data_key": "guarantor_phone", "label": "전화번호", "label_en": "Phone", "type": "text", "required": True},
+                {"data_key": "guarantor_address", "label": "주소", "label_en": "Address", "type": "text", "required": True},
+                {"data_key": "guarantor_relationship", "label": "피보증인과의 관계", "label_en": "Relationship", "type": "text", "required": True},
+                {"data_key": "guarantor_employer", "label": "근무처", "label_en": "Employer", "type": "text", "required": False},
+                {"data_key": "guarantor_position", "label": "직위", "label_en": "Position", "type": "text", "required": False},
+                {"data_key": "guarantor_employer_address", "label": "근무처 주소", "label_en": "Employer Address", "type": "text", "required": False},
+                {"data_key": "guarantor_guarantee_period", "label": "보증기간", "label_en": "Guarantee Period", "type": "text", "required": True, "placeholder": "예: 4년"},
+                {"data_key": "guarantor_signature_date", "label": "서명일", "label_en": "Signature Date", "type": "date", "required": True},
+                {"data_key": "guarantor_signature", "label": "서명", "label_en": "Signature", "type": "text", "required": True}
+            ]
+        }
+    ]
+}

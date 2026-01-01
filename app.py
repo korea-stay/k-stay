@@ -22,17 +22,6 @@ init_language()
 
 # CSS 스타일
 def load_css():
-    # Weglot 번역 서비스
-    import streamlit.components.v1 as components
-    components.html("""
-    <script type="text/javascript" src="https://cdn.weglot.com/weglot.min.js"></script>
-    <script>
-        Weglot.initialize({
-            api_key: 'wg_fe03e78df092c9ec92ae02e64e5114d09'
-        });
-    </script>
-    """, height=0)
-    
     st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
@@ -161,20 +150,24 @@ def render_sidebar():
     if st.button(f"🏠 {t('sidebar.dashboard')}", use_container_width=True):
         st.session_state.current_page = 'dashboard'
         st.session_state.password_verified = False
+        st.session_state.docs_password_verified = False
         st.rerun()
     
     if st.button(f"📁 {t('sidebar.my_documents')}", use_container_width=True):
         st.session_state.current_page = 'my_documents'
         st.session_state.password_verified = False
+        st.session_state.docs_password_verified = False
         st.rerun()
     
     if st.button(f"💬 {t('sidebar.ai_chat')}", use_container_width=True):
         st.session_state.current_page = 'ai_chat'
         st.session_state.password_verified = False
+        st.session_state.docs_password_verified = False
         st.rerun()
     
     if st.button(f"👤 {t('sidebar.my_page')}", use_container_width=True):
         st.session_state.current_page = 'my_page'
+        st.session_state.docs_password_verified = False
         st.rerun()
     
     st.markdown("<br>", unsafe_allow_html=True)

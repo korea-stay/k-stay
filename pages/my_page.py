@@ -1,18 +1,19 @@
 """
 K-Stay My Page
-회원정보 조회 및 수정
+회원정보 조회 및 수정 with i18n support
 """
 
 import streamlit as st
 from datetime import date, datetime
 from services.auth_service import AuthService, SessionManager
+from utils.i18n import t, get_current_language
 
 
 def render():
     """마이페이지 렌더링"""
     
-    st.markdown("## 👤 마이페이지")
-    st.markdown("회원정보를 확인하고 수정할 수 있습니다.")
+    st.markdown(f"## 👤 {t('my_page.title')}")
+    st.markdown(t('my_page.subtitle'))
     
     st.markdown("---")
     
@@ -21,7 +22,7 @@ def render():
     user_email = st.session_state.get('user_email', '')
     
     if not user_data:
-        st.warning("로그인이 필요합니다.")
+        st.warning(t('my_page.login_required'))
         return
     
     # 비밀번호 확인 상태
@@ -36,7 +37,7 @@ def render():
 def render_password_verification(user_email: str):
     """비밀번호 확인 단계"""
     
-    st.markdown("""
+    st.markdown(f"""
         <div style="
             background: #fef3c7;
             border: 1px solid #f59e0b;
@@ -45,7 +46,7 @@ def render_password_verification(user_email: str):
             margin-bottom: 1.5rem;
         ">
             <p style="margin: 0; color: #92400e;">
-                🔐 회원정보를 수정하려면 비밀번호를 다시 입력해주세요.
+                🔐 {t('my_page.password_verify_msg')}
             </p>
         </div>
     """, unsafe_allow_html=True)
@@ -54,19 +55,19 @@ def render_password_verification(user_email: str):
     
     with col2:
         with st.form("password_verify_form"):
-            st.markdown(f"**이메일**: {user_email}")
+            st.markdown(f"**{t('my_page.email')}**: {user_email}")
             
             password = st.text_input(
-                "비밀번호",
+                t('auth.password'),
                 type="password",
-                placeholder="현재 비밀번호를 입력하세요"
+                placeholder=t('my_page.current_password_placeholder')
             )
             
-            submitted = st.form_submit_button("확인", use_container_width=True, type="primary")
+            submitted = st.form_submit_button(t('common.confirm'), use_container_width=True, type="primary")
             
             if submitted:
                 if not password:
-                    st.error("비밀번호를 입력해주세요.")
+                    st.error(t('my_page.enter_password'))
                 else:
                     auth_service = AuthService()
                     success, message, user_data = auth_service.sign_in(user_email, password)
@@ -75,16 +76,16 @@ def render_password_verification(user_email: str):
                         # 로그인 성공 시 세션 데이터 갱신 (DB에서 최신 데이터)
                         st.session_state.user_data = user_data
                         st.session_state.password_verified = True
-                        st.success("비밀번호가 확인되었습니다.")
+                        st.success(t('my_page.password_verified'))
                         st.rerun()
                     else:
-                        st.error("비밀번호가 일치하지 않습니다.")
+                        st.error(t('my_page.password_mismatch'))
 
 
 def render_profile_edit_form(user_data: dict):
     """회원정보 수정 폼"""
     
-    st.markdown("""
+    st.markdown(f"""
         <div style="
             background: #dcfce7;
             border: 1px solid #22c55e;
@@ -93,19 +94,19 @@ def render_profile_edit_form(user_data: dict):
             margin-bottom: 1.5rem;
         ">
             <p style="margin: 0; color: #166534;">
-                ✅ 비밀번호가 확인되었습니다. 회원정보를 수정할 수 있습니다.
+                ✅ {t('my_page.password_verified_msg')}
             </p>
         </div>
     """, unsafe_allow_html=True)
     
     # 수정 불가 필드 표시
-    st.markdown("### 📧 계정 정보")
+    st.markdown(f"### 📧 {t('my_page.account_info')}")
     
     col1, col2 = st.columns(2)
     with col1:
-        st.text_input("이메일", value=user_data.get('email', ''), disabled=True)
+        st.text_input(t('my_page.email'), value=user_data.get('email', ''), disabled=True)
     with col2:
-        st.text_input("가입일", value=format_date(user_data.get('created_at', '')), disabled=True)
+        st.text_input(t('my_page.joined_date'), value=format_date(user_data.get('created_at', '')), disabled=True)
     
     st.markdown("---")
     
@@ -113,18 +114,18 @@ def render_profile_edit_form(user_data: dict):
     with st.form("profile_edit_form"):
         
         # 인적사항
-        st.markdown("### 👤 인적사항")
+        st.markdown(f"### 👤 {t('my_page.personal_info')}")
         
         col1, col2 = st.columns(2)
         with col1:
             surname = st.text_input(
-                "성 (Surname) *",
+                f"{t('my_page.surname')} *",
                 value=user_data.get('surname', ''),
                 placeholder="HONG"
             )
         with col2:
             given_name = st.text_input(
-                "이름 (Given Name) *",
+                f"{t('my_page.given_name')} *",
                 value=user_data.get('given_name', ''),
                 placeholder="GILDONG"
             )
@@ -133,7 +134,7 @@ def render_profile_edit_form(user_data: dict):
         with col1:
             birth_date_value = parse_date(user_data.get('birth_date'))
             birth_date = st.date_input(
-                "생년월일 *",
+                f"{t('my_page.birth_date')} *",
                 value=birth_date_value,
                 min_value=date(1900, 1, 1),
                 max_value=date.today()
@@ -142,16 +143,16 @@ def render_profile_edit_form(user_data: dict):
             gender_options = ["Male", "Female"]
             current_gender = user_data.get('gender', 'Male')
             gender_index = gender_options.index(current_gender) if current_gender in gender_options else 0
-            gender = st.selectbox("성별 *", gender_options, index=gender_index)
+            gender = st.selectbox(f"{t('my_page.gender')} *", gender_options, index=gender_index)
         with col3:
             nationality = st.text_input(
-                "국적 *",
+                f"{t('my_page.nationality')} *",
                 value=user_data.get('nationality', ''),
                 placeholder="USA"
             )
         
         alien_registration_no = st.text_input(
-            "외국인등록번호",
+            t('my_page.alien_reg_no'),
             value=user_data.get('alien_registration_no', '') or '',
             placeholder="000000-0000000"
         )
@@ -159,60 +160,62 @@ def render_profile_edit_form(user_data: dict):
         st.markdown("---")
         
         # 여권정보
-        st.markdown("### 🛂 여권정보")
+        st.markdown(f"### 🛂 {t('my_page.passport_info')}")
         
         col1, col2, col3 = st.columns(3)
         with col1:
             passport_no = st.text_input(
-                "여권번호 *",
+                f"{t('my_page.passport_no')} *",
                 value=user_data.get('passport_no', ''),
                 placeholder="M12345678"
             )
         with col2:
             passport_issue_value = parse_date(user_data.get('passport_issue_date'))
             passport_issue_date = st.date_input(
-                "여권 발급일",
+                t('my_page.passport_issue'),
                 value=passport_issue_value,
                 min_value=date(1990, 1, 1),
                 max_value=date.today()
             )
         with col3:
             passport_expiry_value = parse_date(user_data.get('passport_expiry_date'))
-            if passport_expiry_value is None:
+            # 만료일이 오늘보다 이전이면 오늘 날짜로 설정
+            if passport_expiry_value is None or passport_expiry_value < date.today():
                 passport_expiry_value = date.today()
             passport_expiry_date = st.date_input(
-                "여권 만료일 *",
+                f"{t('my_page.passport_expiry')} *",
                 value=passport_expiry_value,
-                min_value=date.today()
+                min_value=date.today(),
+                max_value=date(2040, 12, 31)
             )
         
         st.markdown("---")
         
         # 연락처 정보
-        st.markdown("### 📞 연락처 정보")
+        st.markdown(f"### 📞 {t('my_page.contact_info')}")
         
-        st.markdown("**한국 내 연락처**")
+        st.markdown(f"**{t('my_page.korea_contact')}**")
         korea_address = st.text_area(
-            "한국 주소 *",
+            f"{t('my_page.korea_address')} *",
             value=user_data.get('korea_address', '') or '',
             placeholder="서울시 강남구 테헤란로 123, 101호",
             height=80
         )
         korea_phone = st.text_input(
-            "한국 전화번호 *",
+            f"{t('my_page.korea_phone')} *",
             value=user_data.get('korea_phone', '') or '',
             placeholder="010-1234-5678"
         )
         
-        st.markdown("**본국 연락처**")
+        st.markdown(f"**{t('my_page.home_contact')}**")
         home_country_address = st.text_area(
-            "본국 주소",
+            t('my_page.home_address'),
             value=user_data.get('home_country_address', '') or '',
             placeholder="123 Main St, City, Country",
             height=80
         )
         home_country_phone = st.text_input(
-            "본국 전화번호",
+            t('my_page.home_phone'),
             value=user_data.get('home_country_phone', '') or '',
             placeholder="+1-234-567-8900"
         )
@@ -222,11 +225,11 @@ def render_profile_edit_form(user_data: dict):
         col1, col2, col3 = st.columns([1, 1, 1])
         
         with col2:
-            submitted = st.form_submit_button("✅ 정보 수정하기", use_container_width=True, type="primary")
+            submitted = st.form_submit_button(f"✅ {t('my_page.update_btn')}", use_container_width=True, type="primary")
         
         if submitted:
             if not all([surname, given_name, nationality, passport_no, korea_address, korea_phone]):
-                st.error("필수 항목(*)을 모두 입력해주세요.")
+                st.error(t('my_page.required_error'))
             else:
                 # 업데이트 데이터 구성
                 update_data = {
@@ -259,33 +262,19 @@ def render_profile_edit_form(user_data: dict):
                         # DB 조회 실패 시 로컬 데이터만 업데이트
                         st.session_state.user_data.update(update_data)
                     
-                    st.success("✅ 회원정보가 성공적으로 수정되었습니다!")
+                    st.success(f"✅ {t('my_page.update_success')}")
                     st.balloons()
                 else:
-                    st.error(f"수정 실패: {message}")
+                    st.error(f"{t('my_page.update_fail')}: {message}")
                     
                     # 디버그 정보 표시
-                    with st.expander("🔍 디버그 정보"):
+                    with st.expander(f"🔍 {t('my_page.debug_info')}"):
                         st.write("**User ID:**", user_id)
-                        st.write("**업데이트 시도 데이터:**")
+                        st.write("**Update Data:**")
                         st.json(update_data)
-                        st.warning("""
-                        **RLS 정책 문제일 수 있습니다.**
-                        
-                        Supabase SQL Editor에서 다음 명령어를 실행해보세요:
-                        ```sql
-                        -- RLS 비활성화 (개발용)
-                        ALTER TABLE users DISABLE ROW LEVEL SECURITY;
-                        
-                        -- 또는 정책 수정
-                        DROP POLICY IF EXISTS "Users can update own data" ON users;
-                        CREATE POLICY "Users can update own data" ON users
-                            FOR UPDATE USING (true);
-                        ```
-                        """)
     
     st.markdown("<br>", unsafe_allow_html=True)
-    if st.button("🔒 비밀번호 확인 취소", use_container_width=False):
+    if st.button(f"🔒 {t('my_page.cancel_verify')}", use_container_width=False):
         st.session_state.password_verified = False
         st.rerun()
 
@@ -317,6 +306,10 @@ def format_date(date_value):
     
     parsed = parse_date(date_value)
     if parsed:
-        return parsed.strftime('%Y년 %m월 %d일')
+        current_lang = get_current_language()
+        if current_lang == "en":
+            return parsed.strftime('%B %d, %Y')
+        else:
+            return parsed.strftime('%Y년 %m월 %d일')
     
     return str(date_value)[:10]

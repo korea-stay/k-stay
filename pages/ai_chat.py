@@ -270,7 +270,7 @@ def render():
             """, unsafe_allow_html=True)
         
         # 채팅 기록 표시
-        for msg in st.session_state.ai_chat_history:
+        for idx, msg in enumerate(st.session_state.ai_chat_history):
             if msg['role'] == 'user':
                 # 사용자 메시지 (연한 파랑, 오른쪽)
                 st.markdown(f"""
@@ -295,11 +295,15 @@ def render():
                 # AI 메시지 (흰색, 왼쪽)
                 # content 내 줄바꿈 처리
                 content = msg['content'].replace('\n', '<br>')
+                
+                # 시나리오 정보 확인
+                scenario = msg.get('scenario', None)
+                
                 st.markdown(f"""
                     <div style="
                         display: flex;
                         gap: 12px;
-                        margin-bottom: 1rem;
+                        margin-bottom: 0.5rem;
                     ">
                         <div style="
                             width: 36px;
@@ -325,6 +329,25 @@ def render():
                         ">{content}</div>
                     </div>
                 """, unsafe_allow_html=True)
+                
+                # 시나리오 버튼 표시
+                if scenario:
+                    current_lang = get_current_language()
+                    scenario_name = scenario.get('name_en' if current_lang == 'en' else 'name_ko', '')
+                    scenario_icon = scenario.get('icon', '📄')
+                    scenario_visa = scenario.get('visa', '')
+                    
+                    btn_text = f"{scenario_icon} Start {scenario_name} ({scenario_visa})" if current_lang == 'en' else f"{scenario_icon} {scenario_name} 시작하기 ({scenario_visa})"
+                    
+                    col_spacer, col_btn, col_spacer2 = st.columns([0.5, 3, 4])
+                    with col_btn:
+                        if st.button(btn_text, key=f"scenario_btn_{idx}", type="primary"):
+                            st.session_state.selected_scenario = scenario.get('id')
+                            st.session_state.current_page = 'scenario_form'
+                            st.session_state.form_step = 1
+                            st.rerun()
+                    
+                    st.markdown("<div style='margin-bottom: 0.5rem;'></div>", unsafe_allow_html=True)
     
     # 입력 영역
     st.markdown("<div style='height: 1rem;'></div>", unsafe_allow_html=True)
@@ -431,6 +454,15 @@ def add_message(role: str, content: str):
     })
 
 
+def add_message_with_scenario(role: str, content: str, scenario: dict = None):
+    """시나리오 정보와 함께 메시지 추가"""
+    st.session_state.ai_chat_history.append({
+        "role": role,
+        "content": content,
+        "scenario": scenario
+    })
+
+
 def generate_response(user_message: str):
     """RAG 기반 AI 응답 생성"""
     
@@ -442,13 +474,13 @@ def generate_response(user_message: str):
                 # 현재 언어 확인하여 영어면 영어로 응답하도록 설정
                 current_lang = get_current_language()
                 
-                response, updated_history = rag_service.chat(
+                response, updated_history, related_scenario = rag_service.chat(
                     query=user_message,
                     conversation_history=st.session_state.conversation_history,
                     language=current_lang  # 언어 파라미터 전달
                 )
                 st.session_state.conversation_history = updated_history
-                add_message("assistant", response)
+                add_message_with_scenario("assistant", response, related_scenario)
             else:
                 add_message("assistant", t('ai_chat.error_service'))
             

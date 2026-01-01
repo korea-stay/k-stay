@@ -1188,13 +1188,94 @@ Response Style:
         
         full_answer = rag_response.answer + source_info
         
+        # 관련 시나리오 감지
+        related_scenario = self._detect_related_scenario(query, full_answer)
+        
         if conversation_history is None:
             conversation_history = []
         
         conversation_history.append({"role": "user", "content": query})
         conversation_history.append({"role": "assistant", "content": full_answer})
         
-        return full_answer, conversation_history
+        return full_answer, conversation_history, related_scenario
+    
+    def _detect_related_scenario(self, query: str, answer: str) -> dict:
+        """질문과 답변에서 관련 시나리오 감지"""
+        
+        # 시나리오 매핑 정의
+        scenario_mapping = {
+            "A": {
+                "id": "A",
+                "name_ko": "구직 준비",
+                "name_en": "Job Search Preparation",
+                "visa": "D-10",
+                "icon": "💼",
+                "keywords": ["d-10", "d10", "구직", "job search", "취업준비", "구직비자", "구직활동", "점수제"]
+            },
+            "B": {
+                "id": "B",
+                "name_ko": "아르바이트",
+                "name_en": "Part-time Work",
+                "visa": "시간제취업",
+                "icon": "⏰",
+                "keywords": ["아르바이트", "알바", "시간제", "part-time", "parttime", "part time", "유학생 취업", "시간제취업", "20시간"]
+            },
+            "C": {
+                "id": "C",
+                "name_ko": "결혼 이민",
+                "name_en": "Marriage Immigration",
+                "visa": "F-6",
+                "icon": "💍",
+                "keywords": ["f-6", "f6", "결혼", "marriage", "결혼이민", "배우자", "spouse", "국민의 배우자"]
+            },
+            "D": {
+                "id": "D",
+                "name_ko": "가족 초청",
+                "name_en": "Family Invitation",
+                "visa": "F-1-5",
+                "icon": "👨‍👩‍👧",
+                "keywords": ["f-1-5", "f1-5", "가족초청", "family invite", "부모초청", "초청장", "방문동거"]
+            },
+            "E": {
+                "id": "E",
+                "name_ko": "전문 인력",
+                "name_en": "Professional Worker",
+                "visa": "E-7",
+                "icon": "🎓",
+                "keywords": ["e-7", "e7", "전문인력", "professional", "특정활동", "전문직"]
+            },
+            "F": {
+                "id": "F",
+                "name_ko": "국적 귀화",
+                "name_en": "Naturalization",
+                "visa": "귀화",
+                "icon": "🏛️",
+                "keywords": ["귀화", "naturalization", "국적취득", "citizenship", "한국국적", "시민권"]
+            }
+        }
+        
+        combined_text = (query + " " + answer).lower()
+        
+        # 각 시나리오별 매칭 점수 계산
+        best_match = None
+        best_score = 0
+        
+        for scenario_id, scenario in scenario_mapping.items():
+            score = 0
+            for keyword in scenario["keywords"]:
+                if keyword.lower() in combined_text:
+                    # 더 긴 키워드에 높은 점수
+                    score += len(keyword)
+            
+            if score > best_score:
+                best_score = score
+                best_match = scenario
+        
+        # 최소 점수 이상일 때만 반환 (너무 약한 매칭 방지)
+        if best_score >= 3 and best_match:
+            return best_match
+        
+        return None
 
 
 # ==================== 간편 함수 ====================

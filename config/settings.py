@@ -312,6 +312,27 @@ LAYER2_VARIABLE_FIELDS = {
                         "required": True
                     },
                     {
+                        "data_key": "dob_year",
+                        "label": "생년월일 (년)",
+                        "label_en": "Date of Birth (Year)",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "dob_month",
+                        "label": "생년월일 (월)",
+                        "label_en": "Date of Birth (Month)",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "dob_day",
+                        "label": "생년월일 (일)",
+                        "label_en": "Date of Birth (Day)",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
                         "data_key": "annual_income_amount",
                         "label": "연 소득금액",
                         "label_en": "Annual Income Amount",
@@ -350,20 +371,6 @@ LAYER2_VARIABLE_FIELDS = {
                         "data_key": "consent_applicant_signature",
                         "label": "신청인",
                         "label_en": "Consent Applicant Signature",
-                        "type": "text",
-                        "required": True
-                    },
-                    {
-                        "data_key": "consent_spouse_signature",
-                        "label": "신청인의 배우자",
-                        "label_en": "Consent Spouse Signature",
-                        "type": "text",
-                        "required": True
-                    },
-                    {
-                        "data_key": "consent_parent_signature",
-                        "label": "신청인의 부 또는 모",
-                        "label_en": "Consent Parent Signature",
                         "type": "text",
                         "required": True
                     },

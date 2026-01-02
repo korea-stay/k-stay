@@ -3,9 +3,10 @@ K-Stay Main Dashboard
 결제 없이 시나리오 시작 가능, Phase 4에서 결제
 with i18n support + K-ETA Tab
 
-Merged Features:
-1. Tab Structure (Visa Docs vs K-ETA)
-2. Updated Scenario List (Medical added, Marriage/Professional removed)
+Fixed Issues:
+1. Tab selection persistence using session_state with styled buttons (no :has selector)
+2. Header colors properly set with -webkit-text-fill-color
+3. Coming soon card height matched with min-height
 """
 
 import streamlit as st
@@ -53,20 +54,86 @@ def render():
     else:
         st.info(f"💡 {t('dashboard.free_info')}")
     
-    # 탭 분리: 비자 서류 vs K-ETA
+    # 탭 상태 관리
+    if "dashboard_tab" not in st.session_state:
+        st.session_state.dashboard_tab = "keta"
+
     current_lang = get_current_language()
-    tab_visa = "📋 비자 서류" if current_lang == "ko" else "📋 Visa Documents"
-    tab_keta = "🛫 K-ETA" if current_lang == "ko" else "🛫 K-ETA"
     
-    # K-ETA를 첫 번째 탭으로 설정하여 기본값이 되도록 변경
-    tab1, tab2 = st.tabs([tab_keta, tab_visa])
+    # 탭 라벨 정의
+    keta_label = "🛫 K-ETA"
+    visa_label = "📋 Visa Documents" if current_lang == "en" else "📋 비자 서류"
     
-    with tab1:
-        # K-ETA 탭
+    # 라디오 버튼을 음영 탭 스타일로 변환하는 CSS
+    st.markdown("""
+        <style>
+            /* 라디오 버튼 컨테이너 */
+            div[data-testid="stRadio"] > div {
+                flex-direction: row !important;
+                gap: 0.5rem !important;
+            }
+            
+            /* 라디오 버튼 동그라미 숨기기 */
+            div[data-testid="stRadio"] label > div:first-child {
+                display: none !important;
+            }
+            
+            /* 각 탭 스타일 - 기본 */
+            div[data-testid="stRadio"] label {
+                padding: 0.6rem 1.25rem !important;
+                margin: 0 !important;
+                border: none !important;
+                background: transparent !important;
+                cursor: pointer !important;
+                border-radius: 0.5rem !important;
+            }
+            
+            /* 탭 텍스트 기본 스타일 */
+            div[data-testid="stRadio"] label p {
+                font-size: 0.9rem !important;
+                font-weight: 500 !important;
+                color: #64748b !important;
+            }
+            
+            /* 호버 효과 */
+            div[data-testid="stRadio"] label:hover {
+                background: #f1f5f9 !important;
+            }
+            
+            /* 선택된 탭 - 음영 배경 + 빨간 밑줄 */
+            div[data-testid="stRadio"] label[data-checked="true"] {
+                background: #fef2f2 !important;
+                border-bottom: 2px solid #dc2626 !important;
+                border-radius: 0.5rem 0.5rem 0 0 !important;
+            }
+            
+            div[data-testid="stRadio"] label[data-checked="true"] p {
+                color: #dc2626 !important;
+            }
+        </style>
+    """, unsafe_allow_html=True)
+    
+    # 탭 선택
+    def on_tab_change():
+        st.session_state.dashboard_tab = st.session_state.tab_radio
+    
+    selected_tab = st.radio(
+        "tab_selector",
+        options=["keta", "visa"],
+        index=0 if st.session_state.dashboard_tab == "keta" else 1,
+        format_func=lambda x: keta_label if x == "keta" else visa_label,
+        horizontal=True,
+        label_visibility="collapsed",
+        key="tab_radio",
+        on_change=on_tab_change
+    )
+    
+    st.markdown("<div style='height: 1rem;'></div>", unsafe_allow_html=True)
+    
+    # 선택된 탭에 따라 콘텐츠 렌더링
+    if st.session_state.dashboard_tab == "keta":
         render_keta_tab()
-    
-    with tab2:
-        # 비자 탭: 업데이트된 시나리오 리스트 (의료관광 포함, 결혼/전문인력 제거)
+    else:
         render_scenario_list()
 
 
@@ -95,10 +162,11 @@ def handle_payment_callback():
 def render_scenario_list():
     """시나리오 목록 렌더링 - 결혼이민(C), 전문인력(E) 제거, 의료관광(G) 추가"""
     
+    # 헤더 - 명시적 색상 지정
     st.markdown(f"""
         <div style="display: flex; align-items: center; gap: 0.75rem; margin: 1.5rem 0;">
             <span style="font-size: 1.5rem;">📋</span>
-            <h2 style="font-size: 1.25rem; font-weight: 700; color: #1e293b !important; margin: 0;">
+            <h2 style="font-size: 1.25rem; font-weight: 700; color: #1e293b !important; margin: 0; -webkit-text-fill-color: #1e293b !important;">
                 {t('dashboard.scenario_select')}
             </h2>
         </div>
@@ -115,28 +183,24 @@ def render_scenario_list():
     
     st.markdown("<br>", unsafe_allow_html=True)
     
-    # Track 2 - 고마진 (결혼이민 제거, 가족초청 유지, 의료관광 추가)
+    # Track 2 - 고마진
     st.markdown(f'<div style="background: #fef3c7; display: inline-block; padding: 0.375rem 0.75rem; border-radius: 0.375rem; margin-bottom: 1rem;"><span style="font-size: 0.8rem; font-weight: 600; color: #92400e;">💎 TRACK 2 — {t("dashboard.track2")}</span></div>', unsafe_allow_html=True)
     
     col3, col4 = st.columns(2)
     with col3:
-        # 가족 초청 (D)
         render_scenario_card("👨‍👩‍👧", "#d1fae5", t("scenarios.family_invite"), "F-1-5", t("scenarios.family_invite_desc"), 4, "D")
     with col4:
-        # 의료 관광 (G) - 새로 추가
         render_scenario_card("🏥", "#e0f2fe", t("scenarios.medical"), "C-3-3/G-1-10", t("scenarios.medical_desc"), 3, "G")
     
     st.markdown("<br>", unsafe_allow_html=True)
     
-    # Track 3 - 국적 귀화 (전문인력 제거)
+    # Track 3 - 국적 귀화
     st.markdown(f'<div style="background: #e0e7ff; display: inline-block; padding: 0.375rem 0.75rem; border-radius: 0.375rem; margin-bottom: 1rem;"><span style="font-size: 0.8rem; font-weight: 600; color: #3730a3;">🔄 TRACK 3 — {t("dashboard.track3")}</span></div>', unsafe_allow_html=True)
     
     col5, col6 = st.columns(2)
     with col5:
-        # 국적 귀화 (F)
         render_scenario_card("🏛️", "#fef3c7", t("scenarios.naturalization"), t("scenarios.naturalization"), t("scenarios.naturalization_desc"), 4, "F")
     with col6:
-        # 빈 카드 또는 "준비 중" 표시
         render_coming_soon_card()
 
 
@@ -210,8 +274,8 @@ def render_keta_tab():
             padding: 1.5rem;
             margin-bottom: 1.5rem;
         ">
-            <h2 style="color: white; margin: 0 0 0.5rem 0; font-size: 1.3rem;">🛫 {intro_title}</h2>
-            <p style="color: rgba(255,255,255,0.9); margin: 0; font-size: 0.95rem;">{intro_text}</p>
+            <h2 style="color: white !important; margin: 0 0 0.5rem 0; font-size: 1.3rem; -webkit-text-fill-color: white !important;">🛫 {intro_title}</h2>
+            <p style="color: rgba(255,255,255,0.9) !important; margin: 0; font-size: 0.95rem;">{intro_text}</p>
         </div>
     """, unsafe_allow_html=True)
     
@@ -241,7 +305,7 @@ def render_keta_tab():
             <a href="https://www.k-eta.go.kr" target="_blank" style="
                 display: block;
                 background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
-                color: white;
+                color: white !important;
                 text-decoration: none;
                 padding: 1rem;
                 border-radius: 0.75rem;
@@ -271,8 +335,8 @@ def render_keta_tab():
         for title, text, bg, color in info_cards:
             st.markdown(f"""
                 <div style="background: {bg}; border-radius: 0.5rem; padding: 0.75rem; margin-bottom: 0.5rem;">
-                    <p style="margin: 0; font-weight: 600; color: {color}; font-size: 0.85rem;">{title}</p>
-                    <p style="margin: 0.25rem 0 0 0; color: {color}; font-size: 0.8rem;">{text}</p>
+                    <p style="margin: 0; font-weight: 600; color: {color} !important; font-size: 0.85rem; -webkit-text-fill-color: {color} !important;">{title}</p>
+                    <p style="margin: 0.25rem 0 0 0; color: {color} !important; font-size: 0.8rem; -webkit-text-fill-color: {color} !important;">{text}</p>
                 </div>
             """, unsafe_allow_html=True)
     
@@ -286,7 +350,7 @@ def render_keta_tab():
         with cols[i % 3]:
             st.markdown(f"""
                 <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 0.5rem; padding: 0.75rem; margin-bottom: 0.5rem; min-height: 60px;">
-                    <p style="margin: 0; font-size: 0.8rem; color: #475569;">{step}</p>
+                    <p style="margin: 0; font-size: 0.8rem; color: #475569 !important; -webkit-text-fill-color: #475569 !important;">{step}</p>
                 </div>
             """, unsafe_allow_html=True)
     
@@ -326,8 +390,8 @@ def render_keta_tab():
     st.markdown("---")
     st.markdown(f"""
         <div style="background: #fef2f2; border: 1px solid #ef4444; border-radius: 0.75rem; padding: 1rem;">
-            <p style="margin: 0; font-weight: 600; color: #dc2626;">{warning_title}</p>
-            <p style="margin: 0.5rem 0 0 0; color: #b91c1c; font-size: 0.9rem;">{warning_text}</p>
+            <p style="margin: 0; font-weight: 600; color: #dc2626 !important; -webkit-text-fill-color: #dc2626 !important;">{warning_title}</p>
+            <p style="margin: 0.5rem 0 0 0; color: #b91c1c !important; font-size: 0.9rem; -webkit-text-fill-color: #b91c1c !important;">{warning_text}</p>
         </div>
     """, unsafe_allow_html=True)
 
@@ -385,7 +449,7 @@ def check_keta_eligibility(nationality: str) -> dict:
 
 
 def render_scenario_card(icon, icon_bg, title, visa_type, description, doc_count, key):
-    """시나리오 카드"""
+    """시나리오 카드 - 고정 높이"""
     
     st.markdown(f"""
         <div style="
@@ -395,12 +459,13 @@ def render_scenario_card(icon, icon_bg, title, visa_type, description, doc_count
             padding: 1.25rem;
             box-shadow: 0 1px 3px rgba(0,0,0,0.08);
             margin-bottom: 0.5rem;
+            min-height: 220px;
         ">
             <div style="width: 40px; height: 40px; background: {icon_bg}; border-radius: 0.5rem; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; margin-bottom: 0.75rem;">{icon}</div>
-            <h3 style="font-size: 1.1rem; font-weight: 700; color: #1e293b; margin: 0 0 0.25rem 0;">{title}</h3>
-            <p style="font-size: 0.8rem; color: #2563eb; margin: 0 0 0.5rem 0; font-weight: 500;">{visa_type}</p>
-            <p style="font-size: 0.85rem; color: #64748b; margin: 0 0 0.75rem 0;">{description}</p>
-            <div style="display: inline-block; background: #dbeafe; color: #1e40af; font-size: 0.75rem; font-weight: 500; padding: 0.25rem 0.5rem; border-radius: 0.25rem;">📄 {doc_count} {t('dashboard.documents')}</div>
+            <h3 style="font-size: 1.1rem; font-weight: 700; color: #1e293b !important; margin: 0 0 0.25rem 0; -webkit-text-fill-color: #1e293b !important;">{title}</h3>
+            <p style="font-size: 0.8rem; color: #2563eb !important; margin: 0 0 0.5rem 0; font-weight: 500; -webkit-text-fill-color: #2563eb !important;">{visa_type}</p>
+            <p style="font-size: 0.85rem; color: #64748b !important; margin: 0 0 0.75rem 0; -webkit-text-fill-color: #64748b !important;">{description}</p>
+            <div style="display: inline-block; background: #dbeafe; color: #1e40af !important; font-size: 0.75rem; font-weight: 500; padding: 0.25rem 0.5rem; border-radius: 0.25rem;">📄 {doc_count} {t('dashboard.documents')}</div>
         </div>
     """, unsafe_allow_html=True)
     
@@ -409,25 +474,32 @@ def render_scenario_card(icon, icon_bg, title, visa_type, description, doc_count
 
 
 def render_coming_soon_card():
-    """준비 중 카드 (빈 슬롯용)"""
+    """준비 중 카드 - 시나리오 카드와 동일 높이"""
+    current_lang = get_current_language()
     
+    coming_soon_title = "준비 중" if current_lang == "ko" else "Coming Soon"
+    coming_soon_desc = "새로운 시나리오가 곧 추가됩니다" if current_lang == "ko" else "New scenarios coming soon"
+    coming_soon_btn = "🔒 준비 중" if current_lang == "ko" else "🔒 Coming Soon"
+    
+    # 시나리오 카드와 동일한 구조 (태그 포함)
     st.markdown(f"""
         <div style="
             background: #f8fafc;
             border: 2px dashed #cbd5e1;
-            border-radius: 0.75rem;ㄱ
+            border-radius: 0.75rem;
             padding: 1.25rem;
             margin-bottom: 0.5rem;
-            text-align: center;
+            min-height: 220px;
         ">
-            <div style="width: 40px; height: 40px; background: #e2e8f0; border-radius: 0.5rem; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; margin: 0 auto 0.75rem auto;">🔜</div>
-            <h3 style="font-size: 1.1rem; font-weight: 700; color: #94a3b8; margin: 0 0 0.25rem 0;">준비 중</h3>
-            <p style="font-size: 0.8rem; color: #94a3b8; margin: 0 0 0.5rem 0; font-weight: 500;">Coming Soon</p>
-            <p style="font-size: 0.85rem; color: #94a3b8; margin: 0 0 0.75rem 0;">새로운 시나리오가 곧 추가됩니다</p>
+            <div style="width: 40px; height: 40px; background: #e2e8f0; border-radius: 0.5rem; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; margin-bottom: 0.75rem;">🔜</div>
+            <h3 style="font-size: 1.1rem; font-weight: 700; color: #94a3b8 !important; margin: 0 0 0.25rem 0; -webkit-text-fill-color: #94a3b8 !important;">{coming_soon_title}</h3>
+            <p style="font-size: 0.8rem; color: #94a3b8 !important; margin: 0 0 0.5rem 0; font-weight: 500; -webkit-text-fill-color: #94a3b8 !important;">Coming Soon</p>
+            <p style="font-size: 0.85rem; color: #94a3b8 !important; margin: 0 0 0.75rem 0; -webkit-text-fill-color: #94a3b8 !important;">{coming_soon_desc}</p>
+            <div style="display: inline-block; background: #e2e8f0; color: #94a3b8 !important; font-size: 0.75rem; font-weight: 500; padding: 0.25rem 0.5rem; border-radius: 0.25rem;">🔒 준비 중</div>
         </div>
     """, unsafe_allow_html=True)
     
-    st.button("🔒 준비 중", disabled=True, use_container_width=True)
+    st.button(coming_soon_btn, disabled=True, use_container_width=True)
 
 
 def start_scenario(scenario_id: str):
@@ -436,3 +508,4 @@ def start_scenario(scenario_id: str):
     st.session_state.current_page = 'scenario_form'
     st.session_state.form_step = 1
     st.rerun()
+    

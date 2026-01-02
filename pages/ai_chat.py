@@ -138,6 +138,13 @@ def render():
     if 'conversation_history' not in st.session_state:
         st.session_state.conversation_history = []
     
+    # K-ETA 프리셋 질문 처리 (대시보드에서 넘어온 경우)
+    if 'ai_chat_preset' in st.session_state and st.session_state.ai_chat_preset:
+        preset_question = st.session_state.ai_chat_preset
+        st.session_state.ai_chat_preset = None  # 한 번만 실행
+        add_message("user", preset_question)
+        generate_response(preset_question)
+    
     # 빠른 질문 버튼
     st.markdown(f"""
         <p style="
@@ -150,15 +157,16 @@ def render():
         ">💡 {t('ai_chat.faq')}</p>
     """, unsafe_allow_html=True)
     
-    col1, col2, col3, col4 = st.columns(4)
+    col1, col2, col3, col4, col5 = st.columns(5)
     quick_questions = [
         (f"🎓 {t('ai_chat.quick_d2')}", t('ai_chat.quick_d2_q')),
         (f"📚 {t('ai_chat.quick_d4')}", t('ai_chat.quick_d4_q')),
         (f"💍 {t('ai_chat.quick_f6')}", t('ai_chat.quick_f6_q')),
-        (f"🔍 {t('ai_chat.quick_d10')}", t('ai_chat.quick_d10_q'))
+        (f"🔍 {t('ai_chat.quick_d10')}", t('ai_chat.quick_d10_q')),
+        (f"🛫 {t('ai_chat.quick_keta')}", t('ai_chat.quick_keta_q'))
     ]
     
-    for col, (label, question) in zip([col1, col2, col3, col4], quick_questions):
+    for col, (label, question) in zip([col1, col2, col3, col4, col5], quick_questions):
         with col:
             if st.button(label, use_container_width=True):
                 add_message("user", question)

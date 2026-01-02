@@ -137,7 +137,7 @@
   },
   "ai_chat": {
     "title": "K-Stay AI Consultant",
-    "subtitle": "D-2 Study · D-4 Training · D-5 Journalism · D-6 Religion · D-10 Job Search · F-6 Marriage · C-4 Short-term",
+    "subtitle": "D-2 Study · D-4 Training · D-5 Journalism · D-6 Religion · D-10 Job Search · F-6 Marriage · C-4 Short-term · K-ETA",
     "faq": "Frequently Asked Questions",
     "welcome": "Hello!",
     "welcome_intro": "I'm the <strong>K-Stay AI Consultant</strong>.",
@@ -155,13 +155,16 @@
     "quick_f6_q": "What are the requirements for F-6 marriage visa?",
     "quick_d10": "D-10 Job Search",
     "quick_d10_q": "How does the D-10 job search visa point system work?",
+    "quick_keta": "K-ETA",
+    "quick_keta_q": "What is K-ETA and how do I apply?",
     "visa_d2": "D-2 Study",
     "visa_d4": "D-4 Training",
     "visa_d5": "D-5 Journalism",
     "visa_d6": "D-6 Religion",
     "visa_d10": "D-10 Job Search",
     "visa_f6": "F-6 Marriage",
-    "visa_c4": "C-4 Short-term Work"
+    "visa_c4": "C-4 Short-term Work",
+    "visa_keta": "K-ETA Electronic Travel Authorization"
   },
   "my_documents": {
     "title": "My Documents",

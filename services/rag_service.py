@@ -939,8 +939,13 @@ class RAGService:
         if self._is_greeting_or_smalltalk(query):
             return self._generate_greeting_response(query, conversation_history, language)
         
+        # 영어 쿼리일 경우 한국어로 번역 후 검색 (RAG 데이터가 한국어이므로)
+        search_query = query
+        if language == "en":
+            search_query = self._translate_query_to_korean(query)
+        
         if search_results is None:
-            search_results = self.search_similar(query)
+            search_results = self.search_similar(search_query)
         
         context = self._build_context(search_results)
         system_prompt = self._get_system_prompt(language)
@@ -983,6 +988,23 @@ class RAGService:
             sources=search_results,
             tokens_used=tokens_used
         )
+    
+    def _translate_query_to_korean(self, query: str) -> str:
+        """영어 쿼리를 한국어로 번역 (RAG 검색용)"""
+        try:
+            response = self.openai_client.chat.completions.create(
+                model=self.chat_model,
+                messages=[
+                    {"role": "system", "content": "Translate the following English query to Korean. Keep visa codes (D-2, D-10, F-6, E-7, etc.) as is. Return only the Korean translation, nothing else."},
+                    {"role": "user", "content": query}
+                ],
+                temperature=0.1,
+                max_tokens=200
+            )
+            translated = response.choices[0].message.content.strip()
+            return translated if translated else query
+        except:
+            return query
     
     def _is_greeting_or_smalltalk(self, query: str) -> bool:
         """인사/잡담/일상대화인지 확인"""

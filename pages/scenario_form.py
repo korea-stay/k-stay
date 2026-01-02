@@ -134,6 +134,19 @@ NATURALIZATION_TYPE_OPTIONS = {
 }
 
 
+"""
+K-Stay Scenario Form Page - Redesigned (Part 1)
+DOCUMENT_FIELD_MAPPING 및 기본 헬퍼 함수
+
+수정사항:
+- 결혼이민(C), 전문인력(E) 제거
+- 의료관광(G) 추가
+"""
+
+# =============================================================================
+# 서류-필드 매핑 정의 (시나리오별) - 결혼이민(C), 전문인력(E) 제거, 의료관광(G) 추가
+# =============================================================================
+
 DOCUMENT_FIELD_MAPPING = {
     "A": {  # 구직 준비 (D-10)
         "통합신청서": {
@@ -309,102 +322,7 @@ DOCUMENT_FIELD_MAPPING = {
             ]
         }
     },
-    "C": {  # 결혼 이민 (F-6)
-        "통합신청서": {
-            "icon": "📋",
-            "description": "결혼이민 비자 기본 신청서",
-            "description_en": "Basic application for marriage immigration visa",
-            "sections": [
-                {
-                    "name": "신청인 기본정보",
-                    "name_en": "Applicant Basic Info",
-                    "icon": "👤",
-                    "fields": ["address_korea", "home_country_address", "surname_native", "given_name_native"]
-                },
-                {
-                    "name": "과거 이름 사용",
-                    "name_en": "Previous Names",
-                    "icon": "📝",
-                    "fields": ["used_other_names"]
-                },
-                {
-                    "name": "서명/날인",
-                    "name_en": "Signature",
-                    "icon": "✍️",
-                    "fields": ["application_date", "applicant_signature", "consent_applicant_signature", "consent_spouse_signature", "consent_parent_signature"]
-                }
-            ]
-        },
-        "결혼배경진술서": {
-            "icon": "💍",
-            "description": "결혼 경위 및 배경 진술",
-            "description_en": "Marriage background statement",
-            "sections": [
-                {
-                    "name": "혼인 관련 사항",
-                    "name_en": "Marriage Related",
-                    "icon": "💒",
-                    "fields": ["family_knows_marriage", "ever_been_married", "has_other_spouse_currently", "has_children_from_previous_marriage"]
-                },
-                {
-                    "name": "출입국 이력",
-                    "name_en": "Immigration History",
-                    "icon": "✈️",
-                    "fields": ["visited_korea_before", "immigration_issues_history"]
-                },
-                {
-                    "name": "작성 도움 여부",
-                    "name_en": "Assistance",
-                    "icon": "🤝",
-                    "fields": ["received_assistance"]
-                }
-            ]
-        },
-        "외국인배우자초청장": {
-            "icon": "📨",
-            "description": "배우자 초청 관련 정보",
-            "description_en": "Spouse invitation details",
-            "sections": [
-                {
-                    "name": "초청인 연락처",
-                    "name_en": "Inviter Contact",
-                    "icon": "📞",
-                    "fields": ["inviter_home_phone", "inviter_phone", "inviter_email"]
-                },
-                {
-                    "name": "세대 구성",
-                    "name_en": "Household",
-                    "icon": "👨‍👩‍👧",
-                    "fields": ["household_lineal_count", "household_total_count"]
-                },
-                {
-                    "name": "소득/재산 정보",
-                    "name_en": "Income & Assets",
-                    "icon": "💰",
-                    "fields": ["earned_income_total", "business_income_total", "other_income_type", "other_income_amount", "other_income_total", "asset_type_1", "asset_amount_1", "asset_total_amount", "asset_converted_total", "income_assets_grand_total"]
-                }
-            ]
-        },
-        "신원보증서": {
-            "icon": "🤝",
-            "description": "신원보증인의 보증 내용",
-            "description_en": "Guarantor's guarantee details",
-            "sections": [
-                {
-                    "name": "보증인 인적사항",
-                    "name_en": "Guarantor Info",
-                    "icon": "👤",
-                    "fields": ["guarantor_name", "guarantor_name_hanja", "guarantor_nationality", "guarantor_gender", "guarantor_passport_or_birth", "guarantor_phone", "guarantor_address"]
-                },
-                {
-                    "name": "보증 내용",
-                    "name_en": "Guarantee Details",
-                    "icon": "📝",
-                    "fields": ["guarantor_relationship", "guarantor_employer", "guarantor_position", "guarantor_employer_address", "guarantor_guarantee_period", "guarantor_signature_date", "guarantor_signature"]
-                }
-            ]
-        }
-    },
+    # 결혼이민(C) 제거됨
     "D": {  # 가족 초청 (F-1-5)
         "가족초청장": {
             "icon": "👨‍👩‍👧",
@@ -422,18 +340,27 @@ DOCUMENT_FIELD_MAPPING = {
                     "name_en": "Inviter Contact",
                     "icon": "📞",
                     "fields": ["inviter_home_phone", "inviter_mobile_phone", "inviter_email", "inviter_phone"]
+                }
+            ]
+        },
+        "불법체류취업방지서약서": {
+            "icon": "📜",
+            "description": "불법체류 및 취업 방지 서약",
+            "description_en": "Illegal Stay and Work Prevention Pledge",
+            "sections": [
+                {
+                    "name": "초청인 정보",
+                    "name_en": "Inviter Information",
+                    "icon": "👤",
+                    "fields": ["inviter_name", "inviter_birth_date", "inviter_address", "inviter_phone"],
+                    "description": "서비스 이용자(초청인)의 정보가 자동으로 입력됩니다."
                 },
                 {
-                    "name": "초청 사유",
-                    "name_en": "Invitation Reason",
-                    "icon": "📝",
-                    "fields": ["invitation_reason", "inviter_household_members", "prior_invitation_history", "prior_invited_person_details"]
-                },
-                {
-                    "name": "법규 위반 이력",
-                    "name_en": "Violation History",
-                    "icon": "⚖️",
-                    "fields": ["inviter_law_violation_record", "invited_foreigner_violation_record"]
+                    "name": "피초청인 정보",
+                    "name_en": "Invitee Information", 
+                    "icon": "👥",
+                    "fields": ["invitee_name", "invitee_birth_date", "invitee_address", "invitee_phone"],
+                    "description": "초청받는 분의 정보를 입력해주세요."
                 }
             ]
         },
@@ -494,83 +421,7 @@ DOCUMENT_FIELD_MAPPING = {
             ]
         }
     },
-    "E": {  # 전문 인력 (E-7)
-        "사증발급인정신청서": {
-            "icon": "📄",
-            "description": "전문인력 사증 발급 신청",
-            "description_en": "Professional worker visa application",
-            "sections": [
-                {
-                    "name": "신청인 기본정보",
-                    "name_en": "Applicant Basic Info",
-                    "icon": "👤",
-                    "fields": ["has_used_other_names", "has_multiple_nationalities", "home_country_address", "phone_alt", "marital_status", "has_children", "children_count"]
-                },
-                {
-                    "name": "여권 정보",
-                    "name_en": "Passport Info",
-                    "icon": "🛂",
-                    "fields": ["passport_type_other", "passport_place_of_issue", "has_other_passport", "other_passport_type", "other_passport_no", "other_passport_country", "other_passport_expiry"]
-                },
-                {
-                    "name": "학력 정보",
-                    "name_en": "Education",
-                    "icon": "🎓",
-                    "fields": ["education_level", "education_other_details", "school_name", "school_location", "education_school_name", "education_degree", "education_major", "education_graduation_year"]
-                },
-                {
-                    "name": "경력 정보",
-                    "name_en": "Work Experience",
-                    "icon": "💼",
-                    "fields": ["occupation_status", "occupation_other_details", "experience_company", "experience_period", "experience_field", "experience_position"]
-                },
-                {
-                    "name": "방문 정보",
-                    "name_en": "Visit Info",
-                    "icon": "✈️",
-                    "fields": ["purpose_of_visit", "purpose_other_details", "intended_stay_period", "intended_entry_date", "address_in_korea", "contact_in_korea_phone", "past_korea_visits", "past_travel_country", "past_travel_purpose", "past_travel_period"]
-                }
-            ]
-        },
-        "고용사유서": {
-            "icon": "📝",
-            "description": "고용 사유 및 활용 계획",
-            "description_en": "Employment reason and utilization plan",
-            "sections": [
-                {
-                    "name": "고용 예정 정보",
-                    "name_en": "Employment Plan",
-                    "icon": "📋",
-                    "fields": ["employment_period", "sojourn_status", "job_field", "job_title", "workplace", "salary_and_benefits"]
-                },
-                {
-                    "name": "고용 회사 정보",
-                    "name_en": "Employer Company Info",
-                    "icon": "🏢",
-                    "fields": ["employer_company_name", "employer_business_registration_no", "employer_representative_name", "employer_address", "employer_phone"]
-                },
-                {
-                    "name": "회사 재무 정보",
-                    "name_en": "Company Financials",
-                    "icon": "💰",
-                    "fields": ["employer_capital_amount", "employer_total_sales", "employer_total_liabilities", "employer_operating_profit", "employer_num_employees", "employer_num_foreign_professionals"]
-                }
-            ]
-        },
-        "신원보증서": {
-            "icon": "🤝",
-            "description": "신원보증인의 보증 내용",
-            "description_en": "Guarantor's guarantee details",
-            "sections": [
-                {
-                    "name": "보증인 정보",
-                    "name_en": "Guarantor Info",
-                    "icon": "👤",
-                    "fields": ["guarantor_name", "guarantor_name_hanja", "guarantor_nationality", "guarantor_gender", "guarantor_passport_or_birth", "guarantor_phone", "guarantor_address", "guarantor_relationship", "guarantor_employer", "guarantor_position", "guarantor_employer_address", "guarantor_guarantee_period", "guarantor_signature_date", "guarantor_signature"]
-                }
-            ]
-        }
-    },
+    # 전문인력(E) 제거됨
     "F": {  # 국적 귀화
         "귀화허가신청서": {
             "icon": "🏛️",
@@ -589,6 +440,71 @@ DOCUMENT_FIELD_MAPPING = {
                     "icon": "📋",
                     "fields": ["naturalization_type", "naturalization_sub_type", "special_merit_type"],
                     "custom_renderer": "render_naturalization_type_selector"
+                }
+            ]
+        },
+        "신원보증서": {
+            "icon": "🤝",
+            "description": "신원보증인의 보증 내용",
+            "description_en": "Guarantor's guarantee details",
+            "sections": [
+                {
+                    "name": "보증인 정보",
+                    "name_en": "Guarantor Info",
+                    "icon": "👤",
+                    "fields": ["guarantor_name", "guarantor_name_hanja", "guarantor_nationality", "guarantor_gender", "guarantor_passport_or_birth", "guarantor_phone", "guarantor_address", "guarantor_relationship", "guarantor_employer", "guarantor_position", "guarantor_employer_address", "guarantor_guarantee_period", "guarantor_signature_date", "guarantor_signature"]
+                }
+            ]
+        }
+    },
+    "G": {  # 의료 관광 (C-3-3/G-1-10) - 새로 추가
+        "치료예정서약서": {
+            "icon": "🏥",
+            "description": "치료 예정 및 서약 내용",
+            "description_en": "Treatment plan and pledge",
+            "sections": [
+                {
+                    "name": "인적사항",
+                    "name_en": "Personal Details",
+                    "icon": "👤",
+                    "fields": ["korea_address", "disease_name"]
+                },
+                {
+                    "name": "보호자 정보",
+                    "name_en": "Guardian Information",
+                    "icon": "👨‍👩‍👧",
+                    "fields": ["guardian_name", "guardian_phone", "guardian_email"]
+                },
+                {
+                    "name": "병원 정보",
+                    "name_en": "Hospital Information",
+                    "icon": "🏨",
+                    "fields": ["hospital_name", "hospital_address_contact"]
+                }
+            ]
+        },
+        "입국허가신청서": {
+            "icon": "📄",
+            "description": "입국 허가 신청서",
+            "description_en": "Entry permit application",
+            "sections": [
+                {
+                    "name": "신청인 정보",
+                    "name_en": "Applicant Information",
+                    "icon": "👤",
+                    "fields": ["birth_place", "address", "address_in_korea", "occupation_and_title"]
+                },
+                {
+                    "name": "여권 정보",
+                    "name_en": "Passport Information",
+                    "icon": "🛂",
+                    "fields": ["passport_issue_date", "passport_expiration_date", "passport_place_of_issue"]
+                },
+                {
+                    "name": "입국/체류 정보",
+                    "name_en": "Entry and Stay Information",
+                    "icon": "✈️",
+                    "fields": ["purpose_of_entry", "desired_length_of_stay", "application_date"]
                 }
             ]
         },
@@ -1352,10 +1268,10 @@ def calculate_section_progress(sections: List[Dict], all_field_defs: Dict) -> Tu
 
 
 def render_section_card(section: Dict, all_field_defs: Dict, scenario_id: str):
-    """섹션 카드 렌더링"""
+    """섹션 카드 렌더링 (영문 제목 제거)"""
     
     section_name = section.get('name', '')
-    section_name_en = section.get('name_en', '')
+    # section_name_en = section.get('name_en', '')  <-- 이 부분은 더 이상 사용하지 않습니다.
     section_icon = section.get('icon', '📋')
     field_keys = section.get('fields', [])
     
@@ -1379,8 +1295,7 @@ def render_section_card(section: Dict, all_field_defs: Dict, scenario_id: str):
                 <span style="font-size: 1.2rem;">{section_icon}</span>
                 <div>
                     <span style="font-weight: 600; color: #1e293b; font-size: 0.95rem;">{section_name}</span>
-                    <span style="color: #64748b; font-size: 0.8rem; margin-left: 8px;">{section_name_en}</span>
-                </div>
+                    </div>
                 <span style="
                     margin-left: auto;
                     background: #dbeafe;
@@ -1393,17 +1308,14 @@ def render_section_card(section: Dict, all_field_defs: Dict, scenario_id: str):
             <div style="padding: 16px;">
     """, unsafe_allow_html=True)
     
-    # 필드들을 2열로 배치
+    # (이하 필드 배치 로직은 동일)
     valid_fields = [k for k in field_keys if k in all_field_defs]
     
     if len(valid_fields) > 0:
-        # 2열 레이아웃
         col1, col2 = st.columns(2)
-        
         for idx, field_key in enumerate(valid_fields):
             field_def = all_field_defs[field_key]
             col = col1 if idx % 2 == 0 else col2
-            
             with col:
                 render_styled_field(field_key, field_def)
     
@@ -1425,13 +1337,13 @@ def render_styled_field(field_key: str, field_def: Dict):
     
     # 라벨 조합
     display_label = label
-    if label_en and label_en != label:
-        # 라벨이 너무 길면 줄임
-        if len(label) > 20:
-            display_label = label[:20] + "..."
-        if len(label_en) > 20:
-            label_en = label_en[:20] + "..."
-        display_label = f"{display_label}"
+    # if label_en and label_en != label:
+    #     # 라벨이 너무 길면 줄임
+    #     if len(label) > 50:
+    #         display_label = label[:50] + "..."
+    #     if len(label_en) > 50:
+    #         label_en = label_en[:20] + "..."
+    #     display_label = f"{display_label}"
     
     if required:
         display_label += " *"

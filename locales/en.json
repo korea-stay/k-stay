@@ -121,7 +121,9 @@
     "professional": "Professional",
     "professional_desc": "Professional worker visa application",
     "naturalization": "Naturalization",
-    "naturalization_desc": "Korean citizenship acquisition"
+    "naturalization_desc": "Korean citizenship acquisition",
+    "medical": "Emergency Medical",
+    "medical_desc": "Emergency treatment & Entry Permission application"
   },
   "spell_check": {
     "button": "Spell Check",

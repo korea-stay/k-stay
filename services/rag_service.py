@@ -228,11 +228,74 @@ class RAGService:
                         "구직", "결혼", "이민", "혼인", "배우자", "서류", "신청", "연장", "변경",
                         "단기취업", "계절근로", "근무처", "흥행", "모델", "강연",
                         "일반연수", "어학연수", "한국어연수", "연수", "인턴", "후견인", "현장실습",
-                        "취재", "기자", "언론", "보도", "종교", "선교", "사회복지", "교회", "성당", "절"]
+                        "취재", "기자", "언론", "보도", "종교", "선교", "사회복지", "교회", "성당", "절",
+                        "k-eta", "keta", "케이에타", "전자여행허가", "무비자", "무사증", "입국허가", "관광비자", "환승", "트랜짓"]
         
         has_visa_keyword = any(kw in q for kw in visa_keywords)
         if not has_visa_keyword:
             return []  # 비자 관련 없으면 검색 안함
+        
+        # === K-ETA 쿼리 ===
+        is_keta_query = "k-eta" in q or "keta" in q or "케이에타" in q or "전자여행허가" in q or "무비자" in q or "무사증" in q or "입국허가" in q
+        
+        if is_keta_query:
+            if "신청" in q or "방법" in q or "어떻게" in q or "how" in q:
+                patterns.append("keta_apply")
+            
+            if "대상" in q or "국가" in q or "나라" in q or "자격" in q or "eligible" in q:
+                patterns.append("keta_eligible")
+            
+            if "면제" in q or "제외" in q or "필요없" in q or "안받아도" in q:
+                patterns.append("keta_exempt")
+            
+            if "수수료" in q or "비용" in q or "얼마" in q or "가격" in q or "fee" in q:
+                patterns.append("keta_overview_002")
+            
+            if "시간" in q or "기간" in q or "얼마나" in q or "소요" in q:
+                patterns.append("keta_overview_003")
+            
+            if "유효" in q or "만료" in q:
+                patterns.append("keta_overview_002")
+            
+            if "결제" in q or "카드" in q or "오류" in q:
+                patterns.append("keta_faq_006")
+            
+            if "수정" in q or "변경" in q:
+                patterns.append("keta_faq_004")
+                patterns.append("keta_faq_005")
+            
+            if "불허" in q or "거부" in q or "거절" in q:
+                patterns.append("keta_faq_007")
+            
+            if "제주" in q:
+                patterns.append("keta_faq_002")
+            
+            if "환승" in q or "트랜짓" in q or "경유" in q:
+                patterns.append("keta_faq_003")
+            
+            if "복수국적" in q or "이중국적" in q:
+                patterns.append("keta_faq_001")
+            
+            if "미군" in q or "sofa" in q:
+                patterns.append("keta_faq_009")
+            
+            if "abtc" in q:
+                patterns.append("keta_faq_008")
+            
+            if "차이" in q or "비교" in q or "vs" in q:
+                patterns.append("keta_compare")
+            
+            if "문의" in q or "연락" in q or "전화" in q or "상담" in q:
+                patterns.append("keta_contact")
+            
+            if "결과" in q or "확인" in q or "조회" in q:
+                patterns.append("keta_apply_003")
+            
+            # K-ETA 일반 질문
+            if not patterns:
+                patterns = ["keta_overview_001", "keta_apply_001"]
+            
+            return patterns[:top_k]
         
         # === F-6 세부 유형 (결혼이민) ===
         if "f-6-1" in q or "f6-1" in q:

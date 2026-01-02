@@ -2908,18 +2908,6 @@ TREATMENT_PLEDGE_MAPPING = {
                     "formatter": "FULL_NAME_KR"
                 },
                 {
-                    "data_key": "full_name_en",
-                    "layer": "universal",
-                    "anchor_text": "영문",
-                    "strategy": "APPEND_TO_SAME_CELL"
-                },
-                {
-                    "data_key": "full_name_hanja",
-                    "layer": "universal",
-                    "anchor_text": "한자",
-                    "strategy": "APPEND_TO_SAME_CELL"
-                },
-                {
                     "data_key": "birth_date",
                     "layer": "universal",
                     "anchor_text": "생년월일",
@@ -2935,13 +2923,13 @@ TREATMENT_PLEDGE_MAPPING = {
                     "data_key": "korea_address",
                     "layer": "variable",
                     "anchor_text": "한국 내 주소",
-                    "strategy": "SPLIT_CELLS"
+                    "strategy": "NEXT_CELL"
                 },
                 {
                     "data_key": "disease_name",
                     "layer": "variable",
                     "anchor_text": "질 병 명",
-                    "strategy": "SPLIT_CELLS"
+                    "strategy": "NEXT_CELL"
                 },
             ]
         },
@@ -2960,14 +2948,8 @@ TREATMENT_PLEDGE_MAPPING = {
                 {
                     "data_key": "guardian_phone",
                     "layer": "variable",
-                    "anchor_text": "전화번호",
-                    "strategy": "APPEND_TO_SAME_CELL"
-                },
-                {
-                    "data_key": "guardian_email",
-                    "layer": "variable",
-                    "anchor_text": "전자메일",
-                    "strategy": "APPEND_TO_SAME_CELL"
+                    "anchor_text": "보호자연락처",
+                    "strategy": "NEXT_CELL"
                 },
             ]
         },
@@ -2981,39 +2963,13 @@ TREATMENT_PLEDGE_MAPPING = {
                     "data_key": "hospital_name",
                     "layer": "variable",
                     "anchor_text": "치료 예정병원",
-                    "strategy": "SPLIT_CELLS"
+                    "strategy": "NEXT_CELL"
                 },
                 {
                     "data_key": "hospital_address_contact",
                     "layer": "variable",
                     "anchor_text": "병원 주소  및 연락처",
-                    "strategy": "SPLIT_CELLS"
-                },
-            ]
-        },
-        {
-            "section_name": "서약 내용",
-            "section_name_en": "Pledge Contents",
-            "target": "self",
-            "target_prefix": "",
-            "fields": [
-                {
-                    "data_key": "pledge_text",
-                    "layer": "narrative",
-                    "anchor_text": "2. 서약 내용",
-                    "strategy": "APPEND_TO_SAME_CELL"
-                },
-                {
-                    "data_key": "pledge_date",
-                    "layer": "narrative",
-                    "anchor_text": "년 월 일",
-                    "strategy": "BELOW_CELL"
-                },
-                {
-                    "data_key": "pledge_signer_name",
-                    "layer": "narrative",
-                    "anchor_text": "서약인",
-                    "strategy": "APPEND_TO_SAME_CELL"
+                    "strategy": "NEXT_CELL"
                 },
             ]
         },
@@ -3189,7 +3145,7 @@ SCENARIO_DOCUMENTS = {
     "A": ['통합신청서', '구직활동계획서', '신원보증서'],
     "B": ['통합신청서', '시간제취업확인서', '신원보증서'],
     "C": ['통합신청서', '결혼배경진술서', '외국인배우자초청장', '신원보증서'],
-    "D": ['가족초청장', '불법체류취업방지서약서', '신원보증서', '사증발급인정신청서'],
+    "D": ['가족초청장', '불법체류취업방지서약서', '신원보증서'],
     "E": ['사증발급인정신청서', '고용사유서', '신원보증서'],
     "G": ['치료예정서약서', '입국허가신청서', '신원보증서'],
     "F": ['귀화허가신청서', '신원보증서'],

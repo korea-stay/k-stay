@@ -364,49 +364,6 @@ DOCUMENT_FIELD_MAPPING = {
                 }
             ]
         },
-        "사증발급인정신청서": {
-            "icon": "📄",
-            "description": "피초청인 사증 발급 신청",
-            "description_en": "Invitee visa issuance application",
-            "sections": [
-                {
-                    "name": "피초청인 기본정보",
-                    "name_en": "Invitee Basic Info",
-                    "icon": "👤",
-                    "fields": ["has_used_other_names", "has_multiple_nationalities", "home_country_address", "phone_alt"]
-                },
-                {
-                    "name": "여권 정보",
-                    "name_en": "Passport Info",
-                    "icon": "🛂",
-                    "fields": ["passport_type_other", "passport_place_of_issue", "has_other_passport", "other_passport_type", "other_passport_no", "other_passport_country", "other_passport_expiry"]
-                },
-                {
-                    "name": "혼인/가족 사항",
-                    "name_en": "Marriage/Family",
-                    "icon": "💒",
-                    "fields": ["marital_status", "has_children", "children_count"]
-                },
-                {
-                    "name": "학력/직업",
-                    "name_en": "Education/Occupation",
-                    "icon": "🎓",
-                    "fields": ["education_level", "education_other_details", "school_name", "school_location", "occupation_status", "occupation_other_details"]
-                },
-                {
-                    "name": "방문 정보",
-                    "name_en": "Visit Info",
-                    "icon": "✈️",
-                    "fields": ["purpose_of_visit", "purpose_other_details", "intended_stay_period", "intended_entry_date", "address_in_korea", "contact_in_korea_phone"]
-                },
-                {
-                    "name": "과거 방문 이력",
-                    "name_en": "Visit History",
-                    "icon": "📅",
-                    "fields": ["past_korea_visits", "past_travel_country", "past_travel_purpose", "past_travel_period", "relationship_to_inviter", "family_members_info", "previous_visit_korea", "previous_violation_korea"]
-                }
-            ]
-        },
         "신원보증서": {
             "icon": "🤝",
             "description": "신원보증인의 보증 내용",

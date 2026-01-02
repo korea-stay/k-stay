@@ -2,6 +2,7 @@
 RAG (Retrieval-Augmented Generation) 서비스
 OpenAI API + Supabase pgvector 기반
 키워드/패턴 검색 우선 방식
+K-ETA 로컬 fallback 포함
 """
 
 import os
@@ -26,6 +27,50 @@ def get_secret(key: str, default: str = None) -> str:
         except:
             return os.getenv(key, default)
     return os.getenv(key, default)
+
+# K-ETA 로컬 청크 캐시
+_KETA_CHUNKS_CACHE = None
+
+def _load_keta_chunks() -> List[Dict]:
+    """K-ETA 청크를 로컬 JSON에서 로드 (캐시)"""
+    global _KETA_CHUNKS_CACHE
+    if _KETA_CHUNKS_CACHE is not None:
+        return _KETA_CHUNKS_CACHE
+    
+    try:
+        # 여러 경로 시도 (Streamlit Cloud 및 로컬 환경)
+        import os
+        
+        # 현재 파일 기준 경로
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        project_root = os.path.dirname(current_dir)
+        
+        possible_paths = [
+            os.path.join(project_root, 'data', 'keta_knowledge.json'),
+            os.path.join(current_dir, '..', 'data', 'keta_knowledge.json'),
+            'data/keta_knowledge.json',
+            './data/keta_knowledge.json',
+            '/mount/src/k-stay/data/keta_knowledge.json',  # Streamlit Cloud
+        ]
+        
+        for path in possible_paths:
+            try:
+                if os.path.exists(path):
+                    with open(path, 'r', encoding='utf-8') as f:
+                        data = json.load(f)
+                    _KETA_CHUNKS_CACHE = data.get('chunks', [])
+                    print(f"  📂 K-ETA 로컬 청크 로드 성공: {len(_KETA_CHUNKS_CACHE)}개 ({path})")
+                    return _KETA_CHUNKS_CACHE
+            except Exception as e:
+                continue
+        
+        print("  ⚠️ K-ETA 로컬 청크 파일을 찾을 수 없습니다")
+        _KETA_CHUNKS_CACHE = []
+        return []
+    except Exception as e:
+        print(f"  ❌ K-ETA 로컬 청크 로드 오류: {e}")
+        _KETA_CHUNKS_CACHE = []
+        return []
 
 @dataclass
 class SearchResult:
@@ -150,6 +195,10 @@ class RAGService:
         print(f"🔍 검색: '{query}'")
         print('='*50)
         
+        # K-ETA 쿼리인지 먼저 확인
+        q_lower = query.lower()
+        is_keta_query = "k-eta" in q_lower or "keta" in q_lower or "케이에타" in q_lower or "전자여행허가" in q_lower or "무비자" in q_lower or "무사증" in q_lower
+        
         # 1단계: chunk_id 패턴 매칭 (가장 정확)
         results = self._smart_pattern_search(query, top_k)
         
@@ -158,7 +207,20 @@ class RAGService:
             self._print_results(results)
             return results
         
-        # 2단계: 키워드 검색
+        # K-ETA 쿼리인데 결과가 부족하면 로컬 fallback 시도 (키워드 검색 안함)
+        if is_keta_query:
+            print("  → K-ETA 쿼리 - 로컬 fallback 시도...")
+            patterns = self._analyze_query(query)
+            keta_results = self._search_keta_local(patterns, top_k)
+            if keta_results:
+                print(f"✅ K-ETA 로컬 검색 성공: {len(keta_results)}개")
+                self._print_results(keta_results)
+                return keta_results
+            else:
+                print("❌ K-ETA 검색 결과 없음")
+                return []  # K-ETA 쿼리는 K-ETA 결과만 반환 (다른 비자 결과 섞지 않음)
+        
+        # 2단계: 키워드 검색 (K-ETA가 아닌 경우에만)
         print("  → 패턴 결과 부족, 키워드 검색 추가...")
         keyword_results = self._keyword_search(query, top_k)
         
@@ -177,9 +239,17 @@ class RAGService:
     
     def _smart_pattern_search(self, query: str, top_k: int) -> List[SearchResult]:
         """스마트 패턴 검색 - 질문 분석 후 관련 chunk_id 찾기"""
+        # top_k 기본값 설정
+        if top_k is None:
+            top_k = self.max_context_chunks
+        
+        patterns = []
         try:
             patterns = self._analyze_query(query)
             print(f"  📝 분석된 패턴: {patterns}")
+            
+            # K-ETA 패턴인지 확인
+            is_keta_patterns = any('keta' in p.lower() for p in patterns) if patterns else False
             
             results = []
             
@@ -201,10 +271,91 @@ class RAGService:
                 if len(results) >= top_k:
                     break
             
+            # K-ETA 패턴인데 결과가 없으면 로컬 fallback 사용
+            if is_keta_patterns and len(results) == 0:
+                print("  📂 K-ETA 로컬 fallback 사용...")
+                results = self._search_keta_local(patterns, top_k)
+            
             return results[:top_k]
             
         except Exception as e:
             print(f"  ❌ 패턴 검색 오류: {e}")
+            # K-ETA 쿼리면 로컬 fallback 시도
+            if not patterns:
+                try:
+                    patterns = self._analyze_query(query)
+                except:
+                    patterns = []
+            
+            if patterns and any('keta' in p.lower() for p in patterns):
+                print("  📂 오류 발생, K-ETA 로컬 fallback 시도...")
+                return self._search_keta_local(patterns, top_k)
+            return []
+    
+    def _search_keta_local(self, patterns: List[str], top_k: int = 5) -> List[SearchResult]:
+        """K-ETA 로컬 청크에서 검색"""
+        try:
+            # top_k 기본값 설정
+            if top_k is None:
+                top_k = 5
+            
+            keta_chunks = _load_keta_chunks()
+            if not keta_chunks:
+                print("  ⚠️ K-ETA 청크를 로드할 수 없습니다")
+                return []
+            
+            results = []
+            
+            for pattern in patterns:
+                pattern_lower = pattern.lower()
+                for chunk in keta_chunks:
+                    chunk_id = chunk.get('id', '').lower()
+                    # 패턴과 chunk_id 매칭
+                    if pattern_lower in chunk_id:
+                        if not any(r.chunk_id == chunk['id'] for r in results):
+                            results.append(SearchResult(
+                                chunk_id=chunk['id'],
+                                content=chunk['content'],
+                                metadata={
+                                    'category': chunk.get('category', 'K-ETA'),
+                                    'subcategory': chunk.get('subcategory', ''),
+                                    'title': chunk.get('title', ''),
+                                    'keywords': chunk.get('keywords', [])
+                                },
+                                similarity=0.85
+                            ))
+                
+                if len(results) >= top_k:
+                    break
+            
+            # 패턴 매칭 결과 부족하면 키워드로 추가 검색
+            if len(results) < top_k:
+                for chunk in keta_chunks:
+                    if not any(r.chunk_id == chunk['id'] for r in results):
+                        keywords = chunk.get('keywords', [])
+                        for pattern in patterns:
+                            if any(pattern.lower() in kw.lower() for kw in keywords):
+                                results.append(SearchResult(
+                                    chunk_id=chunk['id'],
+                                    content=chunk['content'],
+                                    metadata={
+                                        'category': chunk.get('category', 'K-ETA'),
+                                        'subcategory': chunk.get('subcategory', ''),
+                                        'title': chunk.get('title', ''),
+                                        'keywords': keywords
+                                    },
+                                    similarity=0.8
+                                ))
+                                break
+                    
+                    if len(results) >= top_k:
+                        break
+            
+            print(f"  ✅ K-ETA 로컬 검색 결과: {len(results)}개")
+            return results[:top_k]
+            
+        except Exception as e:
+            print(f"  ❌ K-ETA 로컬 검색 오류: {e}")
             return []
     
     def _analyze_query(self, query: str) -> List[str]:
@@ -291,11 +442,12 @@ class RAGService:
             if "결과" in q or "확인" in q or "조회" in q:
                 patterns.append("keta_apply_003")
             
-            # K-ETA 일반 질문
+            # K-ETA 일반 질문 - 패턴이 없으면 기본 패턴 추가
             if not patterns:
                 patterns = ["keta_overview_001", "keta_apply_001"]
             
-            return patterns[:top_k]
+            # K-ETA 쿼리는 여기서 바로 반환 (다른 비자 패턴 검색 안함)
+            return patterns
         
         # === F-6 세부 유형 (결혼이민) ===
         if "f-6-1" in q or "f6-1" in q:
@@ -1030,8 +1182,9 @@ class RAGService:
 관련 자료를 찾지 못했습니다. 
 다음과 같이 안내해주세요:
 - "죄송합니다. 해당 질문에 대한 정확한 자료를 찾지 못했습니다."
-- 현재 지원하는 비자: D-2(유학), D-10(구직), F-6(결혼이민), C-4(단기취업)
+- 현재 지원하는 비자: D-2(유학), D-10(구직), F-6(결혼이민), C-4(단기취업), K-ETA(전자여행허가)
 - 정확한 정보는 출입국관리사무소 또는 하이코리아(www.hikorea.go.kr)에서 확인하시기 바랍니다.
+- K-ETA 관련은 공식 사이트(www.k-eta.go.kr)를 안내해주세요.
 - 절대로 자체 지식으로 비자 정보를 만들어내지 마세요."""
         
         messages.append({"role": "user", "content": user_message})
@@ -1256,11 +1409,28 @@ Response Style:
             language=language
         )
         
+        # 쿼리와 관련된 sources만 필터링
+        q_lower = query.lower()
+        is_keta_query = "k-eta" in q_lower or "keta" in q_lower or "케이에타" in q_lower or "전자여행허가" in q_lower or "무비자" in q_lower or "무사증" in q_lower
+        
+        relevant_sources = []
+        if rag_response.sources:
+            for s in rag_response.sources:
+                chunk_id_lower = s.chunk_id.lower()
+                # K-ETA 쿼리면 K-ETA 소스만
+                if is_keta_query:
+                    if "keta" in chunk_id_lower:
+                        relevant_sources.append(s)
+                else:
+                    # 다른 쿼리면 K-ETA 소스 제외
+                    if "keta" not in chunk_id_lower:
+                        relevant_sources.append(s)
+        
         # 참고자료가 있을 때만 출처 표시
         source_info = ""
-        if rag_response.sources and len(rag_response.sources) > 0:
+        if relevant_sources and len(relevant_sources) > 0:
             source_titles = []
-            for s in rag_response.sources[:3]:
+            for s in relevant_sources[:3]:
                 title = s.metadata.get("title", s.chunk_id) if s.metadata else s.chunk_id
                 source_titles.append(title)
             

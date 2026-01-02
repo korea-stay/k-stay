@@ -158,7 +158,7 @@ DOCUMENT_FIELD_MAPPING = {
                     "name": "신청인 기본정보",
                     "name_en": "Applicant Basic Info",
                     "icon": "👤",
-                    "fields": ["address_korea", "home_country_address", "occupation", "annual_income_amount"]
+                    "fields": ["address_korea", "home_country_address", "occupation", "annual_income_amount","dob_year","dob_month","dob_day"]
                 },
                 {
                     "name": "체류 정보",
@@ -167,8 +167,8 @@ DOCUMENT_FIELD_MAPPING = {
                     "fields": ["stay_purpose", "intended_reentry_period", "refund_bank_account_no"]
                 },
                 {
-                    "name": "서명/날인",
-                    "name_en": "Signature",
+                    "name": "신청 정보",
+                    "name_en": "Application Information",
                     "icon": "✍️",
                     "fields": ["application_date", "applicant_signature", "consent_applicant_signature", "consent_spouse_signature", "consent_parent_signature"]
                 }
@@ -250,8 +250,8 @@ DOCUMENT_FIELD_MAPPING = {
                     "fields": ["school_status", "school_name", "school_type", "department_major", "semester"]
                 },
                 {
-                    "name": "서명/날인",
-                    "name_en": "Signature",
+                    "name": "신청 정보",
+                    "name_en": "Application Information",
                     "icon": "✍️",
                     "fields": ["application_date", "applicant_signature"]
                 }

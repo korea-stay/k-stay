@@ -728,13 +728,13 @@ UNIFIED_APPLICATION_MAPPING = {
                     "data_key": "passport_issue_date",
                     "layer": "universal",
                     "anchor_text": "여권 발급일자 Passport Issue Date",
-                    "strategy": "BELOW_CELL"
+                    "strategy": "NEXT_CELL"
                 },
                 {
                     "data_key": "passport_expiry_date",
                     "layer": "universal",
                     "anchor_text": "여권 유효기간 Passport Expiry Date",
-                    "strategy": "BELOW_CELL"
+                    "strategy": "NEXT_CELL"
                 },
                 {
                     "data_key": "address_korea",
@@ -743,13 +743,13 @@ UNIFIED_APPLICATION_MAPPING = {
                     "strategy": "NEXT_CELL"
                 },
                 {
-                    "data_key": "phone",
+                    "data_key": "korea_phone",
                     "layer": "universal",
                     "anchor_text": "전화 번호 Telephone No.",
                     "strategy": "NEXT_CELL"
                 },
                 {
-                    "data_key": "mobile_phone",
+                    "data_key": "korea_phone",
                     "layer": "universal",
                     "anchor_text": "휴대 전화 Cell phone No.",
                     "strategy": "NEXT_CELL"
@@ -782,7 +782,7 @@ UNIFIED_APPLICATION_MAPPING = {
                     "data_key": "annual_income_amount",
                     "layer": "variable",
                     "anchor_text": "연 소득금액 Annual Income Amount",
-                    "strategy": "BELOW_CELL"
+                    "strategy": "NEXT_CELL"
                 },
                 {
                     "data_key": "occupation",
@@ -2055,13 +2055,13 @@ GUARANTEE_LETTER_MAPPING = {
                     "strategy": "APPEND_TO_SAME_CELL"
                 },
                 {
-                    "data_key": "address",
+                    "data_key": "korea_address",
                     "layer": "universal",
                     "anchor_text": "대한민국 주소",
                     "strategy": "APPEND_TO_SAME_CELL"
                 },
                 {
-                    "data_key": "phone",
+                    "data_key": "korea_phone",
                     "layer": "universal",
                     "anchor_text": "전화번호",
                     "strategy": "APPEND_TO_SAME_CELL"
@@ -2070,7 +2070,7 @@ GUARANTEE_LETTER_MAPPING = {
                     "data_key": "stay_purpose",
                     "layer": "variable",
                     "anchor_text": "체류목적",
-                    "strategy": "BELOW_CELL"
+                    "strategy": "APPEND_TO_SAME_CELL"
                 },
             ]
         },
@@ -2230,7 +2230,7 @@ NATURALIZATION_APPLICATION_MAPPING = {
                     "strategy": "APPEND_TO_SAME_CELL"
                 },
                 {
-                    "data_key": "phone",
+                    "data_key": "korea_phone",
                     "layer": "universal",
                     "anchor_text": "전화번호",
                     "strategy": "APPEND_TO_SAME_CELL"
@@ -2242,7 +2242,7 @@ NATURALIZATION_APPLICATION_MAPPING = {
                     "strategy": "APPEND_TO_SAME_CELL"
                 },
                 {
-                    "data_key": "address",
+                    "data_key": "korea_address",
                     "layer": "universal",
                     "anchor_text": "주소",
                     "strategy": "APPEND_TO_SAME_CELL"

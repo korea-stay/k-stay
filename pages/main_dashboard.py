@@ -58,15 +58,16 @@ def render():
     tab_visa = "📋 비자 서류" if current_lang == "ko" else "📋 Visa Documents"
     tab_keta = "🛫 K-ETA" if current_lang == "ko" else "🛫 K-ETA"
     
-    tab1, tab2 = st.tabs([tab_visa, tab_keta])
+    # K-ETA를 첫 번째 탭으로 설정하여 기본값이 되도록 변경
+    tab1, tab2 = st.tabs([tab_keta, tab_visa])
     
     with tab1:
-        # 비자 탭: 업데이트된 시나리오 리스트 (의료관광 포함, 결혼/전문인력 제거)
-        render_scenario_list()
-    
-    with tab2:
         # K-ETA 탭
         render_keta_tab()
+    
+    with tab2:
+        # 비자 탭: 업데이트된 시나리오 리스트 (의료관광 포함, 결혼/전문인력 제거)
+        render_scenario_list()
 
 
 def handle_payment_callback():
@@ -414,7 +415,7 @@ def render_coming_soon_card():
         <div style="
             background: #f8fafc;
             border: 2px dashed #cbd5e1;
-            border-radius: 0.75rem;
+            border-radius: 0.75rem;ㄱ
             padding: 1.25rem;
             margin-bottom: 0.5rem;
             text-align: center;

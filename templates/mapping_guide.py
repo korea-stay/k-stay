@@ -38,176 +38,7 @@ GENDER_CHECKBOX_MAP = {
 VALUE_MAPS = {
     "GENDER": GENDER_CHECKBOX_MAP,
 }
-
-# ======================================================================
-# 통합신청서
-# ======================================================================
-
-UNIFIED_APPLICATION_MAPPING = {
-    "template_file": "통합신청서(신고서) (7).docx",
-    "document_name": "통합신청서",
-    "type": "form",
-    "sections": [
-        {
-            "section_name": "신청 정보",
-            "section_name_en": "Application Information",
-            "target": "self",
-            "target_prefix": "",
-            "fields": [
-                {
-                    "data_key": "surname",
-                    "layer": "universal",
-                    "anchor_text": "성 Surname",
-                    "strategy": "BELOW_CELL"
-                },
-                {
-                    "data_key": "given_name",
-                    "layer": "universal",
-                    "anchor_text": "명 Given names",
-                    "strategy": "BELOW_CELL"
-                },
-                {
-                    "data_key": "dob_year",
-                    "layer": "universal",
-                    "anchor_text": ["년 yyyy"],
-                    "strategy": "BELOW_CELL"
-                },
-                {
-                    "data_key": "dob_month",
-                    "layer": "universal",
-                    "anchor_text": ["월 mm"],
-                    "strategy": "BELOW_CELL"
-                },
-                {
-                    "data_key": "dob_day",
-                    "layer": "universal",
-                    "anchor_text": ["일 dd"],
-                    "strategy": "BELOW_CELL"
-                },
-                {
-                    "data_key": "gender",
-                    "layer": "universal",
-                    "anchor_text": "[ ]남 M [ ]여 F",
-                    "strategy": "CHECKBOX",
-                    "value_map": "GENDER"
-                },
-                {
-                    "data_key": "nationality",
-                    "layer": "universal",
-                    "anchor_text": "국 적 Nationality",
-                    "strategy": "NEXT_CELL"
-                },
-                {
-                    "data_key": "alien_registration_no",
-                    "layer": "universal",
-                    "anchor_text": "외국인등록번호  Foreign Resident Registration No.",
-                    "strategy": "SPLIT_CELLS"
-                },
-                {
-                    "data_key": "passport_no",
-                    "layer": "universal",
-                    "anchor_text": "여권 번호 Passport No.",
-                    "strategy": "NEXT_CELL"
-                },
-                {
-                    "data_key": "passport_issue_date",
-                    "layer": "universal",
-                    "anchor_text": "여권 발급일자 Passport Issue Date",
-                    "strategy": "BELOW_CELL"
-                },
-                {
-                    "data_key": "passport_expiry_date",
-                    "layer": "universal",
-                    "anchor_text": "여권 유효기간 Passport Expiry Date",
-                    "strategy": "BELOW_CELL"
-                },
-                {
-                    "data_key": "address_korea",
-                    "layer": "variable",
-                    "anchor_text": "대한민국 내 주소 Address In Korea",
-                    "strategy": "NEXT_CELL"
-                },
-                {
-                    "data_key": "phone",
-                    "layer": "universal",
-                    "anchor_text": "전화 번호 Telephone No.",
-                    "strategy": "NEXT_CELL"
-                },
-                {
-                    "data_key": "mobile_phone",
-                    "layer": "universal",
-                    "anchor_text": "휴대 전화 Cell phone No.",
-                    "strategy": "NEXT_CELL"
-                },
-                {
-                    "data_key": "home_country_address",
-                    "layer": "variable",
-                    "anchor_text": "본국 주소 Address In Home Country",
-                    "strategy": "NEXT_CELL"
-                },
-                {
-                    "data_key": "school_name",
-                    "layer": "variable",
-                    "anchor_text": "학교 이름 Name of School",
-                    "strategy": "NEXT_CELL"
-                },
-                {
-                    "data_key": "current_workplace_name",
-                    "layer": "variable",
-                    "anchor_text": "원 근무처 Current Workplace",
-                    "strategy": "NEXT_CELL"
-                },
-                {
-                    "data_key": "new_workplace_name",
-                    "layer": "variable",
-                    "anchor_text": "예정 근무처 New Workplace",
-                    "strategy": "NEXT_CELL"
-                },
-                {
-                    "data_key": "annual_income_amount",
-                    "layer": "variable",
-                    "anchor_text": "연 소득금액 Annual Income Amount",
-                    "strategy": "BELOW_CELL"
-                },
-                {
-                    "data_key": "occupation",
-                    "layer": "variable",
-                    "anchor_text": "직업 Occupation",
-                    "strategy": "BELOW_CELL"
-                },
-                {
-                    "data_key": "intended_reentry_period",
-                    "layer": "variable",
-                    "anchor_text": "재입국 신청 기간 Intended Period Of Reentry",
-                    "strategy": "NEXT_CELL"
-                },
-                {
-                    "data_key": "email",
-                    "layer": "universal",
-                    "anchor_text": "전자우편 E-Mail",
-                    "strategy": "NEXT_CELL"
-                },
-                {
-                    "data_key": "refund_bank_account_no",
-                    "layer": "variable",
-                    "anchor_text": "반환용 계좌번호(외국인등록 및 외국인등록증 재발급 신청 시에만 기재) Refund Bank",
-                    "strategy": "NEXT_CELL"
-                },
-                {
-                    "data_key": "application_date",
-                    "layer": "variable",
-                    "anchor_text": "신청일 Date of application",
-                    "strategy": "NEXT_CELL"
-                },
-            ]
-        },
-    ]
-}
-
-# ======================================================================
-# 사증발급인정신청서
-# ======================================================================
-
+##사증발급인정신청서##
 VISA_ISSUANCE_MAPPING = {
     "template_file": "사증발급인정신청서 (7).docx",
     "document_name": "사증발급인정신청서",
@@ -822,6 +653,174 @@ VISA_ISSUANCE_MAPPING = {
         },
     ]
 }
+
+# ======================================================================
+# 통합신청서
+# ======================================================================
+
+UNIFIED_APPLICATION_MAPPING = {
+    "template_file": "통합신청서(신고서) (7).docx",
+    "document_name": "통합신청서",
+    "type": "form",
+    "sections": [
+        {
+            "section_name": "신청 정보",
+            "section_name_en": "Application Information",
+            "target": "self",
+            "target_prefix": "",
+            "fields": [
+                {
+                    "data_key": "surname",
+                    "layer": "universal",
+                    "anchor_text": "성 Surname",
+                    "strategy": "BELOW_CELL"
+                },
+                {
+                    "data_key": "given_name",
+                    "layer": "universal",
+                    "anchor_text": "명 Given names",
+                    "strategy": "BELOW_CELL"
+                },
+                {
+                    "data_key": "dob_year",
+                    "layer": "universal",
+                    "anchor_text": ["년 yyyy"],
+                    "strategy": "BELOW_CELL"
+                },
+                {
+                    "data_key": "dob_month",
+                    "layer": "universal",
+                    "anchor_text": ["월 mm"],
+                    "strategy": "BELOW_CELL"
+                },
+                {
+                    "data_key": "dob_day",
+                    "layer": "universal",
+                    "anchor_text": ["일 dd"],
+                    "strategy": "BELOW_CELL"
+                },
+                {
+                    "data_key": "gender",
+                    "layer": "universal",
+                    "anchor_text": "[ ]남 M [ ]여 F",
+                    "strategy": "CHECKBOX",
+                    "value_map": "GENDER"
+                },
+                {
+                    "data_key": "nationality",
+                    "layer": "universal",
+                    "anchor_text": "국 적 Nationality",
+                    "strategy": "NEXT_CELL"
+                },
+                {
+                    "data_key": "alien_registration_no",
+                    "layer": "universal",
+                    "anchor_text": "외국인등록번호  Foreign Resident Registration No.",
+                    "strategy": "SPLIT_CELLS"
+                },
+                {
+                    "data_key": "passport_no",
+                    "layer": "universal",
+                    "anchor_text": "여권 번호 Passport No.",
+                    "strategy": "NEXT_CELL"
+                },
+                {
+                    "data_key": "passport_issue_date",
+                    "layer": "universal",
+                    "anchor_text": "여권 발급일자 Passport Issue Date",
+                    "strategy": "BELOW_CELL"
+                },
+                {
+                    "data_key": "passport_expiry_date",
+                    "layer": "universal",
+                    "anchor_text": "여권 유효기간 Passport Expiry Date",
+                    "strategy": "BELOW_CELL"
+                },
+                {
+                    "data_key": "address_korea",
+                    "layer": "variable",
+                    "anchor_text": "대한민국 내 주소 Address In Korea",
+                    "strategy": "NEXT_CELL"
+                },
+                {
+                    "data_key": "phone",
+                    "layer": "universal",
+                    "anchor_text": "전화 번호 Telephone No.",
+                    "strategy": "NEXT_CELL"
+                },
+                {
+                    "data_key": "mobile_phone",
+                    "layer": "universal",
+                    "anchor_text": "휴대 전화 Cell phone No.",
+                    "strategy": "NEXT_CELL"
+                },
+                {
+                    "data_key": "home_country_address",
+                    "layer": "variable",
+                    "anchor_text": "본국 주소 Address In Home Country",
+                    "strategy": "NEXT_CELL"
+                },
+                {
+                    "data_key": "school_name",
+                    "layer": "variable",
+                    "anchor_text": "학교 이름 Name of School",
+                    "strategy": "NEXT_CELL"
+                },
+                {
+                    "data_key": "current_workplace_name",
+                    "layer": "variable",
+                    "anchor_text": "원 근무처 Current Workplace",
+                    "strategy": "NEXT_CELL"
+                },
+                {
+                    "data_key": "new_workplace_name",
+                    "layer": "variable",
+                    "anchor_text": "예정 근무처 New Workplace",
+                    "strategy": "NEXT_CELL"
+                },
+                {
+                    "data_key": "annual_income_amount",
+                    "layer": "variable",
+                    "anchor_text": "연 소득금액 Annual Income Amount",
+                    "strategy": "BELOW_CELL"
+                },
+                {
+                    "data_key": "occupation",
+                    "layer": "variable",
+                    "anchor_text": "직업 Occupation",
+                    "strategy": "BELOW_CELL"
+                },
+                {
+                    "data_key": "intended_reentry_period",
+                    "layer": "variable",
+                    "anchor_text": "재입국 신청 기간 Intended Period Of Reentry",
+                    "strategy": "NEXT_CELL"
+                },
+                {
+                    "data_key": "email",
+                    "layer": "universal",
+                    "anchor_text": "전자우편 E-Mail",
+                    "strategy": "NEXT_CELL"
+                },
+                {
+                    "data_key": "refund_bank_account_no",
+                    "layer": "variable",
+                    "anchor_text": "반환용 계좌번호(외국인등록 및 외국인등록증 재발급 신청 시에만 기재) Refund Bank",
+                    "strategy": "NEXT_CELL"
+                },
+                {
+                    "data_key": "application_date",
+                    "layer": "variable",
+                    "anchor_text": "신청일 Date of application",
+                    "strategy": "NEXT_CELL"
+                },
+            ]
+        },
+    ]
+}
+
+
+
 
 # ======================================================================
 # 고용사유서
@@ -1839,45 +1838,45 @@ PART_TIME_WORK_MAPPING = {
                 {
                     "data_key": "employer_working_hours_mon",
                     "layer": "variable",
-                    "anchor_text": "월",
+                    "anchor_text": "월.",
                     "strategy": "BELOW_CELL"
                 },
                 {
                     "data_key": "employer_working_hours_tue",
                     "layer": "variable",
-                    "anchor_text": "화",
+                    "anchor_text": "화.",
                     "index": 5,
                     "strategy": "BELOW_CELL"
                 },
                 {
                     "data_key": "employer_working_hours_wed",
                     "layer": "variable",
-                    "anchor_text": "수",
+                    "anchor_text": "수.",
                     "index": 5,
                     "strategy": "BELOW_CELL"
                 },
                 {
                     "data_key": "employer_working_hours_thu",
                     "layer": "variable",
-                    "anchor_text": "목",
+                    "anchor_text": "목.",
                     "strategy": "BELOW_CELL"
                 },
                 {
                     "data_key": "employer_working_hours_fri",
                     "layer": "variable",
-                    "anchor_text": "금",
+                    "anchor_text": "금.",
                     "strategy": "BELOW_CELL"
                 },
                 {
                     "data_key": "employer_working_hours_sat",
                     "layer": "variable",
-                    "anchor_text": "토",
+                    "anchor_text": "토.",
                     "strategy": "BELOW_CELL"
                 },
                 {
                     "data_key": "employer_working_hours_sun",
                     "layer": "variable",
-                    "anchor_text": "일",
+                    "anchor_text": "일.",
                     "index": 11,
                     "strategy": "BELOW_CELL"
                 },
@@ -1915,74 +1914,87 @@ ILLEGAL_WORK_PREVENTION_MAPPING = {
     "document_name": "불법체류취업방지서약서",
     "type": "form",
     "sections": [
-        {
-            "section_name": "피초청인",
-            "section_name_en": "Invitee",
-            "target": "self",
-            "target_prefix": "",
-            "fields": [
-                {
-                    "data_key": "full_name",
-                    "layer": "universal",
-                    "anchor_text": "성명",
-                    "strategy": "NEXT_CELL",
-                    "formatter": "FULL_NAME_KR"
-                },
-                {
-                    "data_key": "birth_date",
-                    "layer": "universal",
-                    "anchor_text": "생년월일",
-                    "strategy": "NEXT_CELL"
-                },
-                {
-                    "data_key": "address",
-                    "layer": "universal",
-                    "anchor_text": "주소",
-                    "strategy": "NEXT_CELL"
-                },
-                {
-                    "data_key": "phone",
-                    "layer": "universal",
-                    "anchor_text": "연락처",
-                    "strategy": "NEXT_CELL"
-                },
-            ]
-        },
+        # ============================================
+        # 초청인 = 서비스 사용자 본인 (user_data에서 가져옴)
+        # ============================================
         {
             "section_name": "초청인",
             "section_name_en": "Inviter",
-            "target": "other_inviter",
-            "target_prefix": "inviter_",
+            "target": "self",              # ★ user_data 사용
+            "target_prefix": "",
             "fields": [
                 {
-                    "data_key": "inviter_name",
-                    "layer": "variable",
-                    "anchor_text": "성명",
-                    "strategy": "NEXT_CELL"
+                    "data_key": "full_name",    # user_data의 full_name
+                    "layer": "universal",
+                    "anchor_text": "성",
+                    "strategy": "TABLE_CELL",
+                    "column_index": 1
                 },
                 {
-                    "data_key": "inviter_birth_date",
+                    "data_key": "birth_date",   # user_data의 birth_date
+                    "layer": "universal",
+                    "anchor_text": "생년월일",
+                    "strategy": "TABLE_CELL",
+                    "column_index": 1
+                },
+                {
+                    "data_key": "korea_address", # user_data의 korea_address
+                    "layer": "universal",
+                    "anchor_text": "주",
+                    "strategy": "TABLE_CELL",
+                    "column_index": 1
+                },
+                {
+                    "data_key": "korea_phone",   # user_data의 korea_phone
+                    "layer": "universal",
+                    "anchor_text": "연",
+                    "strategy": "TABLE_CELL",
+                    "column_index": 1
+                },
+            ]
+        },
+        
+        # ============================================
+        # 피초청인 = 별도 입력 (form_data에서 가져옴)
+        # ============================================
+        {
+            "section_name": "피초청인",
+            "section_name_en": "Invitee",
+            "target": "other_invitee",
+            "target_prefix": "invitee_",
+            "fields": [
+                {
+                    "data_key": "invitee_name",
+                    "layer": "variable",
+                    "anchor_text": "성",
+                    "strategy": "TABLE_CELL",
+                    "column_index": 2
+                },
+                {
+                    "data_key": "invitee_birth_date",
                     "layer": "variable",
                     "anchor_text": "생년월일",
-                    "strategy": "NEXT_CELL"
+                    "strategy": "TABLE_CELL",
+                    "column_index": 2
                 },
                 {
-                    "data_key": "inviter_address",
+                    "data_key": "invitee_address",
                     "layer": "variable",
-                    "anchor_text": "주소",
-                    "strategy": "NEXT_CELL"
+                    "anchor_text": "주",
+                    "strategy": "TABLE_CELL",
+                    "column_index": 2
                 },
                 {
-                    "data_key": "inviter_phone",
+                    "data_key": "invitee_phone",
                     "layer": "variable",
-                    "anchor_text": "연락처",
-                    "strategy": "NEXT_CELL"
+                    "anchor_text": "연",
+                    "strategy": "TABLE_CELL",
+                    "column_index": 2
                 },
             ]
         },
     ]
 }
-
 # ======================================================================
 # 신원보증서
 # ======================================================================
@@ -2871,6 +2883,287 @@ SPOUSE_INVITATION_MAPPING = {
     ]
 }
 
+TREATMENT_PLEDGE_MAPPING = {
+    "template_file": "치료예정서약서.docx",
+    "document_name": "치료예정서약서",
+    "type": "form",
+    "sections": [
+        {
+            "section_name": "인적사항",
+            "section_name_en": "Personal Details",
+            "target": "self",
+            "target_prefix": "",
+            "fields": [
+                {
+                    "data_key": "nationality",
+                    "layer": "universal",
+                    "anchor_text": "국 적",
+                    "strategy": "NEXT_CELL"
+                },
+                {
+                    "data_key": "full_name",
+                    "layer": "universal",
+                    "anchor_text": "성 명",
+                    "strategy": "NEXT_CELL",
+                    "formatter": "FULL_NAME_KR"
+                },
+                {
+                    "data_key": "full_name_en",
+                    "layer": "universal",
+                    "anchor_text": "영문",
+                    "strategy": "APPEND_TO_SAME_CELL"
+                },
+                {
+                    "data_key": "full_name_hanja",
+                    "layer": "universal",
+                    "anchor_text": "한자",
+                    "strategy": "APPEND_TO_SAME_CELL"
+                },
+                {
+                    "data_key": "birth_date",
+                    "layer": "universal",
+                    "anchor_text": "생년월일",
+                    "strategy": "NEXT_CELL"
+                },
+                {
+                    "data_key": "gender",
+                    "layer": "universal",
+                    "anchor_text": "성 별",
+                    "strategy": "NEXT_CELL"
+                },
+                {
+                    "data_key": "korea_address",
+                    "layer": "variable",
+                    "anchor_text": "한국 내 주소",
+                    "strategy": "SPLIT_CELLS"
+                },
+                {
+                    "data_key": "disease_name",
+                    "layer": "variable",
+                    "anchor_text": "질 병 명",
+                    "strategy": "SPLIT_CELLS"
+                },
+            ]
+        },
+        {
+            "section_name": "보호자 정보",
+            "section_name_en": "Guardian Information",
+            "target": "other_guardian",
+            "target_prefix": "guardian_",
+            "fields": [
+                {
+                    "data_key": "guardian_name",
+                    "layer": "variable",
+                    "anchor_text": "보호자 (지인,친척 등)",
+                    "strategy": "NEXT_CELL"
+                },
+                {
+                    "data_key": "guardian_phone",
+                    "layer": "variable",
+                    "anchor_text": "전화번호",
+                    "strategy": "APPEND_TO_SAME_CELL"
+                },
+                {
+                    "data_key": "guardian_email",
+                    "layer": "variable",
+                    "anchor_text": "전자메일",
+                    "strategy": "APPEND_TO_SAME_CELL"
+                },
+            ]
+        },
+        {
+            "section_name": "병원 정보",
+            "section_name_en": "Hospital Information",
+            "target": "other_hospital",
+            "target_prefix": "hospital_",
+            "fields": [
+                {
+                    "data_key": "hospital_name",
+                    "layer": "variable",
+                    "anchor_text": "치료 예정병원",
+                    "strategy": "SPLIT_CELLS"
+                },
+                {
+                    "data_key": "hospital_address_contact",
+                    "layer": "variable",
+                    "anchor_text": "병원 주소  및 연락처",
+                    "strategy": "SPLIT_CELLS"
+                },
+            ]
+        },
+        {
+            "section_name": "서약 내용",
+            "section_name_en": "Pledge Contents",
+            "target": "self",
+            "target_prefix": "",
+            "fields": [
+                {
+                    "data_key": "pledge_text",
+                    "layer": "narrative",
+                    "anchor_text": "2. 서약 내용",
+                    "strategy": "APPEND_TO_SAME_CELL"
+                },
+                {
+                    "data_key": "pledge_date",
+                    "layer": "narrative",
+                    "anchor_text": "년 월 일",
+                    "strategy": "BELOW_CELL"
+                },
+                {
+                    "data_key": "pledge_signer_name",
+                    "layer": "narrative",
+                    "anchor_text": "서약인",
+                    "strategy": "APPEND_TO_SAME_CELL"
+                },
+            ]
+        },
+    ]
+}
+
+# ======================================================================
+# 입국허가신청서
+# ======================================================================
+
+ENTRY_PERMIT_APPLICATION_MAPPING = {
+    "template_file": "입국허가신청서.docx",
+    "document_name": "입국허가신청서",
+    "type": "form",
+    "sections": [
+        {
+            "section_name": "신청인 정보",
+            "section_name_en": "Applicant Information",
+            "target": "self",
+            "target_prefix": "",
+            "fields": [
+                {
+                    "data_key": "surname",
+                    "layer": "universal",
+                    "anchor_text": "성 Surname",
+                    "strategy": "APPEND_TO_SAME_CELL"
+                },
+                {
+                    "data_key": "given_name",
+                    "layer": "universal",
+                    "anchor_text": "명 Given Names",
+                    "strategy": "APPEND_TO_SAME_CELL"
+                },
+                {
+                    "data_key": "full_name_hanja",
+                    "layer": "universal",
+                    "anchor_text": "한자성명",
+                    "strategy": "APPEND_TO_SAME_CELL"
+                },
+                {
+                    "data_key": "birth_date",
+                    "layer": "universal",
+                    "anchor_text": "생년월일 Date of Birth",
+                    "strategy": "APPEND_TO_SAME_CELL"
+                },
+                {
+                    "data_key": "gender",
+                    "layer": "universal",
+                    "anchor_text": "성별 Sex",
+                    "strategy": "APPEND_TO_SAME_CELL"
+                },
+                {
+                    "data_key": "nationality",
+                    "layer": "universal",
+                    "anchor_text": "국적 Nationality",
+                    "strategy": "APPEND_TO_SAME_CELL"
+                },
+                {
+                    "data_key": "birth_place",
+                    "layer": "variable",
+                    "anchor_text": "출생지 Place of Birth",
+                    "strategy": "APPEND_TO_SAME_CELL"
+                },
+                {
+                    "data_key": "address",
+                    "layer": "variable",
+                    "anchor_text": "주소 Address",
+                    "strategy": "APPEND_TO_SAME_CELL"
+                },
+                {
+                    "data_key": "address_in_korea",
+                    "layer": "variable",
+                    "anchor_text": "국내체류지 Address in Korea",
+                    "strategy": "APPEND_TO_SAME_CELL"
+                },
+                {
+                    "data_key": "occupation_and_title",
+                    "layer": "variable",
+                    "anchor_text": "직장 직위 Occupation ＆ Title",
+                    "strategy": "APPEND_TO_SAME_CELL"
+                },
+            ]
+        },
+        {
+            "section_name": "여권 정보",
+            "section_name_en": "Passport Information",
+            "target": "self",
+            "target_prefix": "passport_",
+            "fields": [
+                {
+                    "data_key": "passport_no",
+                    "layer": "universal",
+                    "anchor_text": "번호 No.",
+                    "strategy": "APPEND_TO_SAME_CELL"
+                },
+                {
+                    "data_key": "issue_date",
+                    "layer": "variable",
+                    "anchor_text": "발급일 Issued date",
+                    "strategy": "APPEND_TO_SAME_CELL"
+                },
+                {
+                    "data_key": "expiration_date",
+                    "layer": "variable",
+                    "anchor_text": "만료일 Expiration date",
+                    "strategy": "APPEND_TO_SAME_CELL"
+                },
+                {
+                    "data_key": "place_of_issue",
+                    "layer": "variable",
+                    "anchor_text": "발급지 Place of issue",
+                    "strategy": "APPEND_TO_SAME_CELL"
+                },
+            ]
+        },
+        {
+            "section_name": "입국/체류 정보",
+            "section_name_en": "Entry and Stay Information",
+            "target": "self",
+            "target_prefix": "",
+            "fields": [
+                {
+                    "data_key": "purpose_of_entry",
+                    "layer": "variable",
+                    "anchor_text": "입국목적 Purpose of Entry",
+                    "strategy": "APPEND_TO_SAME_CELL"
+                },
+                {
+                    "data_key": "desired_length_of_stay",
+                    "layer": "variable",
+                    "anchor_text": "체류예정기간 Desired lengh of stay",
+                    "strategy": "APPEND_TO_SAME_CELL"
+                },
+                {
+                    "data_key": "reason_arriving_without_visa",
+                    "layer": "narrative",
+                    "anchor_text": "사증없이 도착한 이유  Reason for arriving without a visa",
+                    "strategy": "APPEND_TO_SAME_CELL"
+                },
+                {
+                    "data_key": "application_date",
+                    "layer": "variable",
+                    "anchor_text": "신청일 Date of application",
+                    "strategy": "APPEND_TO_SAME_CELL"
+                },
+            ]
+        },
+    ]
+}
+
 # ======================================================================
 # 전체 매핑
 # ======================================================================
@@ -2881,6 +3174,8 @@ ALL_DOCUMENT_MAPPINGS = {
     "고용사유서": EMPLOYMENT_REASON_MAPPING,
     "구직활동계획서": JOB_SEARCH_PLAN_MAPPING,
     "가족초청장": FAMILY_INVITATION_MAPPING,
+    "치료예정서약서": TREATMENT_PLEDGE_MAPPING,
+    "입국허가신청서": ENTRY_PERMIT_APPLICATION_MAPPING,
     "결혼배경진술서": MARRIAGE_STATEMENT_MAPPING,
     "시간제취업확인서": PART_TIME_WORK_MAPPING,
     "불법체류취업방지서약서": ILLEGAL_WORK_PREVENTION_MAPPING,
@@ -2896,6 +3191,7 @@ SCENARIO_DOCUMENTS = {
     "C": ['통합신청서', '결혼배경진술서', '외국인배우자초청장', '신원보증서'],
     "D": ['가족초청장', '불법체류취업방지서약서', '신원보증서', '사증발급인정신청서'],
     "E": ['사증발급인정신청서', '고용사유서', '신원보증서'],
+    "G": ['치료예정서약서', '입국허가신청서', '신원보증서'],
     "F": ['귀화허가신청서', '신원보증서'],
 }
 

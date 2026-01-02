@@ -2,6 +2,10 @@
 K-Stay Main Dashboard
 결제 없이 시나리오 시작 가능, Phase 4에서 결제
 with i18n support
+
+수정사항:
+- 결혼이민(C), 전문인력(E) 제거
+- 의료관광(G) 추가
 """
 
 import streamlit as st
@@ -75,7 +79,7 @@ def handle_payment_callback():
 
 
 def render_scenario_list():
-    """시나리오 목록 렌더링"""
+    """시나리오 목록 렌더링 - 결혼이민(C), 전문인력(E) 제거, 의료관광(G) 추가"""
     
     st.markdown(f"""
         <div style="display: flex; align-items: center; gap: 0.75rem; margin: 1.5rem 0;">
@@ -86,7 +90,7 @@ def render_scenario_list():
         </div>
     """, unsafe_allow_html=True)
     
-    # Track 1
+    # Track 1 - 유학생/취업준비
     st.markdown(f'<div style="background: #f1f5f9; display: inline-block; padding: 0.375rem 0.75rem; border-radius: 0.375rem; margin-bottom: 1rem;"><span style="font-size: 0.8rem; font-weight: 600; color: #475569;">💼 TRACK 1 — {t("dashboard.track1")}</span></div>', unsafe_allow_html=True)
     
     col1, col2 = st.columns(2)
@@ -97,25 +101,29 @@ def render_scenario_list():
     
     st.markdown("<br>", unsafe_allow_html=True)
     
-    # Track 2
+    # Track 2 - 고마진 (결혼이민 제거, 가족초청 유지, 의료관광 추가)
     st.markdown(f'<div style="background: #fef3c7; display: inline-block; padding: 0.375rem 0.75rem; border-radius: 0.375rem; margin-bottom: 1rem;"><span style="font-size: 0.8rem; font-weight: 600; color: #92400e;">💎 TRACK 2 — {t("dashboard.track2")}</span></div>', unsafe_allow_html=True)
     
     col3, col4 = st.columns(2)
     with col3:
-        render_scenario_card("💍", "#fce7f3", t("scenarios.marriage"), "F-6", t("scenarios.marriage_desc"), 5, "C")
-    with col4:
+        # 가족 초청 (D)
         render_scenario_card("👨‍👩‍👧", "#d1fae5", t("scenarios.family_invite"), "F-1-5", t("scenarios.family_invite_desc"), 4, "D")
+    with col4:
+        # 의료 관광 (G) - 새로 추가
+        render_scenario_card("🏥", "#e0f2fe", t("scenarios.medical"), "C-3-3/G-1-10", t("scenarios.medical_desc"), 3, "G")
     
     st.markdown("<br>", unsafe_allow_html=True)
     
-    # Track 3
+    # Track 3 - 국적 귀화 (전문인력 제거)
     st.markdown(f'<div style="background: #e0e7ff; display: inline-block; padding: 0.375rem 0.75rem; border-radius: 0.375rem; margin-bottom: 1rem;"><span style="font-size: 0.8rem; font-weight: 600; color: #3730a3;">🔄 TRACK 3 — {t("dashboard.track3")}</span></div>', unsafe_allow_html=True)
     
     col5, col6 = st.columns(2)
     with col5:
-        render_scenario_card("🎓", "#e0e7ff", t("scenarios.professional"), "E-7", t("scenarios.professional_desc"), 3, "E")
-    with col6:
+        # 국적 귀화 (F)
         render_scenario_card("🏛️", "#fef3c7", t("scenarios.naturalization"), t("scenarios.naturalization"), t("scenarios.naturalization_desc"), 4, "F")
+    with col6:
+        # 빈 카드 또는 "준비 중" 표시 (선택사항)
+        render_coming_soon_card()
 
 
 def render_scenario_card(icon, icon_bg, title, visa_type, description, doc_count, key):
@@ -140,6 +148,28 @@ def render_scenario_card(icon, icon_bg, title, visa_type, description, doc_count
     
     if st.button(f"🚀 {t('dashboard.start_btn')}", key=f"start_{key}", use_container_width=True, type="primary"):
         start_scenario(key)
+
+
+def render_coming_soon_card():
+    """준비 중 카드 (빈 슬롯용)"""
+    
+    st.markdown(f"""
+        <div style="
+            background: #f8fafc;
+            border: 2px dashed #cbd5e1;
+            border-radius: 0.75rem;
+            padding: 1.25rem;
+            margin-bottom: 0.5rem;
+            text-align: center;
+        ">
+            <div style="width: 40px; height: 40px; background: #e2e8f0; border-radius: 0.5rem; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; margin: 0 auto 0.75rem auto;">🔜</div>
+            <h3 style="font-size: 1.1rem; font-weight: 700; color: #94a3b8; margin: 0 0 0.25rem 0;">준비 중</h3>
+            <p style="font-size: 0.8rem; color: #94a3b8; margin: 0 0 0.5rem 0; font-weight: 500;">Coming Soon</p>
+            <p style="font-size: 0.85rem; color: #94a3b8; margin: 0 0 0.75rem 0;">새로운 시나리오가 곧 추가됩니다</p>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    st.button("🔒 준비 중", disabled=True, use_container_width=True)
 
 
 def start_scenario(scenario_id: str):

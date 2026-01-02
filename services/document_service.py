@@ -692,21 +692,76 @@ class DocumentProcessor:
             except Exception as e:
                 self._log(f"        ❌ 입력 오류 (Row {i+1}): {e}")
         
+    def _execute_table_cell(self, table, r_idx: int, c_idx: int, 
+                            value: Any, field: Dict, current_cell, row_cells):
+        """
+        TABLE_CELL 전략: 지정된 열 인덱스의 셀에 값 입력
+        
+        field 설정 예시:
+        {
+            "data_key": "inviter_name",
+            "anchor_text": "성명",
+            "strategy": "TABLE_CELL",
+            "column_index": 1  # 0-indexed, 초청인=1, 피초청인=2
+        }
+        """
+        column_index = field.get('column_index')
+        
+        if column_index is None:
+            self._log(f"      ⚠️ [TABLE_CELL] column_index 설정 없음")
+            return
+        
+        # 지정된 열 인덱스의 셀에 값 입력
+        if column_index < len(row_cells):
+            target_cell = row_cells[column_index]
+            val_str = str(value)
+            
+            # 서식 유지하며 입력
+            if target_cell.paragraphs:
+                p = target_cell.paragraphs[0]
+                if p.runs:
+                    # 기존 스타일 유지
+                    for run in p.runs[1:]:
+                        run.text = ""
+                    p.runs[0].text = val_str
+                else:
+                    p.text = val_str
+            else:
+                target_cell.text = val_str
+            
+            self._log(f"      ✅ [TABLE_CELL] Row{r_idx}-Col{column_index}에 '{val_str[:20]}...' 입력")
+        else:
+            self._log(f"      ⚠️ [TABLE_CELL] column_index {column_index} 범위 초과 (max: {len(row_cells)-1})")
+
+
+    # =============================================================================
+    # [전체 수정된 _execute_strategy 메서드]
+    # 기존 메서드를 아래로 교체하세요
+    # =============================================================================
+
     def _execute_strategy(self, strategy: str, table, r_idx: int, c_idx: int, 
-                         value: Any, field: Dict, current_cell, row_cells):
+                        value: Any, field: Dict, current_cell, row_cells):
         """전략별 실행"""
         try:
+            # HIERARCHICAL_CHECKBOX
             if strategy == "HIERARCHICAL_CHECKBOX":
                 self._execute_hierarchical_checkbox(
                     table, r_idx, c_idx, value, field, current_cell, row_cells
                 )
                 return
             
+            # CHECKBOX_WITH_VALUE
             elif strategy == "CHECKBOX_WITH_VALUE":
                 self._execute_checkbox_with_value(
-                    table, r_idx, c_idx, value, field, current_cell, row_cells, data or {}
+                    table, r_idx, c_idx, value, field, current_cell, row_cells, {}
                 )
-                return            
+                return
+            
+            # ★★★ TABLE_CELL - 새로 추가 ★★★
+            elif strategy == "TABLE_CELL":
+                self._execute_table_cell(table, r_idx, c_idx, value, field, current_cell, row_cells)
+                return
+            
             # CHECKBOX
             elif strategy == "CHECKBOX":
                 value_map_name = field.get('value_map', 'GENDER')
@@ -797,16 +852,12 @@ class DocumentProcessor:
                     self._log(f"      ⚠️ [BELOW_CELL 실패] 아래 행 없음")
             
             # APPEND_TO_SAME_CELL
-# APPEND_TO_SAME_CELL
             elif strategy == "APPEND_TO_SAME_CELL":
                 val_str = str(value)
                 
-                # 값이 존재하고, 아직 셀에 적히지 않은 경우에만 실행
                 if val_str and (val_str not in current_cell.text):
-                    # 1. 셀에 기존 텍스트가 있으면 -> add_paragraph로 줄바꿈 후 추가
                     if current_cell.text.strip():
                         current_cell.add_paragraph(val_str)
-                    # 2. 셀이 비어있으면 -> 그냥 텍스트 설정
                     else:
                         current_cell.text = val_str
                         
@@ -814,8 +865,6 @@ class DocumentProcessor:
         
         except Exception as e:
             self._log(f"      ❌ 처리 중 에러: {e}")
-
-
 # =============================================================================
 # DocumentService 클래스
 # =============================================================================

@@ -1,29 +1,28 @@
 """
 K-Stay Signup Page
 Phase 1: Universal Fact Collection (불변 정보 수집)
+다국어 지원
 """
 
 import streamlit as st
 from datetime import datetime, date
 from services.auth_service import AuthService, SessionManager
+from utils.i18n import t, get_current_language
 
 
 def render():
     """회원가입 페이지 렌더링"""
     
     # 헤더
-    st.markdown("""
-        <div style="text-align: center; padding: 2rem 0;">
-            <h1 style="
-                font-family: 'Playfair Display', serif;
-                font-size: 3rem;
+    st.markdown(f"""
+        <div style="text-align: center; padding: 1rem 0;">
+            <h2 style="
+                font-size: 1.8rem;
                 font-weight: 700;
-                background: linear-gradient(135deg, #C9A227 0%, #E8D5A3 50%, #C9A227 100%);
-                -webkit-background-clip: text;
-                -webkit-text-fill-color: transparent;
-            ">회원가입</h1>
-            <p style="color: #a0aec0; margin-top: 0.5rem;">
-                통합신청서 상단 정보를 한 번만 입력하세요
+                color: #1e293b;
+            ">{t('signup.title')}</h2>
+            <p style="color: #64748b; margin-top: 0.5rem; font-size: 0.9rem;">
+                {t('signup.subtitle')}
             </p>
         </div>
     """, unsafe_allow_html=True)
@@ -52,38 +51,38 @@ def render_progress_steps():
     current_step = st.session_state.get('signup_step', 1)
     
     steps = [
-        ("1", "계정", "account"),
-        ("2", "인적사항", "personal"),
-        ("3", "여권", "passport"),
-        ("4", "연락처", "contact"),
-        ("5", "확인", "confirm")
+        ("1", t('signup.step_account')),
+        ("2", t('signup.step_personal')),
+        ("3", t('signup.step_passport')),
+        ("4", t('signup.step_contact')),
+        ("5", t('signup.step_confirm'))
     ]
     
     cols = st.columns(len(steps))
     
-    for i, (num, label, key) in enumerate(steps):
+    for i, (num, label) in enumerate(steps):
         with cols[i]:
             is_active = (i + 1) == current_step
             is_completed = (i + 1) < current_step
             
             if is_completed:
-                color = "#4CAF50"
-                bg = "rgba(76, 175, 80, 0.2)"
+                color = "#22c55e"
+                bg = "rgba(34, 197, 94, 0.15)"
                 icon = "✓"
             elif is_active:
-                color = "#C9A227"
-                bg = "rgba(201, 162, 39, 0.2)"
+                color = "#2563eb"
+                bg = "rgba(37, 99, 235, 0.15)"
                 icon = num
             else:
-                color = "#6c757d"
-                bg = "rgba(108, 117, 125, 0.1)"
+                color = "#94a3b8"
+                bg = "rgba(148, 163, 184, 0.1)"
                 icon = num
             
             st.markdown(f"""
                 <div style="text-align: center;">
                     <div style="
-                        width: 40px;
-                        height: 40px;
+                        width: 36px;
+                        height: 36px;
                         border-radius: 50%;
                         background: {bg};
                         border: 2px solid {color};
@@ -92,25 +91,28 @@ def render_progress_steps():
                         justify-content: center;
                         color: {color};
                         font-weight: 700;
-                        margin-bottom: 0.5rem;
+                        font-size: 0.85rem;
+                        margin-bottom: 0.25rem;
                     ">{icon}</div>
-                    <p style="color: {color}; font-size: 0.8rem; margin: 0;">{label}</p>
+                    <p style="color: {color}; font-size: 0.7rem; margin: 0;">{label}</p>
                 </div>
             """, unsafe_allow_html=True)
+    
+    st.markdown("<br>", unsafe_allow_html=True)
 
 
 def render_step1_account():
     """Step 1: 계정 정보"""
     
-    st.markdown("""
+    st.markdown(f"""
         <div style="
-            background: rgba(255,255,255,0.02);
-            border: 1px solid rgba(201,162,39,0.15);
-            border-radius: 16px;
-            padding: 2rem;
-            margin: 1.5rem 0;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.75rem;
+            padding: 1.25rem;
+            margin-bottom: 1rem;
         ">
-            <h3 style="color: #C9A227; margin-bottom: 1.5rem;">📧 계정 정보</h3>
+            <h4 style="color: #1e293b; margin: 0;">📧 {t('signup.account_info')}</h4>
         </div>
     """, unsafe_allow_html=True)
     
@@ -118,16 +120,16 @@ def render_step1_account():
     
     with col1:
         email = st.text_input(
-            "이메일 *",
-            placeholder="your@email.com",
+            f"{t('auth.email')} *",
+            placeholder=t('auth.email_placeholder'),
             key="signup_email",
             value=st.session_state.get('signup_data', {}).get('email', '')
         )
     
     with col2:
         email_confirm = st.text_input(
-            "이메일 확인 *",
-            placeholder="이메일을 다시 입력하세요",
+            f"{t('auth.email_confirm')} *",
+            placeholder=t('auth.email_confirm_placeholder'),
             key="signup_email_confirm"
         )
     
@@ -135,43 +137,42 @@ def render_step1_account():
     
     with col3:
         password = st.text_input(
-            "비밀번호 *",
+            f"{t('auth.password')} *",
             type="password",
-            placeholder="8자 이상, 영문+숫자",
+            placeholder=t('auth.password_placeholder'),
             key="signup_password"
         )
     
     with col4:
         password_confirm = st.text_input(
-            "비밀번호 확인 *",
+            f"{t('auth.password_confirm')} *",
             type="password",
-            placeholder="비밀번호를 다시 입력하세요",
+            placeholder=t('auth.password_confirm_placeholder'),
             key="signup_password_confirm"
         )
     
-    st.caption("* 표시는 필수 입력 항목입니다.")
+    st.caption(t('signup.required_note'))
     
     col_prev, col_next = st.columns(2)
     
     with col_next:
-        if st.button("다음 →", use_container_width=True, type="primary"):
-            # 유효성 검사
+        if st.button(t('common.next'), use_container_width=True, type="primary"):
             if not email or not password:
-                st.error("모든 필수 항목을 입력해주세요.")
+                st.error(t('signup.error_required'))
                 return
             
             if email != email_confirm:
-                st.error("이메일이 일치하지 않습니다.")
+                st.error(t('signup.error_email_mismatch'))
                 return
             
             if password != password_confirm:
-                st.error("비밀번호가 일치하지 않습니다.")
+                st.error(t('signup.error_password_mismatch'))
                 return
             
             auth_service = AuthService()
             
             if not auth_service.validate_email(email):
-                st.error("유효하지 않은 이메일 형식입니다.")
+                st.error(t('signup.error_invalid_email'))
                 return
             
             is_valid, msg = auth_service.validate_password(password)
@@ -179,7 +180,6 @@ def render_step1_account():
                 st.error(msg)
                 return
             
-            # 데이터 저장
             if 'signup_data' not in st.session_state:
                 st.session_state.signup_data = {}
             
@@ -192,17 +192,17 @@ def render_step1_account():
 def render_step2_personal():
     """Step 2: 인적 사항"""
     
-    st.markdown("""
+    st.markdown(f"""
         <div style="
-            background: rgba(255,255,255,0.02);
-            border: 1px solid rgba(201,162,39,0.15);
-            border-radius: 16px;
-            padding: 2rem;
-            margin: 1.5rem 0;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.75rem;
+            padding: 1.25rem;
+            margin-bottom: 1rem;
         ">
-            <h3 style="color: #C9A227; margin-bottom: 1.5rem;">👤 인적 사항</h3>
-            <p style="color: #a0aec0; font-size: 0.9rem;">
-                여권에 기재된 정보와 동일하게 입력해주세요 (영문)
+            <h4 style="color: #1e293b; margin: 0 0 0.5rem 0;">👤 {t('signup.personal_info')}</h4>
+            <p style="color: #64748b; font-size: 0.85rem; margin: 0;">
+                {t('signup.personal_info_desc')}
             </p>
         </div>
     """, unsafe_allow_html=True)
@@ -211,7 +211,7 @@ def render_step2_personal():
     
     with col1:
         surname = st.text_input(
-            "성 (Surname) *",
+            f"{t('signup.surname')} *",
             placeholder="KIM",
             key="signup_surname",
             value=st.session_state.get('signup_data', {}).get('surname', '')
@@ -219,7 +219,7 @@ def render_step2_personal():
     
     with col2:
         given_name = st.text_input(
-            "이름 (Given Name) *",
+            f"{t('signup.given_name')} *",
             placeholder="MINJUN",
             key="signup_given_name",
             value=st.session_state.get('signup_data', {}).get('given_name', '')
@@ -229,7 +229,7 @@ def render_step2_personal():
     
     with col3:
         birth_date = st.date_input(
-            "생년월일 *",
+            f"{t('signup.birth_date')} *",
             min_value=date(1920, 1, 1),
             max_value=date.today(),
             value=date(1990, 1, 1),
@@ -237,9 +237,11 @@ def render_step2_personal():
         )
     
     with col4:
+        current_lang = get_current_language()
+        gender_options = ["", "Male", "Female"] if current_lang == "en" else ["", "남성 (Male)", "여성 (Female)"]
         gender = st.selectbox(
-            "성별 *",
-            options=["", "Male", "Female"],
+            f"{t('signup.gender')} *",
+            options=gender_options,
             key="signup_gender"
         )
     
@@ -247,7 +249,7 @@ def render_step2_personal():
     
     with col5:
         nationality = st.text_input(
-            "국적 *",
+            f"{t('signup.nationality')} *",
             placeholder="USA, China, Vietnam...",
             key="signup_nationality",
             value=st.session_state.get('signup_data', {}).get('nationality', '')
@@ -255,8 +257,8 @@ def render_step2_personal():
     
     with col6:
         alien_registration_no = st.text_input(
-            "외국인등록번호",
-            placeholder="없으면 비워두세요",
+            t('signup.alien_reg_no'),
+            placeholder=t('signup.alien_reg_placeholder'),
             key="signup_alien_reg",
             value=st.session_state.get('signup_data', {}).get('alien_registration_no', '')
         )
@@ -264,21 +266,28 @@ def render_step2_personal():
     col_prev, col_next = st.columns(2)
     
     with col_prev:
-        if st.button("← 이전", use_container_width=True):
+        if st.button(t('common.prev'), use_container_width=True):
             st.session_state.signup_step = 1
             st.rerun()
     
     with col_next:
-        if st.button("다음 →", use_container_width=True, type="primary"):
+        if st.button(t('common.next'), use_container_width=True, type="primary"):
             if not all([surname, given_name, gender, nationality]):
-                st.error("모든 필수 항목을 입력해주세요.")
+                st.error(t('signup.error_required'))
                 return
+            
+            # 성별 값 정규화
+            gender_value = gender
+            if "남성" in gender or "Male" in gender:
+                gender_value = "Male"
+            elif "여성" in gender or "Female" in gender:
+                gender_value = "Female"
             
             st.session_state.signup_data.update({
                 'surname': surname.upper(),
                 'given_name': given_name.upper(),
                 'birth_date': birth_date.isoformat(),
-                'gender': gender,
+                'gender': gender_value,
                 'nationality': nationality.upper(),
                 'alien_registration_no': alien_registration_no or '미소지'
             })
@@ -289,20 +298,20 @@ def render_step2_personal():
 def render_step3_passport():
     """Step 3: 여권 정보"""
     
-    st.markdown("""
+    st.markdown(f"""
         <div style="
-            background: rgba(255,255,255,0.02);
-            border: 1px solid rgba(201,162,39,0.15);
-            border-radius: 16px;
-            padding: 2rem;
-            margin: 1.5rem 0;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.75rem;
+            padding: 1.25rem;
+            margin-bottom: 1rem;
         ">
-            <h3 style="color: #C9A227; margin-bottom: 1.5rem;">📘 여권 정보</h3>
+            <h4 style="color: #1e293b; margin: 0;">📘 {t('signup.passport_info')}</h4>
         </div>
     """, unsafe_allow_html=True)
     
     passport_no = st.text_input(
-        "여권번호 *",
+        f"{t('signup.passport_no')} *",
         placeholder="M12345678",
         key="signup_passport_no",
         value=st.session_state.get('signup_data', {}).get('passport_no', '')
@@ -312,7 +321,7 @@ def render_step3_passport():
     
     with col1:
         passport_issue_date = st.date_input(
-            "발급일 *",
+            f"{t('signup.issue_date')} *",
             min_value=date(2000, 1, 1),
             max_value=date.today(),
             key="signup_passport_issue"
@@ -320,7 +329,7 @@ def render_step3_passport():
     
     with col2:
         passport_expiry_date = st.date_input(
-            "만료일 *",
+            f"{t('signup.expiry_date')} *",
             min_value=date.today(),
             max_value=date(2040, 12, 31),
             key="signup_passport_expiry"
@@ -329,18 +338,18 @@ def render_step3_passport():
     col_prev, col_next = st.columns(2)
     
     with col_prev:
-        if st.button("← 이전", use_container_width=True):
+        if st.button(t('common.prev'), use_container_width=True):
             st.session_state.signup_step = 2
             st.rerun()
     
     with col_next:
-        if st.button("다음 →", use_container_width=True, type="primary"):
+        if st.button(t('common.next'), use_container_width=True, type="primary"):
             if not passport_no:
-                st.error("여권번호를 입력해주세요.")
+                st.error(t('signup.error_required'))
                 return
             
             if passport_expiry_date <= date.today():
-                st.error("여권이 만료되었거나 곧 만료됩니다.")
+                st.error(t('signup.error_passport_expired'))
                 return
             
             st.session_state.signup_data.update({
@@ -355,45 +364,45 @@ def render_step3_passport():
 def render_step4_contact():
     """Step 4: 연락처 정보"""
     
-    st.markdown("""
+    st.markdown(f"""
         <div style="
-            background: rgba(255,255,255,0.02);
-            border: 1px solid rgba(201,162,39,0.15);
-            border-radius: 16px;
-            padding: 2rem;
-            margin: 1.5rem 0;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.75rem;
+            padding: 1.25rem;
+            margin-bottom: 1rem;
         ">
-            <h3 style="color: #C9A227; margin-bottom: 1.5rem;">📞 연락처 정보</h3>
+            <h4 style="color: #1e293b; margin: 0;">📞 {t('signup.contact_info')}</h4>
         </div>
     """, unsafe_allow_html=True)
     
-    st.markdown("#### 🇰🇷 한국 연락처")
+    st.markdown(f"#### 🇰🇷 {t('signup.korea_contact')}")
     
     korea_address = st.text_input(
-        "한국 주소 *",
-        placeholder="서울시 강남구 테헤란로 123, 101동 1001호",
+        f"{t('signup.korea_address')} *",
+        placeholder=t('signup.korea_address_placeholder'),
         key="signup_korea_address",
         value=st.session_state.get('signup_data', {}).get('korea_address', '')
     )
     
     korea_phone = st.text_input(
-        "한국 휴대전화 *",
+        f"{t('signup.korea_phone')} *",
         placeholder="010-1234-5678",
         key="signup_korea_phone",
         value=st.session_state.get('signup_data', {}).get('korea_phone', '')
     )
     
-    st.markdown("#### 🌍 본국 연락처")
+    st.markdown(f"#### 🌍 {t('signup.home_contact')}")
     
     home_country_address = st.text_input(
-        "본국 주소 (영문)",
-        placeholder="123 Main Street, City, Country",
+        t('signup.home_address'),
+        placeholder=t('signup.home_address_placeholder'),
         key="signup_home_address",
         value=st.session_state.get('signup_data', {}).get('home_country_address', '')
     )
     
     home_country_phone = st.text_input(
-        "본국 전화번호",
+        t('signup.home_phone'),
         placeholder="+1-123-456-7890",
         key="signup_home_phone",
         value=st.session_state.get('signup_data', {}).get('home_country_phone', '')
@@ -402,14 +411,14 @@ def render_step4_contact():
     col_prev, col_next = st.columns(2)
     
     with col_prev:
-        if st.button("← 이전", use_container_width=True):
+        if st.button(t('common.prev'), use_container_width=True):
             st.session_state.signup_step = 3
             st.rerun()
     
     with col_next:
-        if st.button("다음 →", use_container_width=True, type="primary"):
+        if st.button(t('common.next'), use_container_width=True, type="primary"):
             if not korea_address or not korea_phone:
-                st.error("한국 주소와 전화번호는 필수입니다.")
+                st.error(t('signup.error_required'))
                 return
             
             st.session_state.signup_data.update({
@@ -425,83 +434,74 @@ def render_step4_contact():
 def render_step5_confirm():
     """Step 5: 정보 확인 및 가입 완료"""
     
-    # Supabase 연결 상태 확인 (디버그용)
     auth_service = AuthService()
     if auth_service.is_supabase_connected():
-        st.success("✅ Supabase 연결됨")
+        st.success(f"✅ {t('auth.supabase_connected')}")
     else:
-        st.warning("⚠️ Mock 모드 (Supabase 미연결 - secrets.toml 확인 필요)")
+        st.info(f"💡 {t('auth.test_mode')}")
     
-    st.markdown("""
+    st.markdown(f"""
         <div style="
-            background: rgba(255,255,255,0.02);
-            border: 1px solid rgba(201,162,39,0.15);
-            border-radius: 16px;
-            padding: 2rem;
-            margin: 1.5rem 0;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.75rem;
+            padding: 1.25rem;
+            margin-bottom: 1rem;
         ">
-            <h3 style="color: #C9A227; margin-bottom: 1.5rem;">✅ 정보 확인</h3>
-            <p style="color: #a0aec0; font-size: 0.9rem;">
-                입력하신 정보를 확인해주세요. 이 정보는 통합신청서에 자동으로 채워집니다.
+            <h4 style="color: #1e293b; margin: 0 0 0.5rem 0;">✅ {t('signup.confirm_info')}</h4>
+            <p style="color: #64748b; font-size: 0.85rem; margin: 0;">
+                {t('signup.confirm_desc')}
             </p>
         </div>
     """, unsafe_allow_html=True)
     
     data = st.session_state.get('signup_data', {})
     
-    # 정보 요약 표시
     col1, col2 = st.columns(2)
     
     with col1:
-        st.markdown("**📧 계정**")
-        st.write(f"이메일: {data.get('email', 'N/A')}")
+        st.markdown(f"**📧 {t('signup.step_account')}**")
+        st.write(f"{t('auth.email')}: {data.get('email', 'N/A')}")
         
-        st.markdown("**👤 인적사항**")
-        st.write(f"성명: {data.get('surname', '')} {data.get('given_name', '')}")
-        st.write(f"생년월일: {data.get('birth_date', 'N/A')}")
-        st.write(f"성별: {data.get('gender', 'N/A')}")
-        st.write(f"국적: {data.get('nationality', 'N/A')}")
-        st.write(f"외국인등록번호: {data.get('alien_registration_no', '미소지')}")
+        st.markdown(f"**👤 {t('signup.step_personal')}**")
+        st.write(f"{t('signup.surname')}: {data.get('surname', '')} {data.get('given_name', '')}")
+        st.write(f"{t('signup.birth_date')}: {data.get('birth_date', 'N/A')}")
+        st.write(f"{t('signup.gender')}: {data.get('gender', 'N/A')}")
+        st.write(f"{t('signup.nationality')}: {data.get('nationality', 'N/A')}")
     
     with col2:
-        st.markdown("**📘 여권**")
-        st.write(f"여권번호: {data.get('passport_no', 'N/A')}")
-        st.write(f"발급일: {data.get('passport_issue_date', 'N/A')}")
-        st.write(f"만료일: {data.get('passport_expiry_date', 'N/A')}")
+        st.markdown(f"**📘 {t('signup.step_passport')}**")
+        st.write(f"{t('signup.passport_no')}: {data.get('passport_no', 'N/A')}")
+        st.write(f"{t('signup.issue_date')}: {data.get('passport_issue_date', 'N/A')}")
+        st.write(f"{t('signup.expiry_date')}: {data.get('passport_expiry_date', 'N/A')}")
         
-        st.markdown("**📞 연락처**")
-        st.write(f"한국 주소: {data.get('korea_address', 'N/A')}")
-        st.write(f"한국 전화: {data.get('korea_phone', 'N/A')}")
+        st.markdown(f"**📞 {t('signup.step_contact')}**")
+        st.write(f"{t('signup.korea_address')}: {data.get('korea_address', 'N/A')}")
+        st.write(f"{t('signup.korea_phone')}: {data.get('korea_phone', 'N/A')}")
     
-    # 이용약관
     st.markdown("---")
     
-    agree_terms = st.checkbox("이용약관 및 개인정보 처리방침에 동의합니다.", key="agree_terms")
-    agree_marketing = st.checkbox("마케팅 정보 수신에 동의합니다. (선택)", key="agree_marketing")
+    agree_terms = st.checkbox(t('signup.terms_agree'), key="agree_terms")
+    agree_marketing = st.checkbox(t('signup.marketing_agree'), key="agree_marketing")
     
     col_prev, col_next = st.columns(2)
     
     with col_prev:
-        if st.button("← 이전", use_container_width=True):
+        if st.button(t('common.prev'), use_container_width=True):
             st.session_state.signup_step = 4
             st.rerun()
     
     with col_next:
-        if st.button("🎉 가입 완료", use_container_width=True, type="primary"):
+        if st.button(f"🎉 {t('signup.complete_btn')}", use_container_width=True, type="primary"):
             if not agree_terms:
-                st.error("이용약관에 동의해주세요.")
+                st.error(t('signup.error_terms'))
                 return
             
-            # 회원가입 처리
             auth_service = AuthService()
-            
-            # 디버그: 연결 상태 표시
-            st.info(f"🔍 Supabase 연결 상태: {'연결됨' if auth_service.is_supabase_connected() else 'Mock 모드'}")
-            
             success, message, user_id = auth_service.sign_up(data)
             
             if success:
-                st.success(message)
+                st.success(t('signup.success'))
                 st.balloons()
                 
                 # 자동 로그인
@@ -515,7 +515,9 @@ def render_step5_confirm():
                     del st.session_state.signup_data
                 if 'signup_step' in st.session_state:
                     del st.session_state.signup_step
+                if 'auth_page' in st.session_state:
+                    del st.session_state.auth_page
                 
                 st.rerun()
             else:
-                st.error(f"❌ 회원가입 실패: {message}")
+                st.error(f"❌ {message}")

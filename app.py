@@ -207,12 +207,52 @@ def render_auth_page():
     col1, col2, col3 = st.columns([1, 3, 1])
     
     with col2:
-        tab1, tab2 = st.tabs([f"🔐 {t('common.login')}", f"📝 {t('common.signup')}"])
+        # 현재 인증 페이지 상태 (login/signup)
+        auth_page = st.session_state.get('auth_page', 'login')
         
-        with tab1:
+        # 페이지 전환 버튼
+        btn_col1, btn_col2 = st.columns(2)
+        
+        with btn_col1:
+            if auth_page == 'login':
+                st.markdown(f"""
+                    <div style="
+                        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+                        color: white;
+                        padding: 0.75rem 1rem;
+                        border-radius: 0.5rem;
+                        text-align: center;
+                        font-weight: 600;
+                    ">🔐 {t('common.login')}</div>
+                """, unsafe_allow_html=True)
+            else:
+                if st.button(f"🔐 {t('common.login')}", use_container_width=True):
+                    st.session_state.auth_page = 'login'
+                    st.rerun()
+        
+        with btn_col2:
+            if auth_page == 'signup':
+                st.markdown(f"""
+                    <div style="
+                        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+                        color: white;
+                        padding: 0.75rem 1rem;
+                        border-radius: 0.5rem;
+                        text-align: center;
+                        font-weight: 600;
+                    ">📝 {t('common.signup')}</div>
+                """, unsafe_allow_html=True)
+            else:
+                if st.button(f"📝 {t('common.signup')}", use_container_width=True):
+                    st.session_state.auth_page = 'signup'
+                    st.rerun()
+        
+        st.markdown("<br>", unsafe_allow_html=True)
+        
+        # 페이지 렌더링
+        if auth_page == 'login':
             login.render()
-        
-        with tab2:
+        else:
             signup.render()
         
         st.markdown("<br>", unsafe_allow_html=True)

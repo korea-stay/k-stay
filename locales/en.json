@@ -125,6 +125,16 @@
     "medical": "Emergency Medical",
     "medical_desc": "Emergency treatment & Entry Permission application"
   },
+  "spell_check": {
+    "button": "Spell Check",
+    "checking": "Checking spelling...",
+    "error_found": "Spelling errors found",
+    "suggestion": "Suggestion",
+    "apply": "Apply Correction",
+    "no_error": "No spelling errors found!",
+    "too_short": "Text is too short to check.",
+    "confirm": "OK"
+  },
   "ai_chat": {
     "title": "K-Stay AI Consultant",
     "subtitle": "D-2 Study · D-4 Training · D-5 Journalism · D-6 Religion · D-10 Job Search · F-6 Marriage · C-4 Short-term",

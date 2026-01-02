@@ -11,6 +11,65 @@ from services.auth_service import AuthService
 from utils.i18n import t, get_current_language
 
 
+# 시나리오 이름 번역 매핑
+SCENARIO_NAME_MAP = {
+    "구직 준비": "Job Search Preparation",
+    "아르바이트": "Part-time Work",
+    "결혼 이민": "Marriage Immigration",
+    "가족 초청": "Family Invitation",
+    "전문 인력": "Professional Worker",
+    "국적 귀화": "Naturalization"
+}
+
+# 문서 이름 번역 매핑
+DOCUMENT_NAME_MAP = {
+    "통합신청서": "Integrated Application Form",
+    "통합신청서(신고서)": "Integrated Application Form",
+    "구직활동계획서": "Job Search Activity Plan",
+    "신원보증서": "Personal Guarantee Letter",
+    "신원보증서(한글)": "Personal Guarantee Letter (Korean)",
+    "신원보증서(영문)": "Personal Guarantee Letter (English)",
+    "고용사유서": "Employment Reason Statement",
+    "시간제취업확인서": "Part-time Employment Certificate",
+    "외국인 배우자 초청장": "Foreign Spouse Invitation Letter",
+    "결혼배경진술서": "Marriage Background Statement",
+    "가족관계통보서": "Family Relationship Report",
+    "귀화허가신청서": "Naturalization Application",
+    "귀화추천서": "Naturalization Recommendation",
+    "거주숙소제공사실확인서": "Accommodation Provision Confirmation",
+    "거주숙소제공사실확인서(영문병기)": "Accommodation Provision Confirmation (Bilingual)",
+    "사증발급인정신청서": "Visa Issuance Certificate Application",
+    "결혼이민자의 부모 등 가족 초청장": "Family Invitation for Marriage Immigrant",
+    "결혼이민자의 부모 등 가족 초청장(F-1-5 비자 신청)": "Family Invitation Letter (F-1-5 Visa)",
+    "불법체류 취업 방지 서약서": "Illegal Stay Prevention Pledge",
+    "불법체류 취업 방지 서약서(F-1-5)": "Illegal Stay Prevention Pledge (F-1-5)",
+    "유학생 시간제취업 요건 준수 확인서": "Student Part-time Work Compliance Certificate",
+    "유학생 시간제취업 요건 준수 확인서(제조업_국문)": "Student Part-time Work Certificate (Manufacturing)"
+}
+
+
+def translate_scenario_name(name: str) -> str:
+    """시나리오 이름 번역"""
+    current_lang = get_current_language()
+    if current_lang == "en" and name in SCENARIO_NAME_MAP:
+        return SCENARIO_NAME_MAP[name]
+    return name
+
+
+def translate_document_name(name: str) -> str:
+    """문서 이름 번역"""
+    current_lang = get_current_language()
+    if current_lang == "en":
+        # 정확한 매칭 먼저 시도
+        if name in DOCUMENT_NAME_MAP:
+            return DOCUMENT_NAME_MAP[name]
+        # 부분 매칭 시도
+        for ko, en in DOCUMENT_NAME_MAP.items():
+            if ko in name:
+                return en
+    return name
+
+
 def render():
     """내 문서함 페이지 렌더링"""
     
@@ -139,11 +198,14 @@ def render_document_card(doc: dict, storage_service: DocumentStorageService, use
     """개별 문서 카드 렌더링"""
     
     doc_id = doc.get('id', '')
-    scenario_name = doc.get('scenario_name', 'Unknown')
+    scenario_name_raw = doc.get('scenario_name', 'Unknown')
     visa_type = doc.get('visa_type', '-')
     document_list = doc.get('document_list', [])
     file_size = doc.get('file_size', 0)
     created_at = doc.get('created_at', '')
+    
+    # 시나리오 이름 번역
+    scenario_name = translate_scenario_name(scenario_name_raw)
     
     # document_list 처리
     if isinstance(document_list, str):
@@ -164,10 +226,11 @@ def render_document_card(doc: dict, storage_service: DocumentStorageService, use
     else:
         size_str = f"{file_size} bytes"
     
-    # 문서 목록 HTML 생성 (세로 나열)
+    # 문서 목록 HTML 생성 (세로 나열) - 문서 이름 번역 적용
     docs_html = ""
     for i, doc_name in enumerate(document_list, 1):
-        docs_html += f'<div style="font-size: 0.85rem; color: #475569; margin-bottom: 0.25rem;">{i}. {doc_name}</div>'
+        translated_doc_name = translate_document_name(doc_name)
+        docs_html += f'<div style="font-size: 0.85rem; color: #475569; margin-bottom: 0.25rem;">{i}. {translated_doc_name}</div>'
     
     # 카드 HTML
     st.markdown(f"""

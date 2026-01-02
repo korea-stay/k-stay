@@ -125,6 +125,16 @@
     "medical": "긴급 의료",
     "medical_desc": "긴급 치료 및 입국 허가서 통합 신청"
   },
+  "spell_check": {
+    "button": "맞춤법",
+    "checking": "맞춤법 검사 중...",
+    "error_found": "맞춤법 오류 발견",
+    "suggestion": "수정 제안",
+    "apply": "수정 적용",
+    "no_error": "맞춤법 오류가 없습니다!",
+    "too_short": "검사할 텍스트가 너무 짧습니다.",
+    "confirm": "확인"
+  },
   "ai_chat": {
     "title": "K-Stay AI 상담사",
     "subtitle": "D-2 유학 · D-4 연수 · D-5 취재 · D-6 종교 · D-10 구직 · F-6 결혼 · C-4 단기취업",

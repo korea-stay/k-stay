@@ -516,7 +516,7 @@ LAYER2_VARIABLE_FIELDS = {
                     },
                     {
                         "data_key": "guarantor_guarantee_period",
-                        "label": "나. 보증기간(보증기간의 최장기간은 4년)",
+                        "label": "보증기간(보증기간의 최장기간은 4년)",
                         "label_en": "Guarantor Guarantee Period",
                         "type": "text",
                         "required": True
@@ -525,13 +525,6 @@ LAYER2_VARIABLE_FIELDS = {
                         "data_key": "guarantor_employer_address",
                         "label": "근무처 주소",
                         "label_en": "Guarantor Employer Address",
-                        "type": "text",
-                        "required": True
-                    },
-                    {
-                        "data_key": "guarantor_note",
-                        "label": "비고",
-                        "label_en": "Guarantor Note",
                         "type": "text",
                         "required": True
                     },
@@ -879,13 +872,6 @@ LAYER2_VARIABLE_FIELDS = {
                         "data_key": "guarantor_employer_address",
                         "label": "근무처 주소",
                         "label_en": "Guarantor Employer Address",
-                        "type": "text",
-                        "required": True
-                    },
-                    {
-                        "data_key": "guarantor_note",
-                        "label": "비고",
-                        "label_en": "Guarantor Note",
                         "type": "text",
                         "required": True
                     },
@@ -1443,13 +1429,6 @@ LAYER2_VARIABLE_FIELDS = {
                         "required": True
                     },
                     {
-                        "data_key": "guarantor_name_hanja",
-                        "label": "漢字",
-                        "label_en": "Guarantor Name Hanja",
-                        "type": "text",
-                        "required": True
-                    },
-                    {
                         "data_key": "guarantor_nationality",
                         "label": "국적",
                         "label_en": "Guarantor Nationality",
@@ -1513,30 +1492,9 @@ LAYER2_VARIABLE_FIELDS = {
                         "required": True
                     },
                     {
-                        "data_key": "guarantor_note",
-                        "label": "비고",
-                        "label_en": "Guarantor Note",
-                        "type": "text",
-                        "required": True
-                    },
-                    {
                         "data_key": "guarantor_guarantee_period",
-                        "label": "나. 보증기간(보증기간의 최장기간은 4년으로 한다)",
+                        "label": "보증기간(보증기간의 최장기간은 4년)",
                         "label_en": "Guarantor Guarantee Period",
-                        "type": "text",
-                        "required": True
-                    },
-                    {
-                        "data_key": "guarantor_signature_date",
-                        "label": "년              월           일장",
-                        "label_en": "Guarantor Signature Date",
-                        "type": "text",
-                        "required": True
-                    },
-                    {
-                        "data_key": "guarantor_signature",
-                        "label": "(서명 또는 인)",
-                        "label_en": "Guarantor Signature",
                         "type": "text",
                         "required": True
                     },
@@ -1704,13 +1662,6 @@ LAYER2_VARIABLE_FIELDS = {
                         "required": True
                     },
                     {
-                        "data_key": "guarantor_name_hanja",
-                        "label": "漢字",
-                        "label_en": "Guarantor Name Hanja",
-                        "type": "text",
-                        "required": True
-                    },
-                    {
                         "data_key": "guarantor_nationality",
                         "label": "국적",
                         "label_en": "Guarantor Nationality",
@@ -1774,30 +1725,9 @@ LAYER2_VARIABLE_FIELDS = {
                         "required": True
                     },
                     {
-                        "data_key": "guarantor_note",
-                        "label": "비고",
-                        "label_en": "Guarantor Note",
-                        "type": "text",
-                        "required": True
-                    },
-                    {
                         "data_key": "guarantor_guarantee_period",
                         "label": "보증기간(보증기간의 최장기간은 4년)",
                         "label_en": "Guarantor Guarantee Period",
-                        "type": "text",
-                        "required": True
-                    },
-                    {
-                        "data_key": "guarantor_signature_date",
-                        "label": "년              월           일장",
-                        "label_en": "Guarantor Signature Date",
-                        "type": "text",
-                        "required": True
-                    },
-                    {
-                        "data_key": "guarantor_signature",
-                        "label": "(서명 또는 인)",
-                        "label_en": "Guarantor Signature",
                         "type": "text",
                         "required": True
                     },
@@ -2712,13 +2642,6 @@ LAYER2_VARIABLE_FIELDS = {
                         "required": True
                     },
                     {
-                        "data_key": "guarantor_name_hanja",
-                        "label": "漢字",
-                        "label_en": "Guarantor Name Hanja",
-                        "type": "text",
-                        "required": True
-                    },
-                    {
                         "data_key": "guarantor_nationality",
                         "label": "국적",
                         "label_en": "Guarantor Nationality",
@@ -2790,22 +2713,8 @@ LAYER2_VARIABLE_FIELDS = {
                     },
                     {
                         "data_key": "guarantor_guarantee_period",
-                        "label": "나. 보증기간(보증기간의 최장기간은 4년으로 한다)",
+                        "label": "보증기간(보증기간의 최장기간은 4년)",
                         "label_en": "Guarantor Guarantee Period",
-                        "type": "text",
-                        "required": True
-                    },
-                    {
-                        "data_key": "guarantor_signature_date",
-                        "label": "년              월           일장",
-                        "label_en": "Guarantor Signature Date",
-                        "type": "text",
-                        "required": True
-                    },
-                    {
-                        "data_key": "guarantor_signature",
-                        "label": "(서명 또는 인)",
-                        "label_en": "Guarantor Signature",
                         "type": "text",
                         "required": True
                     },
@@ -2928,22 +2837,162 @@ LAYER2_VARIABLE_FIELDS = {
                         "type": "text",
                         "required": True
                     },
-                    {
-                        "data_key": "guarantor_signature_date",
-                        "label": "년              월           일장",
-                        "label_en": "Guarantor Signature Date",
-                        "type": "text",
-                        "required": True
-                    },
                 ]
             },
         ]
     },
     "G": {
-        "scenario_name": "의료 관광",
+        "scenario_name": "긴급 의료",
         "scenario_name_en": "Medical Tourism",
         "visa_type": "C-3-3/G-1-10",
         "field_groups": [
+            # -----------------------------------------------------------
+            # 1. 신청인 기본 정보 (Applicant Information)
+            # -----------------------------------------------------------
+            {
+                "target": "self",
+                "group_name": "신청인 기본 정보",
+                "group_name_en": "Applicant Basic Info",
+                "fields": [
+                    {
+                        "data_key": "surname",
+                        "label": "성 (Surname)",
+                        "label_en": "Surname",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "given_name",
+                        "label": "명 (Given Name)",
+                        "label_en": "Given Name",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "full_name_hanja",
+                        "label": "한자 성명",
+                        "label_en": "Name in Hanja",
+                        "type": "text",
+                        "required": False
+                    },
+                    {
+                        "data_key": "birth_date",
+                        "label": "생년월일",
+                        "label_en": "Date of Birth",
+                        "type": "date",
+                        "required": True
+                    },
+                    {
+                        "data_key": "gender",
+                        "label": "성별",
+                        "label_en": "Gender",
+                        "type": "select",
+                        "options": ["M", "F"],
+                        "required": True
+                    },
+                    {
+                        "data_key": "nationality",
+                        "label": "국적",
+                        "label_en": "Nationality",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "birth_place",
+                        "label": "출생지",
+                        "label_en": "Place of Birth",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "address",
+                        "label": "본국 주소",
+                        "label_en": "Address (Home Country)",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "address_in_korea",
+                        "label": "국내 체류지 (숙소 등)",
+                        "label_en": "Address in Korea",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "occupation_and_title",
+                        "label": "직업 및 직위",
+                        "label_en": "Occupation & Title",
+                        "type": "text",
+                        "required": True
+                    }
+                ]
+            },
+            # -----------------------------------------------------------
+            # 2. 여권 정보 (Passport Information)
+            # -----------------------------------------------------------
+            {
+                "target": "self",
+                "group_name": "여권 정보",
+                "group_name_en": "Passport Information",
+                "fields": [
+                    {
+                        "data_key": "passport_no",
+                        "label": "여권 번호",
+                        "label_en": "Passport No.",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "passport_issue_date",
+                        "label": "여권 발급일",
+                        "label_en": "Date of Issue",
+                        "type": "date",
+                        "required": True
+                    },
+                    {
+                        "data_key": "passport_expiration_date",
+                        "label": "여권 만료일",
+                        "label_en": "Date of Expiry",
+                        "type": "date",
+                        "required": True
+                    },
+                    {
+                        "data_key": "passport_place_of_issue",
+                        "label": "발급지",
+                        "label_en": "Place of Issue",
+                        "type": "text",
+                        "required": True
+                    }
+                ]
+            },
+            # -----------------------------------------------------------
+            # 3. 체류 예정 정보 (Stay Information) - Narrative 제외
+            # -----------------------------------------------------------
+            {
+                "target": "self",
+                "group_name": "체류 예정 정보",
+                "group_name_en": "Stay Information",
+                "fields": [
+                    {
+                        "data_key": "desired_length_of_stay",
+                        "label": "체류 예정 기간",
+                        "label_en": "Desired Length of Stay",
+                        "type": "text",
+                        "required": True,
+                        "placeholder": "예: 30 days"
+                    },
+                    {
+                        "data_key": "application_date",
+                        "label": "신청일",
+                        "label_en": "Date of Application",
+                        "type": "date",
+                        "required": True
+                    }
+                ]
+            },
+            # -----------------------------------------------------------
+            # 4. 보호자 정보 (Guardian Info)
+            # -----------------------------------------------------------
             {
                 "target": "other_guardian",
                 "group_name": "보호자 정보",
@@ -2951,27 +3000,30 @@ LAYER2_VARIABLE_FIELDS = {
                 "fields": [
                     {
                         "data_key": "guardian_name",
-                        "label": "Guardian Name",
+                        "label": "보호자 성명",
                         "label_en": "Guardian Name",
                         "type": "text",
                         "required": True
                     },
                     {
                         "data_key": "guardian_phone",
-                        "label": "Guardian Phone",
+                        "label": "보호자 전화번호",
                         "label_en": "Guardian Phone",
                         "type": "text",
                         "required": True
                     },
                     {
                         "data_key": "guardian_email",
-                        "label": "Guardian Email",
+                        "label": "보호자 이메일",
                         "label_en": "Guardian Email",
                         "type": "text",
                         "required": True
                     },
                 ]
             },
+            # -----------------------------------------------------------
+            # 5. 병원 정보 (Hospital Info)
+            # -----------------------------------------------------------
             {
                 "target": "other_hospital",
                 "group_name": "병원 정보",
@@ -2979,15 +3031,106 @@ LAYER2_VARIABLE_FIELDS = {
                 "fields": [
                     {
                         "data_key": "hospital_name",
-                        "label": "병원 성명",
+                        "label": "병원 이름",
                         "label_en": "Hospital Name",
                         "type": "text",
                         "required": True
                     },
                     {
                         "data_key": "hospital_address_contact",
-                        "label": "Address Contact",
-                        "label_en": "Address Contact",
+                        "label": "병원 주소 및 연락처",
+                        "label_en": "Hospital Address & Contact",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "disease_name",
+                        "label": "질병 명",
+                        "label_en": "Disease Name",
+                        "type": "text",
+                        "required": True
+                    },
+                ]
+            },
+            {
+                "target": "other_guarantor",
+                "group_name": "신원보증인",
+                "group_name_en": "Guarantor",
+                "fields": [
+                    {
+                        "data_key": "guarantor_name",
+                        "label": "성명",
+                        "label_en": "Guarantor Name",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_guarantee_period",
+                        "label": "보증기간(보증기간의 최장기간은 4년)",
+                        "label_en": "Guarantor Guarantee Period",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_nationality",
+                        "label": "국적",
+                        "label_en": "Guarantor Nationality",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_gender",
+                        "label": "성별",
+                        "label_en": "Guarantor Gender",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_passport_or_birth",
+                        "label": "여권번호 또는 생년월일",
+                        "label_en": "Guarantor Passport Or Birth",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_phone",
+                        "label": "전화번호",
+                        "label_en": "Guarantor Phone",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_address",
+                        "label": "주소",
+                        "label_en": "Guarantor Address",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_relationship",
+                        "label": "피보증인과의 관계",
+                        "label_en": "Guarantor Relationship",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_employer",
+                        "label": "근무처",
+                        "label_en": "Guarantor Employer",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_position",
+                        "label": "직위",
+                        "label_en": "Guarantor Position",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "guarantor_employer_address",
+                        "label": "근무처 주소",
+                        "label_en": "Guarantor Employer Address",
                         "type": "text",
                         "required": True
                     },
@@ -3286,6 +3429,41 @@ LAYER3_NARRATIVE_FIELDS = {
         "validation_prompt": """내용의 사실 관계와 논리적 흐름을 검토하세요.""",
         "danger_patterns": ['허위', '거짓', '불법']
     },
+    "G": {
+        "scenario_name": "긴급 의료",
+        "scenario_name_en": "Medical Tourism",
+        "visa_type": "C-3-3/G-1-10",
+        "narrative_label": "입국 사유서",
+        "narrative_label_en": "Statement of Entry Purpose",
+        "fields": [
+            {
+                "data_key": "purpose_of_entry",
+                "label": "입국 목적",
+                "label_en": "Purpose of Entry",
+                "hint": "치료 목적, 병원 예약 상황 등 입국 목적을 상세히 기술해주세요.",
+                "hint_en": "Please describe the purpose of entry in detail (treatment plan, hospital appointment, etc.)",
+                "placeholder": "예: 서울대학교병원에서의 정밀 검사 및 수술을 위해 입국하고자 합니다.",
+                "placeholder_en": "e.g., I intend to enter for detailed examination and surgery at Seoul National University Hospital.",
+                "min_chars": 30,
+                "required": True,
+                "anchor_text": "입국목적 Purpose of Entry"
+            },
+            {
+                "data_key": "reason_arriving_without_visa",
+                "label": "사증 없이 도착한 이유",
+                "label_en": "Reason for arriving without a visa",
+                "hint": "사증(비자) 없이 공항/항만에 도착하게 된 긴급한 경위를 설명해주세요.",
+                "hint_en": "Explain the urgent circumstances for arriving at the port of entry without a visa.",
+                "placeholder": "예: 본국에서의 급격한 건강 악화로 인해 긴급히 이송되었습니다.",
+                "placeholder_en": "e.g., I was urgently transported due to rapid deterioration of health in my home country.",
+                "min_chars": 30,
+                "required": True,
+                "anchor_text": "사증없이 도착한 이유  Reason for arriving without a visa"
+            }
+        ],
+        "validation_prompt": """의료 목적의 타당성과 긴급성이 잘 드러나는지 검토하세요.""",
+        "danger_patterns": ['불법 취업', '관광 목적', '돈 벌러']
+    },
 }
 
 
@@ -3353,7 +3531,7 @@ SCENARIOS: Dict[str, Scenario] = {
         description="부모님 또는 가족을 한국으로 초청",
         description_en="Inviting parents or family members to Korea",
         track="high_margin",
-        required_docs=['가족초청장', '불법체류취업방지서약서', '신원보증서', '사증발급인정신청서'],
+        required_docs=['가족초청장', '불법체류취업방지서약서', '신원보증서'],
         price=19.99
     ),
     "E": Scenario(
@@ -3468,6 +3646,8 @@ DOCUMENT_TEMPLATES = {
     
     # 기타
     "거주숙소제공사실확인서": "거주숙소제공사실확인서(영문병기).docx",
+    "입국허가신청서": "입국허가신청서.docx",
+    "치료예정서약서": "치료예정서약서.docx",
 }
 
 def get_layer3_config(scenario_id: str) -> Dict:

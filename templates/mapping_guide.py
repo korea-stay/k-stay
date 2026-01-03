@@ -3004,6 +3004,12 @@ ENTRY_PERMIT_APPLICATION_MAPPING = {
                     "strategy": "APPEND_TO_SAME_CELL"
                 },
                 {
+                    "data_key": "chinese_name",
+                    "layer": "universal",
+                    "anchor_text": "한자성명",
+                    "strategy": "APPEND_TO_SAME_CELL"
+                },
+                {
                     "data_key": "full_name_hanja",
                     "layer": "universal",
                     "anchor_text": "한자성명",

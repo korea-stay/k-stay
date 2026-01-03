@@ -15,6 +15,7 @@ TABLE_ROWS 동적 테이블 입력 지원
 import streamlit as st
 from datetime import date, datetime
 from typing import Dict, List, Any, Optional, Tuple
+from utils.i18n import t, get_current_language
 
 # 설정 파일에서 Layer 정의 임포트
 from config.settings import (
@@ -32,6 +33,38 @@ from config.settings import (
     get_table_rows_fields,  # ★ TABLE_ROWS 필드 가져오기
 )
 from services.payment_service import PaymentService
+# 문서명 영어 매핑
+DOCUMENT_NAME_EN = {
+    "통합신청서": "Integrated Application",
+    "구직활동계획서": "Job Search Plan",
+    "신원보증서": "Identity Guarantee",
+    "시간제취업확인서": "Part-time Work Confirmation",
+    "가족초청장": "Family Invitation Letter",
+    "불법체류취업방지서약서": "Illegal Stay Prevention Pledge",
+    "귀화허가신청서": "Naturalization Application",
+    "치료예정서약서": "Medical Treatment Pledge",
+    "입국허가신청서": "Entry Permit Application",
+}
+
+
+def get_doc_name(doc_name: str) -> str:
+    """현재 언어에 따라 문서명 반환"""
+    lang = get_current_language()
+    if lang == "en":
+        return DOCUMENT_NAME_EN.get(doc_name, doc_name)
+    return doc_name
+
+def get_label(item: dict, key: str = "label") -> str:
+    """현재 언어에 따라 label 또는 label_en 반환"""
+    lang = get_current_language()
+    if lang == "en":
+        return item.get(f"{key}_en") or item.get(key, "")
+    return item.get(key, "")
+
+
+def get_text(ko: str, en: str) -> str:
+    """현재 언어에 따라 한국어/영어 텍스트 반환"""
+    return en if get_current_language() == "en" else ko
 
 
 # =============================================================================
@@ -502,6 +535,8 @@ def get_all_field_definitions(scenario_id: str) -> Dict[str, Dict]:
 def render_table_input_section(table_key: str, table_config: dict, section_title: str = None):
     """동적 테이블 입력 UI 렌더링"""
     
+    lang = get_current_language()
+    
     columns = table_config.get("columns", [])
     max_rows = table_config.get("max_rows", 10)
     min_rows = table_config.get("min_rows", 0)
@@ -521,22 +556,33 @@ def render_table_input_section(table_key: str, table_config: dict, section_title
         rows_data = [{}]
         st.session_state.form_data[table_key] = rows_data
     
+    rows_text = get_text("행", "rows")
+    
     if section_title:
         st.markdown(f"""
             <div style="background: linear-gradient(90deg, #fef3c7, #fde68a); padding: 12px 16px; border-radius: 8px; margin-bottom: 12px; border-left: 4px solid #f59e0b; display: flex; align-items: center; gap: 10px;">
                 <span style="font-size: 1.2rem;">📋</span>
                 <span style="font-weight: 600; color: #92400e;">{section_title}</span>
-                <span style="margin-left: auto; background: #fbbf24; color: #78350f; font-size: 0.7rem; padding: 2px 8px; border-radius: 10px;">{len(rows_data)}행</span>
+                <span style="margin-left: auto; background: #fbbf24; color: #78350f; font-size: 0.7rem; padding: 2px 8px; border-radius: 10px;">{len(rows_data)} {rows_text}</span>
             </div>
         """, unsafe_allow_html=True)
     
     num_cols = len(columns)
     header_cols = st.columns([3] * num_cols + [1])
     
+    delete_text = get_text("삭제", "Delete")
+    
     for idx, col_config in enumerate(columns):
-        required_mark = " *" if col_config.get("required", False) else ""
-        header_cols[idx].markdown(f"**{col_config.get('label', '')}{required_mark}**")
-    header_cols[-1].markdown("**삭제**")
+        col_label = col_config.get('label_en', col_config.get('label', '')) if lang == "en" else col_config.get('label', '')
+        is_required = col_config.get("required", False)
+        
+        # ★ 수정: HTML로 볼드 처리하여 마크다운 충돌 방지
+        if is_required:
+            header_cols[idx].markdown(f"<b>{col_label}</b> <span style='color: red;'>*</span>", unsafe_allow_html=True)
+        else:
+            header_cols[idx].markdown(f"<b>{col_label}</b>", unsafe_allow_html=True)
+    
+    header_cols[-1].markdown(f"<b>{delete_text}</b>", unsafe_allow_html=True)
     
     rows_to_delete = []
     
@@ -546,15 +592,46 @@ def render_table_input_section(table_key: str, table_config: dict, section_title
         for col_idx, col_config in enumerate(columns):
             col_key = col_config.get("key")
             col_type = col_config.get("type", "text")
-            col_options = col_config.get("options", [])
+            
+            # ★ 언어에 따라 옵션 선택
+            col_options = col_config.get("options_en", col_config.get("options", [])) if lang == "en" else col_config.get("options", [])
+            col_options_ko = col_config.get("options", [])  # 저장용 한국어 옵션
+            col_options_en = col_config.get("options_en", col_config.get("options", []))  # 표시용 영어 옵션
+            
             widget_key = f"{table_key}_{row_idx}_{col_key}"
             current_value = row_data.get(col_key, "")
             
             with row_cols[col_idx]:
                 if col_type == "select" and col_options:
-                    options_list = [""] + col_options
-                    idx_val = options_list.index(current_value) if current_value in options_list else 0
-                    new_value = st.selectbox(f"{col_key}_{row_idx}", options_list, index=idx_val, key=widget_key, label_visibility="collapsed")
+                    # ★ 현재 값의 인덱스 찾기 (한국어 값으로 저장되어 있음)
+                    idx_val = 0
+                    if current_value:
+                        if current_value in col_options_ko:
+                            idx_val = col_options_ko.index(current_value) + 1  # +1 because we add "" at start
+                        elif current_value in col_options_en:
+                            idx_val = col_options_en.index(current_value) + 1
+                    
+                    # ★ 표시용 옵션 (언어에 따라)
+                    display_options = [""] + (col_options_en if lang == "en" else col_options_ko)
+                    
+                    selected_display = st.selectbox(
+                        f"{col_key}_{row_idx}", 
+                        display_options, 
+                        index=idx_val, 
+                        key=widget_key, 
+                        label_visibility="collapsed"
+                    )
+                    
+                    # ★ 저장할 때는 한국어 값으로 저장 (문서 생성 시 일관성 유지)
+                    if selected_display == "":
+                        new_value = ""
+                    elif lang == "en" and selected_display in col_options_en:
+                        # 영어 선택 → 한국어로 변환하여 저장
+                        en_idx = col_options_en.index(selected_display)
+                        new_value = col_options_ko[en_idx] if en_idx < len(col_options_ko) else selected_display
+                    else:
+                        new_value = selected_display
+                        
                 elif col_type == "date":
                     date_val = None
                     if current_value:
@@ -571,7 +648,7 @@ def render_table_input_section(table_key: str, table_config: dict, section_title
         
         with row_cols[-1]:
             if len(rows_data) > min_rows:
-                if st.button("🗑️", key=f"del_{table_key}_{row_idx}", help="이 행 삭제"):
+                if st.button("🗑️", key=f"del_{table_key}_{row_idx}", help=get_text("이 행 삭제", "Delete this row")):
                     rows_to_delete.append(row_idx)
             else:
                 st.write("")
@@ -585,18 +662,22 @@ def render_table_input_section(table_key: str, table_config: dict, section_title
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         if len(rows_data) < max_rows:
-            if st.button(f"➕ 행 추가 ({len(rows_data)}/{max_rows})", key=f"add_{table_key}", use_container_width=True):
+            add_text = get_text(f"➕ 행 추가 ({len(rows_data)}/{max_rows})", f"➕ Add Row ({len(rows_data)}/{max_rows})")
+            if st.button(add_text, key=f"add_{table_key}", use_container_width=True):
                 rows_data.append({})
                 st.session_state.form_data[table_key] = rows_data
                 st.rerun()
         else:
-            st.info(f"최대 {max_rows}개 행까지 입력 가능합니다.")
+            max_info = get_text(f"최대 {max_rows}개 행까지 입력 가능합니다.", f"Maximum {max_rows} rows allowed.")
+            st.info(max_info)
     
     st.markdown("---")
 
 
 def render_phase2_table_rows_section(scenario_id: str, current_doc_name: str):
     """Phase 2에서 TABLE_ROWS 섹션 렌더링"""
+    
+    lang = get_current_language()
     
     table_fields = get_table_rows_fields(scenario_id)
     
@@ -612,16 +693,19 @@ def render_phase2_table_rows_section(scenario_id: str, current_doc_name: str):
     if not relevant_tables:
         return
 
-    st.markdown("""
+    title_text = get_text("📊 추가 정보 (테이블 형식)", "📊 Additional Information (Table Format)")
+    guide_text = get_text("아래 테이블에 필요한 정보를 입력해주세요.", "Please enter the required information in the table below.")
+    
+    st.markdown(f"""
         <div style="background: linear-gradient(135deg, #fef3c7, #fde68a); border: 1px solid #f59e0b; border-radius: 12px; padding: 1rem; margin: 1rem 0;">
-            <div style="font-weight: 600; color: #92400e; margin-bottom: 4px;">📊 추가 정보 (테이블 형식)</div>
-            <div style="font-size: 0.8rem; color: #a16207;">아래 테이블에 필요한 정보를 입력해주세요.</div>
+            <div style="font-weight: 600; color: #92400e; margin-bottom: 4px;">{title_text}</div>
+            <div style="font-size: 0.8rem; color: #a16207;">{guide_text}</div>
         </div>
     """, unsafe_allow_html=True)
     
     for table_key, table_config in relevant_tables.items():
-        render_table_input_section(table_key=table_key, table_config=table_config, section_title=table_config.get('label', table_key))
-
+        table_label = table_config.get('label_en', table_config.get('label', table_key)) if lang == "en" else table_config.get('label', table_key)
+        render_table_input_section(table_key=table_key, table_config=table_config, section_title=table_label)
 
 # =============================================================================
 # 메인 렌더 함수
@@ -630,24 +714,33 @@ def render_phase2_table_rows_section(scenario_id: str, current_doc_name: str):
 def render():
     """시나리오 폼 페이지 렌더링"""
     
+    lang = get_current_language()
+    
     scenario_id = st.session_state.get('selected_scenario')
     
     if not scenario_id:
-        st.warning("시나리오를 먼저 선택해주세요.")
-        if st.button("← 대시보드로 돌아가기"):
+        warning_text = get_text("시나리오를 먼저 선택해주세요.", "Please select a scenario first.")
+        st.warning(warning_text)
+        btn_text = get_text("← 대시보드로 돌아가기", "← Back to Dashboard")
+        if st.button(btn_text):
             st.session_state.current_page = 'dashboard'
             st.rerun()
         return
     
     scenario = SCENARIOS.get(scenario_id)
     if not scenario:
-        st.error("유효하지 않은 시나리오입니다.")
+        error_text = get_text("유효하지 않은 시나리오입니다.", "Invalid scenario.")
+        st.error(error_text)
         return
     
     current_step = st.session_state.get('form_step', 1)
     
     if current_step in [2, 3]:
-        st.warning("⚠️ 주의: 새로고침 또는 페이지 이탈 시 작성 중인 내용이 저장되지 않을 수 있습니다.")
+        warning_text = get_text(
+            "⚠️ 주의: 새로고침 또는 페이지 이탈 시 작성 중인 내용이 저장되지 않을 수 있습니다.",
+            "⚠️ Warning: Your progress may not be saved if you refresh or leave this page."
+        )
+        st.warning(warning_text)
     
     render_phase_indicator(current_step)
     
@@ -660,7 +753,6 @@ def render():
     elif current_step == 4:
         render_phase4_payment(scenario)
 
-
 # =============================================================================
 # Phase Indicator
 # =============================================================================
@@ -668,11 +760,29 @@ def render():
 def render_phase_indicator(current_step: int):
     """4-Phase 진행 상태 표시"""
     
+    lang = get_current_language()
+    
     phases = [
-        {"name": "기본정보 확인", "desc": "Universal Fact", "color": "#22c55e"},
-        {"name": "서류별 정보 입력", "desc": "Variable Fact", "color": "#3b82f6"},
-        {"name": "서술형 작성", "desc": "Narrative", "color": "#a855f7"},
-        {"name": "결제 & 생성", "desc": "Payment", "color": "#f59e0b"},
+        {
+            "name": "Basic Info Check" if lang == "en" else "기본정보 확인",
+            "desc": "Universal Fact",
+            "color": "#22c55e"
+        },
+        {
+            "name": "Document Input" if lang == "en" else "서류별 정보 입력",
+            "desc": "Variable Fact",
+            "color": "#3b82f6"
+        },
+        {
+            "name": "Narrative" if lang == "en" else "서술형 작성",
+            "desc": "Narrative",
+            "color": "#a855f7"
+        },
+        {
+            "name": "Payment & Generate" if lang == "en" else "결제 & 생성",
+            "desc": "Payment",
+            "color": "#f59e0b"
+        },
     ]
     
     cols = st.columns(4)
@@ -718,21 +828,29 @@ def render_phase1_universal_fact(scenario):
     """Phase 1: 회원가입 시 입력된 불변 정보 확인"""
     
     user_data = st.session_state.get('user_data', {})
+    lang = get_current_language()
+    
+    # 시나리오 이름
+    scenario_name = getattr(scenario, 'name_en', scenario.name) if lang == "en" else scenario.name
+    
+    desc_text = get_text(
+        "회원가입 시 입력한 기본 정보를 확인해주세요. 이 정보는 모든 서류에 자동으로 반영됩니다.",
+        "Please confirm the basic information entered during registration. This will be automatically applied to all documents."
+    )
     
     st.markdown(f"""
         <div style="margin-bottom: 1.5rem;">
             <h2 style="font-size: 1.5rem; font-weight: 700; color: #1e293b; margin: 0 0 0.5rem 0;">
-                {scenario.icon} {scenario.name} <span style="color: #64748b; font-weight: 400;">({scenario.visa_type})</span>
+                {scenario.icon} {scenario_name} <span style="color: #64748b; font-weight: 400;">({scenario.visa_type})</span>
             </h2>
-            <p style="color: #64748b; font-size: 0.9rem; margin: 0;">
-                회원가입 시 입력한 기본 정보를 확인해주세요. 이 정보는 모든 서류에 자동으로 반영됩니다.
-            </p>
+            <p style="color: #64748b; font-size: 0.9rem; margin: 0;">{desc_text}</p>
         </div>
     """, unsafe_allow_html=True)
     
     col_back, _ = st.columns([1, 3])
     with col_back:
-        if st.button("← 다른 시나리오 선택", use_container_width=True):
+        btn_text = get_text("← 다른 시나리오 선택", "← Select Other Scenario")
+        if st.button(btn_text, use_container_width=True):
             st.session_state.selected_scenario = None
             st.session_state.form_step = 1
             st.session_state.form_data = {}
@@ -743,9 +861,21 @@ def render_phase1_universal_fact(scenario):
     st.markdown("<br>", unsafe_allow_html=True)
     
     categories = {
-        "personal": {"title": "인적사항", "icon": "👤", "color": "#3b82f6"},
-        "passport": {"title": "여권 정보", "icon": "🛂", "color": "#8b5cf6"},
-        "contact": {"title": "연락처", "icon": "📞", "color": "#10b981"},
+        "personal": {
+            "title": get_text("인적사항", "Personal Info"),
+            "icon": "👤",
+            "color": "#3b82f6"
+        },
+        "passport": {
+            "title": get_text("여권 정보", "Passport Info"),
+            "icon": "🛂",
+            "color": "#8b5cf6"
+        },
+        "contact": {
+            "title": get_text("연락처", "Contact"),
+            "icon": "📞",
+            "color": "#10b981"
+        },
     }
     
     fields_by_category = {}
@@ -771,7 +901,7 @@ def render_phase1_universal_fact(scenario):
             
             for field in fields:
                 data_key = field['data_key']
-                label = field['label']
+                label = get_label(field)
                 value = user_data.get(data_key, '-')
                 
                 if field['type'] == 'date' and value and value != '-':
@@ -792,20 +922,23 @@ def render_phase1_universal_fact(scenario):
     
     st.markdown("<br>", unsafe_allow_html=True)
     
-    st.markdown("""
+    docs_title = get_text("📄 이번 신청에서 작성할 서류", "📄 Documents to Create")
+    
+    st.markdown(f"""
         <div style="background: linear-gradient(135deg, #eff6ff, #dbeafe); border: 1px solid #93c5fd; border-radius: 12px; padding: 1rem 1.25rem; margin: 1rem 0;">
-            <div style="font-weight: 600; color: #1e40af; margin-bottom: 8px;">📄 이번 신청에서 작성할 서류</div>
+            <div style="font-weight: 600; color: #1e40af; margin-bottom: 8px;">{docs_title}</div>
     """, unsafe_allow_html=True)
     
     doc_cols = st.columns(len(scenario.required_docs))
     for idx, doc_name in enumerate(scenario.required_docs):
         doc_info = DOCUMENT_FIELD_MAPPING.get(scenario.id, {}).get(doc_name, {})
         icon = doc_info.get('icon', '📄')
+        display_doc_name = get_doc_name(doc_name)  # ★ 여기 수정
         with doc_cols[idx]:
             st.markdown(f"""
                 <div style="background: white; border-radius: 8px; padding: 10px; text-align: center; border: 1px solid #bfdbfe;">
                     <div style="font-size: 1.5rem;">{icon}</div>
-                    <div style="font-size: 0.75rem; color: #1e40af; font-weight: 500;">{doc_name}</div>
+                    <div style="font-size: 0.75rem; color: #1e40af; font-weight: 500;">{display_doc_name}</div>
                 </div>
             """, unsafe_allow_html=True)
     
@@ -813,14 +946,13 @@ def render_phase1_universal_fact(scenario):
     
     st.markdown("<br>", unsafe_allow_html=True)
     
-    if st.button("✓ 정보 확인 완료 → 서류 작성 시작", type="primary", use_container_width=True):
+    btn_next = get_text("✓ 정보 확인 완료 → 서류 작성 시작", "✓ Confirmed → Start Document")
+    if st.button(btn_next, type="primary", use_container_width=True):
         st.session_state.form_step = 2
         st.session_state.current_doc_index = 0
         if 'form_data' not in st.session_state:
             st.session_state.form_data = {}
         st.rerun()
-
-
 # =============================================================================
 # Phase 2: Document-Based Form
 # =============================================================================
@@ -828,6 +960,7 @@ def render_phase1_universal_fact(scenario):
 def render_phase2_document_based(scenario):
     """Phase 2: 서류 기반 스텝 폼 + TABLE_ROWS 테이블"""
     
+    lang = get_current_language()
     scenario_id = scenario.id
     doc_mapping = DOCUMENT_FIELD_MAPPING.get(scenario_id, {})
     required_docs = scenario.required_docs
@@ -835,8 +968,8 @@ def render_phase2_document_based(scenario):
     available_docs = [doc for doc in required_docs if doc in doc_mapping]
     
     if not available_docs:
-        st.warning("이 시나리오에 대한 서류 설정이 없습니다.")
-        if st.button("다음 단계로 →"):
+        st.warning(get_text("이 시나리오에 대한 서류 설정이 없습니다.", "No document settings for this scenario."))
+        if st.button(get_text("다음 단계로 →", "Next Step →")):
             st.session_state.form_step = 3
             st.rerun()
         return
@@ -863,17 +996,22 @@ def render_phase2_document_based(scenario):
     
     st.markdown("<br>", unsafe_allow_html=True)
     
+    # ★ 문서명과 설명 영어 변환
+    display_doc_name = get_doc_name(current_doc_name)
+    doc_description = current_doc_info.get('description_en', current_doc_info.get('description', '')) if lang == "en" else current_doc_info.get('description', '')
+    doc_text = get_text("서류", "Document")
+    
     st.markdown(f"""
         <div style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); border-radius: 16px; padding: 1.5rem; margin-bottom: 1.5rem; color: white;">
             <div style="display: flex; align-items: center; gap: 12px;">
                 <span style="font-size: 2.5rem;">{current_doc_info.get('icon', '📄')}</span>
                 <div>
-                    <h2 style="margin: 0; font-size: 1.4rem; font-weight: 700;">{current_doc_name}</h2>
-                    <p style="margin: 4px 0 0 0; opacity: 0.9; font-size: 0.9rem;">{current_doc_info.get('description', '')}</p>
+                    <h2 style="margin: 0; font-size: 1.4rem; font-weight: 700;">{display_doc_name}</h2>
+                    <p style="margin: 4px 0 0 0; opacity: 0.9; font-size: 0.9rem;">{doc_description}</p>
                 </div>
             </div>
             <div style="display: flex; align-items: center; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.2);">
-                <span style="font-size: 0.85rem; opacity: 0.9;">서류 {current_idx + 1} / {total_docs}</span>
+                <span style="font-size: 0.85rem; opacity: 0.9;">{doc_text} {current_idx + 1} / {total_docs}</span>
             </div>
         </div>
     """, unsafe_allow_html=True)
@@ -898,18 +1036,18 @@ def render_phase2_document_based(scenario):
     
     with col1:
         if current_idx > 0:
-            btn_prev = st.button("← 이전 서류", use_container_width=True)
+            btn_prev = st.button(get_text("← 이전 서류", "← Previous Doc"), use_container_width=True)
         else:
-            btn_prev = st.button("← Phase 1로", use_container_width=True)
+            btn_prev = st.button(get_text("← Phase 1로", "← To Phase 1"), use_container_width=True)
     
     with col2:
-        btn_save = st.button("💾 임시 저장", use_container_width=True)
+        btn_save = st.button(get_text("💾 임시 저장", "💾 Save Draft"), use_container_width=True)
     
     with col3:
         if current_idx < total_docs - 1:
-            btn_next = st.button("다음 서류 →", type="primary", use_container_width=True)
+            btn_next = st.button(get_text("다음 서류 →", "Next Doc →"), type="primary", use_container_width=True)
         else:
-            btn_next = st.button("서술형 작성 →", type="primary", use_container_width=True)
+            btn_next = st.button(get_text("서술형 작성 →", "Narrative →"), type="primary", use_container_width=True)
     
     if btn_prev:
         save_current_form_data(sections, all_field_defs)
@@ -921,7 +1059,7 @@ def render_phase2_document_based(scenario):
     
     if btn_save:
         save_current_form_data(sections, all_field_defs)
-        st.success("✓ 임시 저장되었습니다!")
+        st.success(get_text("✓ 임시 저장되었습니다!", "✓ Draft saved!"))
     
     if btn_next:
         save_current_form_data(sections, all_field_defs)
@@ -935,6 +1073,8 @@ def render_phase2_document_based(scenario):
 def render_document_tabs(docs: List[str], current_idx: int, doc_mapping: Dict, all_field_defs: Dict):
     """서류 탭 네비게이션 렌더링"""
     
+    lang = get_current_language()
+    
     total_filled = 0
     total_fields = 0
     doc_progress_list = []
@@ -942,10 +1082,10 @@ def render_document_tabs(docs: List[str], current_idx: int, doc_mapping: Dict, a
     for doc_name in docs:
         doc_info = doc_mapping.get(doc_name, {})
         sections = doc_info.get('sections', [])
-        f, t = calculate_section_progress(sections, all_field_defs)
+        f, t_count = calculate_section_progress(sections, all_field_defs)
         total_filled += f
-        total_fields += t
-        doc_progress_list.append((f, t))
+        total_fields += t_count
+        doc_progress_list.append((f, t_count))
     
     overall_progress = int((total_filled / total_fields) * 100) if total_fields > 0 else 0
     
@@ -956,6 +1096,9 @@ def render_document_tabs(docs: List[str], current_idx: int, doc_mapping: Dict, a
         icon = doc_info.get('icon', '📄')
         filled, total = doc_progress_list[idx]
         is_complete = filled == total and total > 0
+        
+        # ★ 문서명 영어 변환
+        display_doc_name = get_doc_name(doc_name)
         
         with col:
             if idx == current_idx:
@@ -976,7 +1119,7 @@ def render_document_tabs(docs: List[str], current_idx: int, doc_mapping: Dict, a
             
             progress_text = f"{filled}/{total}" if total > 0 else "0/0"
             check_mark = "✓ " if is_complete else ""
-            short_name = doc_name if len(doc_name) <= 6 else doc_name[:5] + "..."
+            short_name = display_doc_name if len(display_doc_name) <= 10 else display_doc_name[:9] + "..."
             
             st.markdown(f"""
                 <div style="background: {bg_color}; border: {border_style}; border-radius: 12px; padding: 12px 8px; text-align: center; opacity: {opacity}; {shadow}">
@@ -987,11 +1130,12 @@ def render_document_tabs(docs: List[str], current_idx: int, doc_mapping: Dict, a
             """, unsafe_allow_html=True)
     
     progress_color = '#22c55e' if overall_progress == 100 else '#3b82f6'
+    overall_text = get_text("전체 진행률", "Overall Progress")
     
     st.markdown(f"""
         <div style="margin-top: 12px; padding: 0 4px;">
             <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: #64748b; margin-bottom: 6px;">
-                <span>전체 진행률</span>
+                <span>{overall_text}</span>
                 <span style="font-weight: 600; color: {progress_color};">{overall_progress}%</span>
             </div>
             <div style="background: #e2e8f0; border-radius: 10px; height: 8px; overflow: hidden;">
@@ -1022,16 +1166,19 @@ def calculate_section_progress(sections: List[Dict], all_field_defs: Dict) -> Tu
 def render_section_card(section: Dict, all_field_defs: Dict, scenario_id: str):
     """섹션 카드 렌더링"""
     
-    section_name = section.get('name', '')
+    lang = get_current_language()
+    section_name = section.get('name_en', section.get('name', '')) if lang == "en" else section.get('name', '')
     section_icon = section.get('icon', '📋')
     field_keys = section.get('fields', [])
+    
+    items_text = get_text("개 항목", "items")
     
     st.markdown(f"""
         <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 1rem; overflow: hidden;">
             <div style="background: linear-gradient(90deg, #f1f5f9, #e2e8f0); padding: 12px 16px; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; gap: 10px;">
                 <span style="font-size: 1.2rem;">{section_icon}</span>
                 <div><span style="font-weight: 600; color: #1e293b; font-size: 0.95rem;">{section_name}</span></div>
-                <span style="margin-left: auto; background: #dbeafe; color: #1d4ed8; font-size: 0.7rem; padding: 2px 8px; border-radius: 10px;">{len(field_keys)}개 항목</span>
+                <span style="margin-left: auto; background: #dbeafe; color: #1d4ed8; font-size: 0.7rem; padding: 2px 8px; border-radius: 10px;">{len(field_keys)} {items_text}</span>
             </div>
             <div style="padding: 16px;">
     """, unsafe_allow_html=True)
@@ -1052,7 +1199,10 @@ def render_section_card(section: Dict, all_field_defs: Dict, scenario_id: str):
 def render_styled_field(field_key: str, field_def: Dict):
     """스타일링된 개별 필드 렌더링"""
     
-    label = field_def.get('label', field_key)
+    lang = get_current_language()
+    
+    # 라벨 선택 (영어면 label_en, 한국어면 label)
+    label = field_def.get('label_en', field_def.get('label', field_key)) if lang == "en" else field_def.get('label', field_key)
     label_en = field_def.get('label_en', '')
     field_type = field_def.get('type', 'text')
     required = field_def.get('required', False)
@@ -1065,17 +1215,20 @@ def render_styled_field(field_key: str, field_def: Dict):
     if required:
         display_label += " *"
     
+    # help 텍스트: 영어면 한국어 label 표시, 한국어면 영어 label_en 표시
+    help_text = field_def.get('label', '') if lang == "en" else label_en
+    
     if field_type == 'text':
-        st.text_input(display_label, value=current_value, key=f"field_{field_key}", placeholder=placeholder or label_en, help=label_en if label_en else None)
+        st.text_input(display_label, value=current_value, key=f"field_{field_key}", placeholder=placeholder or label_en, help=help_text if help_text else None)
     elif field_type == 'textarea':
-        st.text_area(display_label, value=current_value, key=f"field_{field_key}", placeholder=placeholder, height=100, help=label_en if label_en else None)
+        st.text_area(display_label, value=current_value, key=f"field_{field_key}", placeholder=placeholder, height=100, help=help_text if help_text else None)
     elif field_type == 'select':
         if not options:
             options = ['']
         default_idx = 0
         if current_value and current_value in options:
             default_idx = options.index(current_value)
-        st.selectbox(display_label, options=options, index=default_idx, key=f"field_{field_key}", help=label_en if label_en else None)
+        st.selectbox(display_label, options=options, index=default_idx, key=f"field_{field_key}", help=help_text if help_text else None)
     elif field_type == 'date':
         default_date = date.today()
         if current_value:
@@ -1086,13 +1239,12 @@ def render_styled_field(field_key: str, field_def: Dict):
                     default_date = current_value
             except:
                 pass
-        st.date_input(display_label, value=default_date, key=f"field_{field_key}", help=label_en if label_en else None)
+        st.date_input(display_label, value=default_date, key=f"field_{field_key}", help=help_text if help_text else None)
     elif field_type == 'number':
         min_val = field_def.get('min_value', 0)
-        st.number_input(display_label, value=int(current_value) if current_value else min_val, min_value=min_val, key=f"field_{field_key}", help=label_en if label_en else None)
+        st.number_input(display_label, value=int(current_value) if current_value else min_val, min_value=min_val, key=f"field_{field_key}", help=help_text if help_text else None)
     else:
-        st.text_input(display_label, value=current_value, key=f"field_{field_key}", placeholder=placeholder, help=label_en if label_en else None)
-
+        st.text_input(display_label, value=current_value, key=f"field_{field_key}", placeholder=placeholder, help=help_text if help_text else None)
 
 def save_current_form_data(sections: List[Dict], all_field_defs: Dict):
     """현재 폼 데이터 저장"""
@@ -1114,6 +1266,7 @@ def save_current_form_data(sections: List[Dict], all_field_defs: Dict):
 def render_phase3_narrative(scenario):
     """Phase 3: 서술형 데이터 입력 + AI 검토"""
     
+    lang = get_current_language()
     scenario_id = scenario.id
     narrative_config = get_narrative_config(scenario_id)
     layer3_fields = get_layer3_fields(scenario_id)
@@ -1125,27 +1278,35 @@ def render_phase3_narrative(scenario):
     if 'ai_feedbacks' not in st.session_state:
         st.session_state.ai_feedbacks = []
     
-    narrative_label = narrative_config.get('narrative_label', '서술형 작성')
+    narrative_label = narrative_config.get('narrative_label_en', narrative_config.get('narrative_label', 'Narrative')) if lang == "en" else narrative_config.get('narrative_label', '서술형 작성')
     
     if not layer3_fields:
+        no_items_title = get_text("서술형 항목이 없습니다", "No Narrative Items")
+        no_items_desc = get_text("이 시나리오는 서술형 작성이 필요하지 않습니다.", "This scenario does not require narrative writing.")
+        
         st.markdown(f"""
             <div style="background: #f0fdf4; border: 2px solid #86efac; border-radius: 16px; padding: 2rem; text-align: center;">
                 <div style="font-size: 3rem; margin-bottom: 1rem;">✅</div>
-                <h3 style="color: #166534; margin: 0 0 0.5rem 0;">서술형 항목이 없습니다</h3>
-                <p style="color: #15803d; margin: 0;">이 시나리오는 서술형 작성이 필요하지 않습니다.</p>
+                <h3 style="color: #166534; margin: 0 0 0.5rem 0;">{no_items_title}</h3>
+                <p style="color: #15803d; margin: 0;">{no_items_desc}</p>
             </div>
         """, unsafe_allow_html=True)
         
         col1, col2 = st.columns(2)
         with col1:
-            if st.button("← Phase 2로 돌아가기", use_container_width=True):
+            if st.button(get_text("← Phase 2로 돌아가기", "← Back to Phase 2"), use_container_width=True):
                 st.session_state.form_step = 2
                 st.rerun()
         with col2:
-            if st.button("결제하기 →", type="primary", use_container_width=True):
+            if st.button(get_text("결제하기 →", "Proceed to Payment →"), type="primary", use_container_width=True):
                 st.session_state.form_step = 4
                 st.rerun()
         return
+    
+    guide_text = get_text(
+        "각 항목에 대해 상세히 작성해주세요. AI가 실시간으로 검토합니다.",
+        "Please write in detail for each item. AI will review in real-time."
+    )
     
     st.markdown(f"""
         <div style="background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%); border-radius: 16px; padding: 1.5rem; margin-bottom: 1.5rem; color: white;">
@@ -1153,7 +1314,7 @@ def render_phase3_narrative(scenario):
                 <span style="font-size: 2.5rem;">✍️</span>
                 <div>
                     <h2 style="margin: 0; font-size: 1.4rem; font-weight: 700;">{narrative_label}</h2>
-                    <p style="margin: 4px 0 0 0; opacity: 0.9; font-size: 0.9rem;">각 항목에 대해 상세히 작성해주세요. AI가 실시간으로 검토합니다.</p>
+                    <p style="margin: 4px 0 0 0; opacity: 0.9; font-size: 0.9rem;">{guide_text}</p>
                 </div>
             </div>
         </div>
@@ -1169,7 +1330,7 @@ def render_phase3_narrative(scenario):
         
         col_validate, _ = st.columns([1, 1])
         with col_validate:
-            if st.button("🤖 AI 검토 요청", use_container_width=True):
+            if st.button(get_text("🤖 AI 검토 요청", "🤖 Request AI Review"), use_container_width=True):
                 run_ai_validation(layer3_fields, danger_patterns)
                 st.rerun()
         
@@ -1178,15 +1339,16 @@ def render_phase3_narrative(scenario):
         col_back, col_next = st.columns(2)
         
         with col_back:
-            if st.button("← Phase 2로 돌아가기", use_container_width=True):
+            if st.button(get_text("← Phase 2로 돌아가기", "← Back to Phase 2"), use_container_width=True):
                 st.session_state.form_step = 2
                 st.rerun()
         
         with col_next:
-            if st.button("✓ 작성 완료 → 결제하기", use_container_width=True, type="primary"):
+            if st.button(get_text("✓ 작성 완료 → 결제하기", "✓ Complete → Proceed to Payment"), use_container_width=True, type="primary"):
                 missing = validate_narrative_fields(layer3_fields)
                 if missing:
-                    st.error(f"필수 항목을 작성해주세요: {', '.join(missing)}")
+                    error_text = get_text("필수 항목을 작성해주세요:", "Please complete required fields:")
+                    st.error(f"{error_text} {', '.join(missing)}")
                 else:
                     st.session_state.form_step = 4
                     st.rerun()
@@ -1198,11 +1360,13 @@ def render_phase3_narrative(scenario):
 def render_narrative_field(index: int, field: Dict, danger_patterns: List[str]):
     """서술형 필드 렌더링"""
     
+    lang = get_current_language()
+    
     data_key = field['data_key']
-    label = field.get('label', data_key)
-    label_en = field.get('label_en', '')
-    hint = field.get('hint', '')
-    placeholder = field.get('placeholder', '')
+    label = field.get('label_en', field.get('label', data_key)) if lang == "en" else field.get('label', data_key)
+    label_sub = field.get('label', '') if lang == "en" else field.get('label_en', '')
+    hint = field.get('hint_en', field.get('hint', '')) if lang == "en" else field.get('hint', '')
+    placeholder = field.get('placeholder_en', field.get('placeholder', '')) if lang == "en" else field.get('placeholder', '')
     min_chars = field.get('min_chars', 50)
     required = field.get('required', False)
     
@@ -1214,7 +1378,7 @@ def render_narrative_field(index: int, field: Dict, danger_patterns: List[str]):
                 <span style="background: #7c3aed; color: white; font-size: 0.75rem; font-weight: 700; padding: 2px 8px; border-radius: 6px;">Q{index + 1}</span>
                 <div>
                     <div style="font-weight: 600; color: #1e293b; font-size: 0.9rem;">{label} {'*' if required else ''}</div>
-                    <div style="color: #64748b; font-size: 0.75rem;">{label_en}</div>
+                    <div style="color: #64748b; font-size: 0.75rem;">{label_sub}</div>
                 </div>
             </div>
     """, unsafe_allow_html=True)
@@ -1222,17 +1386,21 @@ def render_narrative_field(index: int, field: Dict, danger_patterns: List[str]):
     if hint:
         st.caption(f"💡 {hint}")
     
-    answer = st.text_area(f"답변 입력", value=current_value, height=120, key=f"narrative_{data_key}", placeholder=placeholder, label_visibility="collapsed")
+    answer_label = get_text("답변 입력", "Enter your answer")
+    answer = st.text_area(answer_label, value=current_value, height=120, key=f"narrative_{data_key}", placeholder=placeholder, label_visibility="collapsed")
     
     st.session_state.narrative_data[data_key] = answer
     
     char_count = len(answer)
     color = "#22c55e" if char_count >= min_chars else "#f59e0b" if char_count > 0 else "#ef4444"
     
+    min_chars_text = get_text(f"최소 {min_chars}자 이상 작성", f"Minimum {min_chars} characters")
+    chars_text = get_text("자", "chars")
+    
     st.markdown(f"""
             <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
-                <div style="font-size: 0.7rem; color: #94a3b8;">최소 {min_chars}자 이상 작성</div>
-                <div style="font-size: 0.75rem; font-weight: 600; color: {color};">{char_count} / {min_chars}자</div>
+                <div style="font-size: 0.7rem; color: #94a3b8;">{min_chars_text}</div>
+                <div style="font-size: 0.75rem; font-weight: 600; color: {color};">{char_count} / {min_chars} {chars_text}</div>
             </div>
         </div>
     """, unsafe_allow_html=True)
@@ -1241,28 +1409,35 @@ def render_narrative_field(index: int, field: Dict, danger_patterns: List[str]):
 def run_ai_validation(fields: List[Dict], danger_patterns: List[str]):
     """AI 검토 실행"""
     
+    lang = get_current_language()
     feedbacks = []
     
     for field in fields:
         data_key = field['data_key']
         answer = st.session_state.narrative_data.get(data_key, '')
-        label = field.get('label', data_key)
+        label = field.get('label_en', field.get('label', data_key)) if lang == "en" else field.get('label', data_key)
         min_chars = field.get('min_chars', 50)
         
+        short_label = label[:15] + '...' if len(label) > 15 else label
+        
         if len(answer) == 0:
-            feedbacks.append({'field': label[:15] + '...' if len(label) > 15 else label, 'type': 'error', 'message': '아직 작성되지 않았습니다.'})
+            msg = get_text('아직 작성되지 않았습니다.', 'Not written yet.')
+            feedbacks.append({'field': short_label, 'type': 'error', 'message': msg})
             continue
         
         if len(answer) < min_chars:
-            feedbacks.append({'field': label[:15] + '...' if len(label) > 15 else label, 'type': 'warning', 'message': f'내용이 부족합니다. ({len(answer)}/{min_chars}자)'})
+            msg = get_text(f'내용이 부족합니다. ({len(answer)}/{min_chars}자)', f'Content insufficient. ({len(answer)}/{min_chars} chars)')
+            feedbacks.append({'field': short_label, 'type': 'warning', 'message': msg})
             continue
         
         found_dangers = [p for p in danger_patterns if p in answer]
         if found_dangers:
-            feedbacks.append({'field': label[:15] + '...' if len(label) > 15 else label, 'type': 'error', 'message': f'위험 표현: "{found_dangers[0]}"'})
+            msg = get_text(f'위험 표현: "{found_dangers[0]}"', f'Risky expression: "{found_dangers[0]}"')
+            feedbacks.append({'field': short_label, 'type': 'error', 'message': msg})
             continue
         
-        feedbacks.append({'field': label[:15] + '...' if len(label) > 15 else label, 'type': 'success', 'message': '잘 작성되었습니다 ✓'})
+        msg = get_text('잘 작성되었습니다 ✓', 'Well written ✓')
+        feedbacks.append({'field': short_label, 'type': 'success', 'message': msg})
     
     st.session_state.ai_feedbacks = feedbacks
 
@@ -1270,6 +1445,7 @@ def run_ai_validation(fields: List[Dict], danger_patterns: List[str]):
 def render_ai_feedback_panel(fields: List[Dict]):
     """AI 피드백 패널"""
     
+    lang = get_current_language()
     feedbacks = st.session_state.get('ai_feedbacks', [])
     
     total = len(fields)
@@ -1278,20 +1454,24 @@ def render_ai_feedback_panel(fields: List[Dict]):
     progress_color = '#22c55e' if progress == 100 else '#3b82f6'
     
     with st.container():
-        st.markdown("#### 📊 작성 진행률")
+        progress_title = get_text("📊 작성 진행률", "📊 Writing Progress")
+        st.markdown(f"#### {progress_title}")
+        
+        completed_text = get_text("완료", "completed")
         
         st.markdown(f"""
             <div style="background: #e2e8f0; border-radius: 10px; height: 10px; overflow: hidden; margin-bottom: 8px;">
                 <div style="background: linear-gradient(90deg, #22c55e, #16a34a); height: 100%; width: {progress}%; border-radius: 10px;"></div>
             </div>
             <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: #64748b; margin-bottom: 16px;">
-                <span>{completed}/{total} 완료</span>
+                <span>{completed}/{total} {completed_text}</span>
                 <span style="font-weight: 600; color: {progress_color};">{progress}%</span>
             </div>
         """, unsafe_allow_html=True)
         
         st.markdown("---")
-        st.markdown("#### 🤖 AI 피드백")
+        feedback_title = get_text("🤖 AI 피드백", "🤖 AI Feedback")
+        st.markdown(f"#### {feedback_title}")
         
         if feedbacks:
             for fb in feedbacks:
@@ -1305,7 +1485,8 @@ def render_ai_feedback_panel(fields: List[Dict]):
                 else:
                     st.info(f"**{fb.get('field', '')}**: {fb.get('message', '')}")
         else:
-            st.info("'AI 검토 요청' 버튼을 클릭해주세요")
+            click_text = get_text("'AI 검토 요청' 버튼을 클릭해주세요", "Click 'Request AI Review' button")
+            st.info(click_text)
 
 
 def validate_narrative_fields(fields: List[Dict]) -> List[str]:
@@ -1328,13 +1509,21 @@ def validate_narrative_fields(fields: List[Dict]) -> List[str]:
 def render_phase4_payment(scenario):
     """Phase 4: 결제 & 문서 생성 - Embedded Checkout 지원"""
     
+    lang = get_current_language()
+    
+    title = get_text("결제 & 문서 생성", "Payment & Generate Documents")
+    desc = get_text(
+        f"결제 완료 후 {len(scenario.required_docs)}개의 문서가 자동으로 생성됩니다.",
+        f"After payment, {len(scenario.required_docs)} documents will be automatically generated."
+    )
+    
     st.markdown(f"""
         <div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border-radius: 16px; padding: 1.5rem; margin-bottom: 1.5rem; color: white;">
             <div style="display: flex; align-items: center; gap: 12px;">
                 <span style="font-size: 2.5rem;">💳</span>
                 <div>
-                    <h2 style="margin: 0; font-size: 1.4rem; font-weight: 700;">결제 & 문서 생성</h2>
-                    <p style="margin: 4px 0 0 0; opacity: 0.9; font-size: 0.9rem;">결제 완료 후 {len(scenario.required_docs)}개의 문서가 자동으로 생성됩니다.</p>
+                    <h2 style="margin: 0; font-size: 1.4rem; font-weight: 700;">{title}</h2>
+                    <p style="margin: 4px 0 0 0; opacity: 0.9; font-size: 0.9rem;">{desc}</p>
                 </div>
             </div>
         </div>
@@ -1343,16 +1532,17 @@ def render_phase4_payment(scenario):
     # 결제 후 돌아왔을 때 URL 파라미터 확인
     payment_service = PaymentService()
     if payment_service.handle_return_from_checkout():
-        st.success("🎉 결제가 완료되었습니다!")
+        st.success(get_text("🎉 결제가 완료되었습니다!", "🎉 Payment completed!"))
         st.rerun()
     
     is_paid = st.session_state.get('is_paid', False)
     is_admin = st.session_state.get('is_admin', False)
     
     if is_paid or is_admin:
-        st.success("✅ Premium 활성화 상태입니다!")
+        st.success(get_text("✅ Premium 활성화 상태입니다!", "✅ Premium is active!"))
         
-        st.markdown("### 📄 생성될 서류")
+        docs_title = get_text("📄 생성될 서류", "📄 Documents to Generate")
+        st.markdown(f"### {docs_title}")
         
         cols = st.columns(min(len(scenario.required_docs), 4))
         for idx, doc_name in enumerate(scenario.required_docs):
@@ -1368,20 +1558,24 @@ def render_phase4_payment(scenario):
         
         st.markdown("<br>", unsafe_allow_html=True)
         
-        if st.button("📄 문서 생성하기", type="primary", use_container_width=True):
+        generate_btn = get_text("📄 문서 생성하기", "📄 Generate Documents")
+        if st.button(generate_btn, type="primary", use_container_width=True):
             generate_documents(scenario)
     else:
         render_payment_ui(scenario, payment_service)
     
     st.markdown("---")
     
-    if st.button("← Phase 3로 돌아가기", use_container_width=True):
+    back_btn = get_text("← Phase 3로 돌아가기", "← Back to Phase 3")
+    if st.button(back_btn, use_container_width=True):
         st.session_state.form_step = 3
         st.rerun()
 
 
 def render_payment_ui(scenario, payment_service: PaymentService):
     """결제 UI - Embedded Checkout 자동 로딩 + Redirect 지원"""
+    
+    lang = get_current_language()
     
     user_id = st.session_state.get('user_id', '')
     user_email = st.session_state.get('user_email', '')
@@ -1390,49 +1584,69 @@ def render_payment_ui(scenario, payment_service: PaymentService):
     col1, col2 = st.columns([1, 1])
     
     with col1:
+        plan_text = get_text("Premium Plan", "Premium Plan")
+        payment_desc = get_text("일회성 결제 · 평생 이용", "One-time payment · Lifetime access")
+        
         st.markdown(f"""
             <div style="background: linear-gradient(135deg, #1e40af, #3b82f6); border-radius: 16px; padding: 2rem; text-align: center; color: white;">
-                <div style="font-size: 1rem; opacity: 0.9;">Premium Plan</div>
+                <div style="font-size: 1rem; opacity: 0.9;">{plan_text}</div>
                 <div style="font-size: 3rem; font-weight: 700; margin: 0.5rem 0;">${scenario.price}</div>
-                <div style="opacity: 0.8;">일회성 결제 · 평생 이용</div>
+                <div style="opacity: 0.8;">{payment_desc}</div>
             </div>
         """, unsafe_allow_html=True)
     
     with col2:
-        st.markdown("""
-            ### ✨ Premium 혜택
-            - ✅ **AI 문서 자동 생성**
-            - ✅ **전문가 수준 서류 작성**
-            - ✅ **ZIP 패키지 다운로드**
-            - ✅ **무제한 수정 & 재생성**
+        benefits_title = get_text("✨ Premium 혜택", "✨ Premium Benefits")
+        benefit1 = get_text("AI 문서 자동 생성", "AI Document Auto-Generation")
+        benefit2 = get_text("전문가 수준 서류 작성", "Expert-Level Document Writing")
+        benefit3 = get_text("ZIP 패키지 다운로드", "ZIP Package Download")
+        benefit4 = get_text("무제한 수정 & 재생성", "Unlimited Edit & Regenerate")
+        
+        st.markdown(f"""
+            ### {benefits_title}
+            - ✅ **{benefit1}**
+            - ✅ **{benefit2}**
+            - ✅ **{benefit3}**
+            - ✅ **{benefit4}**
         """)
     
     st.markdown("<br>", unsafe_allow_html=True)
     
     # Stripe 연결 확인
     if not payment_service.is_stripe_connected():
-        st.warning("⚠️ 테스트 모드 - Stripe가 연결되지 않았습니다.")
-        if st.button("🧪 테스트 결제 (무료)", type="primary", use_container_width=True):
+        warning_text = get_text("⚠️ 테스트 모드 - Stripe가 연결되지 않았습니다.", "⚠️ Test Mode - Stripe is not connected.")
+        st.warning(warning_text)
+        
+        test_btn = get_text("🧪 테스트 결제 (무료)", "🧪 Test Payment (Free)")
+        if st.button(test_btn, type="primary", use_container_width=True):
             st.session_state.is_paid = True
-            st.success("🎉 테스트 결제 완료!")
+            st.success(get_text("🎉 테스트 결제 완료!", "🎉 Test payment completed!"))
             st.rerun()
         return
     
     # 결제 방식 탭
-    tab_embedded, tab_redirect = st.tabs(["💳 이 페이지에서 결제", "🔗 새 페이지에서 결제"])
+    tab1_text = get_text("💳 이 페이지에서 결제", "💳 Pay on This Page")
+    tab2_text = get_text("🔗 새 페이지에서 결제", "🔗 Pay on New Page")
+    tab_embedded, tab_redirect = st.tabs([tab1_text, tab2_text])
     
     with tab_embedded:
-        st.markdown("##### 🔒 Stripe 보안 결제")
+        secure_text = get_text("🔒 Stripe 보안 결제", "🔒 Stripe Secure Payment")
+        st.markdown(f"##### {secure_text}")
         
         # ★★★ 자동으로 결제 폼 로딩 (버튼 없이) ★★★
         if 'checkout_client_secret' not in st.session_state:
-            with st.spinner("결제 폼 준비 중..."):
+            preparing_text = get_text("결제 폼 준비 중...", "Preparing payment form...")
+            with st.spinner(preparing_text):
                 client_secret = payment_service.create_embedded_checkout_session(user_id, user_email)
                 if client_secret:
                     st.session_state.checkout_client_secret = client_secret
                     st.rerun()
                 else:
-                    st.error("결제 세션 생성 실패. '새 페이지에서 결제' 탭을 이용해주세요.")
+                    error_text = get_text(
+                        "결제 세션 생성 실패. '새 페이지에서 결제' 탭을 이용해주세요.",
+                        "Failed to create payment session. Please use 'Pay on New Page' tab."
+                    )
+                    st.error(error_text)
         else:
             # Embedded Checkout 렌더링 (높이 700px, 스크롤 가능)
             payment_service.render_embedded_checkout(st.session_state.checkout_client_secret, height=700)
@@ -1441,7 +1655,8 @@ def render_payment_ui(scenario, payment_service: PaymentService):
             
             col1, col2 = st.columns(2)
             with col1:
-                if st.button("✅ 결제 완료 확인", use_container_width=True, type="primary"):
+                verify_btn = get_text("✅ 결제 완료 확인", "✅ Verify Payment")
+                if st.button(verify_btn, use_container_width=True, type="primary"):
                     session_id = st.session_state.get('pending_checkout_session_id', '')
                     if session_id:
                         status = payment_service.check_session_status(session_id)
@@ -1449,56 +1664,76 @@ def render_payment_ui(scenario, payment_service: PaymentService):
                             is_paid, payment_info = payment_service.verify_payment(session_id)
                             if is_paid:
                                 payment_service.record_payment_to_db(user_id, payment_info)
-                                st.success("🎉 결제 완료!")
+                                st.success(get_text("🎉 결제 완료!", "🎉 Payment completed!"))
                                 if 'checkout_client_secret' in st.session_state:
                                     del st.session_state.checkout_client_secret
                                 st.rerun()
                         elif status == 'open':
-                            st.warning("결제가 아직 완료되지 않았습니다. 위 폼에서 결제를 완료해주세요.")
+                            st.warning(get_text(
+                                "결제가 아직 완료되지 않았습니다. 위 폼에서 결제를 완료해주세요.",
+                                "Payment not completed yet. Please complete payment in the form above."
+                            ))
                         else:
-                            st.error(f"세션 상태: {status}")
+                            st.error(f"Session status: {status}")
                     else:
-                        st.warning("결제 세션을 찾을 수 없습니다. 새로고침 해주세요.")
+                        st.warning(get_text(
+                            "결제 세션을 찾을 수 없습니다. 새로고침 해주세요.",
+                            "Payment session not found. Please refresh."
+                        ))
             with col2:
-                if st.button("🔄 결제 폼 새로고침", use_container_width=True):
+                refresh_btn = get_text("🔄 결제 폼 새로고침", "🔄 Refresh Payment Form")
+                if st.button(refresh_btn, use_container_width=True):
                     if 'checkout_client_secret' in st.session_state:
                         del st.session_state.checkout_client_secret
                     st.rerun()
     
     with tab_redirect:
-        st.markdown("##### Redirect Checkout")
-        st.caption("Stripe 결제 페이지로 이동합니다. 결제 완료 후 돌아옵니다.")
+        redirect_title = get_text("Redirect Checkout", "Redirect Checkout")
+        redirect_desc = get_text(
+            "Stripe 결제 페이지로 이동합니다. 결제 완료 후 돌아옵니다.",
+            "You will be redirected to Stripe payment page. You will return after payment."
+        )
+        st.markdown(f"##### {redirect_title}")
+        st.caption(redirect_desc)
         
-        if st.button("💳 결제 페이지로 이동", type="primary", use_container_width=True, key="redirect_pay"):
-            with st.spinner("결제 페이지 생성 중..."):
+        go_btn = get_text("💳 결제 페이지로 이동", "💳 Go to Payment Page")
+        if st.button(go_btn, type="primary", use_container_width=True, key="redirect_pay"):
+            creating_text = get_text("결제 페이지 생성 중...", "Creating payment page...")
+            with st.spinner(creating_text):
                 checkout_url, session_id = payment_service.create_checkout_session(user_id, user_email)
             
             if checkout_url:
                 st.session_state.checkout_session_id = session_id
+                open_text = get_text("결제 페이지 열기 (클릭)", "Open Payment Page (Click)")
+                after_text = get_text("결제 완료 후 아래 버튼으로 확인", "After payment, verify with button below")
+                
                 st.markdown(f"""
                     <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 12px; padding: 1.5rem; text-align: center; margin-top: 1rem;">
                         <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">🔗</div>
-                        <a href="{checkout_url}" target="_blank" style="color: #2563eb; font-weight: 600; font-size: 1.1rem;">결제 페이지 열기 (클릭)</a>
-                        <div style="color: #64748b; font-size: 0.8rem; margin-top: 0.5rem;">결제 완료 후 아래 버튼으로 확인</div>
+                        <a href="{checkout_url}" target="_blank" style="color: #2563eb; font-weight: 600; font-size: 1.1rem;">{open_text}</a>
+                        <div style="color: #64748b; font-size: 0.8rem; margin-top: 0.5rem;">{after_text}</div>
                     </div>
                 """, unsafe_allow_html=True)
         
         session_id = st.session_state.get('checkout_session_id', '')
         if session_id:
             st.markdown("<br>", unsafe_allow_html=True)
-            if st.button("✅ 결제 완료 확인", use_container_width=True, key="verify_redirect"):
+            verify_btn = get_text("✅ 결제 완료 확인", "✅ Verify Payment")
+            if st.button(verify_btn, use_container_width=True, key="verify_redirect"):
                 is_paid, payment_info = payment_service.verify_payment(session_id)
                 if is_paid:
                     payment_service.record_payment_to_db(user_id, payment_info)
-                    st.success("🎉 결제 완료!")
+                    st.success(get_text("🎉 결제 완료!", "🎉 Payment completed!"))
                     st.rerun()
                 else:
-                    st.warning("결제가 아직 완료되지 않았습니다.")
+                    st.warning(get_text("결제가 아직 완료되지 않았습니다.", "Payment not completed yet."))
 
 
 def generate_documents(scenario):
     """문서 생성"""
     from services.document_service import DocumentService
+    
+    lang = get_current_language()
     
     user_data = st.session_state.get('user_data', {})
     form_data = st.session_state.get('form_data', {})
@@ -1520,7 +1755,9 @@ def generate_documents(scenario):
         for idx, doc_name in enumerate(required_docs):
             progress = int(((idx + 1) / len(required_docs)) * 100)
             progress_bar.progress(progress)
-            status_text.text(f"📝 {doc_name} 생성 중... ({idx + 1}/{len(required_docs)})")
+            
+            generating_text = get_text(f"📝 {doc_name} 생성 중...", f"📝 Generating {doc_name}...")
+            status_text.text(f"{generating_text} ({idx + 1}/{len(required_docs)})")
             
             try:
                 doc_bytes = doc_service.generate_document(doc_name, user_data, form_data, narrative_data)
@@ -1530,7 +1767,8 @@ def generate_documents(scenario):
                 zip_file.writestr(f"ERROR_{doc_name}.txt", f"오류: {str(e)}".encode('utf-8'))
     
     progress_bar.progress(100)
-    status_text.text("✅ 모든 문서 생성 완료!")
+    complete_text = get_text("✅ 모든 문서 생성 완료!", "✅ All documents generated!")
+    status_text.text(complete_text)
     
     zip_buffer.seek(0)
     st.session_state.generated_zip = zip_buffer.getvalue()
@@ -1544,13 +1782,18 @@ def generate_documents(scenario):
 def render_naturalization_type_selector():
     """귀화 유형 선택 UI 렌더링"""
     
-    st.markdown("""
+    lang = get_current_language()
+    
+    title = get_text("귀화 유형 선택", "Select Naturalization Type")
+    desc = get_text("해당하는 귀화 유형과 세부 조건을 선택해주세요.", "Please select the applicable naturalization type and conditions.")
+    
+    st.markdown(f"""
         <div style="background: linear-gradient(135deg, #fef3c7, #fde68a); border: 2px solid #f59e0b; border-radius: 16px; padding: 1.5rem; margin-bottom: 1.5rem;">
             <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
                 <span style="font-size: 2rem;">🏛️</span>
                 <div>
-                    <h3 style="margin: 0; color: #92400e; font-size: 1.2rem;">귀화 유형 선택</h3>
-                    <p style="margin: 4px 0 0 0; color: #a16207; font-size: 0.85rem;">해당하는 귀화 유형과 세부 조건을 선택해주세요.</p>
+                    <h3 style="margin: 0; color: #92400e; font-size: 1.2rem;">{title}</h3>
+                    <p style="margin: 4px 0 0 0; color: #a16207; font-size: 0.85rem;">{desc}</p>
                 </div>
             </div>
         </div>
@@ -1559,7 +1802,8 @@ def render_naturalization_type_selector():
     if 'form_data' not in st.session_state:
         st.session_state.form_data = {}
     
-    st.markdown("### 1️⃣ 귀화 유형 선택")
+    step1_text = get_text("1️⃣ 귀화 유형 선택", "1️⃣ Select Naturalization Type")
+    st.markdown(f"### {step1_text}")
     
     selected_category = st.session_state.form_data.get('naturalization_type', None)
     
@@ -1571,15 +1815,18 @@ def render_naturalization_type_selector():
             bg_color = f"{category['color']}20" if is_selected else "#f8fafc"
             border_color = category['color'] if is_selected else "#e2e8f0"
             
+            cat_label = category.get('label_en', category['label']) if lang == "en" else category['label']
+            
             st.markdown(f"""
                 <div style="background: {bg_color}; border: 2px solid {border_color}; border-radius: 12px; padding: 1rem; text-align: center; cursor: pointer; transition: all 0.2s; min-height: 120px;">
-                    <div style="font-weight: 700; color: {category['color']}; font-size: 1rem;">{category['label']}</div>
-                    <div style="font-size: 0.7rem; color: #64748b; margin-top: 4px;">{category['label_en']}</div>
+                    <div style="font-weight: 700; color: {category['color']}; font-size: 1rem;">{cat_label}</div>
+                    <div style="font-size: 0.7rem; color: #64748b; margin-top: 4px;">{category.get('label_en', '')}</div>
                     <div style="font-size: 0.65rem; color: #94a3b8; margin-top: 8px; background: white; padding: 4px 8px; border-radius: 6px;">{category.get('requirement', '')}</div>
                 </div>
             """, unsafe_allow_html=True)
             
-            if st.button("✓ 선택" if is_selected else "선택", key=f"nat_cat_{category_key}", use_container_width=True, type="primary" if is_selected else "secondary"):
+            select_text = get_text("✓ 선택", "✓ Selected") if is_selected else get_text("선택", "Select")
+            if st.button(select_text, key=f"nat_cat_{category_key}", use_container_width=True, type="primary" if is_selected else "secondary"):
                 st.session_state.form_data['naturalization_type'] = category_key
                 st.session_state.form_data['naturalization_sub_type'] = None
                 st.session_state.form_data['special_merit_type'] = None
@@ -1591,7 +1838,9 @@ def render_naturalization_type_selector():
         category_data = NATURALIZATION_TYPE_OPTIONS.get(selected_category, {})
         sub_options = category_data.get('sub_options', [])
         
-        st.markdown(f"### 2️⃣ 세부 조건 선택 ({category_data['label']})")
+        cat_label = category_data.get('label_en', category_data['label']) if lang == "en" else category_data['label']
+        step2_text = get_text(f"2️⃣ 세부 조건 선택 ({cat_label})", f"2️⃣ Select Conditions ({cat_label})")
+        st.markdown(f"### {step2_text}")
         
         selected_sub = st.session_state.form_data.get('naturalization_sub_type', None)
         
@@ -1602,6 +1851,9 @@ def render_naturalization_type_selector():
             
             border_color = category_data['color'] if is_selected else "#e2e8f0"
             bg_color = f"{category_data['color']}10" if is_selected else "white"
+            
+            sub_label = sub_option.get('label_en', sub_option['label']) if lang == "en" else sub_option['label']
+            sub_label_alt = sub_option['label'] if lang == "en" else sub_option.get('label_en', '')
             
             col1, col2 = st.columns([0.05, 0.95])
             
@@ -1614,12 +1866,13 @@ def render_naturalization_type_selector():
             with col2:
                 st.markdown(f"""
                     <div style="background: {bg_color}; border: 2px solid {border_color}; border-radius: 10px; padding: 12px 16px; margin-bottom: 8px;">
-                        <div style="font-size: 0.9rem; color: #1e293b;">{sub_option['label']}</div>
-                        <div style="font-size: 0.75rem; color: #64748b; margin-top: 4px;">{sub_option['label_en']}</div>
+                        <div style="font-size: 0.9rem; color: #1e293b;">{sub_label}</div>
+                        <div style="font-size: 0.75rem; color: #64748b; margin-top: 4px;">{sub_label_alt}</div>
                     </div>
                 """, unsafe_allow_html=True)
                 
-                if st.button("선택", key=f"nat_sub_{value}", use_container_width=True):
+                select_text = get_text("선택", "Select")
+                if st.button(select_text, key=f"nat_sub_{value}", use_container_width=True):
                     st.session_state.form_data['naturalization_sub_type'] = value
                     if not has_nested:
                         st.session_state.form_data['special_merit_type'] = None
@@ -1629,7 +1882,8 @@ def render_naturalization_type_selector():
                 nested_options = sub_option.get('sub_options', [])
                 selected_nested = st.session_state.form_data.get('special_merit_type', None)
                 
-                st.markdown("""<div style="margin-left: 40px; margin-bottom: 16px;"><div style="font-size: 0.85rem; color: #64748b; margin-bottom: 8px;">▸ 공로 유형을 선택하세요:</div></div>""", unsafe_allow_html=True)
+                nested_guide = get_text("▸ 공로 유형을 선택하세요:", "▸ Select merit type:")
+                st.markdown(f"""<div style="margin-left: 40px; margin-bottom: 16px;"><div style="font-size: 0.85rem; color: #64748b; margin-bottom: 8px;">{nested_guide}</div></div>""", unsafe_allow_html=True)
                 
                 nested_cols = st.columns(3)
                 
@@ -1638,36 +1892,48 @@ def render_naturalization_type_selector():
                         n_value = nested_opt['value']
                         n_selected = selected_nested == n_value
                         
+                        nested_label = nested_opt.get('label_en', nested_opt['label']) if lang == "en" else nested_opt['label']
+                        nested_label_alt = nested_opt['label'] if lang == "en" else nested_opt.get('label_en', '')
+                        
                         st.markdown(f"""
                             <div style="background: {'#fef3c7' if n_selected else 'white'}; border: 2px solid {'#f59e0b' if n_selected else '#e2e8f0'}; border-radius: 8px; padding: 10px; text-align: center; margin-left: 40px;">
-                                <div style="font-size: 0.85rem; font-weight: 600; color: #1e293b;">{nested_opt['label']}</div>
-                                <div style="font-size: 0.7rem; color: #64748b;">{nested_opt['label_en']}</div>
+                                <div style="font-size: 0.85rem; font-weight: 600; color: #1e293b;">{nested_label}</div>
+                                <div style="font-size: 0.7rem; color: #64748b;">{nested_label_alt}</div>
                             </div>
                         """, unsafe_allow_html=True)
                         
-                        if st.button("✓" if n_selected else "선택", key=f"nat_nested_{n_value}", use_container_width=True):
+                        btn_text = "✓" if n_selected else get_text("선택", "Select")
+                        if st.button(btn_text, key=f"nat_nested_{n_value}", use_container_width=True):
                             st.session_state.form_data['special_merit_type'] = n_value
                             st.rerun()
         
         st.markdown("<br>", unsafe_allow_html=True)
     
-    st.markdown("### 3️⃣ 수반취득 (선택사항)")
+    step3_text = get_text("3️⃣ 수반취득 (선택사항)", "3️⃣ Accompanying Acquisition (Optional)")
+    st.markdown(f"### {step3_text}")
     
-    st.markdown("""
+    accompanying_info = get_text(
+        "ℹ️ 만 19세 미만의 자녀가 있는 경우, 신청인과 함께 국적 취득을 신청할 수 있습니다.",
+        "ℹ️ If you have children under 19 years old, they can apply for nationality acquisition together with the applicant."
+    )
+    
+    st.markdown(f"""
         <div style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 10px; padding: 1rem; margin-bottom: 12px;">
-            <div style="font-size: 0.85rem; color: #0369a1;">ℹ️ 만 19세 미만의 자녀가 있는 경우, 신청인과 함께 국적 취득을 신청할 수 있습니다.</div>
+            <div style="font-size: 0.85rem; color: #0369a1;">{accompanying_info}</div>
         </div>
     """, unsafe_allow_html=True)
     
     col1, col2 = st.columns([1, 2])
     
     with col1:
-        accompanying = st.checkbox("수반취득 신청", value=st.session_state.form_data.get('accompanying_acquisition', False), key="accompanying_checkbox")
+        checkbox_text = get_text("수반취득 신청", "Apply for Accompanying Acquisition")
+        accompanying = st.checkbox(checkbox_text, value=st.session_state.form_data.get('accompanying_acquisition', False), key="accompanying_checkbox")
         st.session_state.form_data['accompanying_acquisition'] = accompanying
     
     with col2:
         if accompanying:
-            count = st.number_input("자녀 수", min_value=1, max_value=10, value=st.session_state.form_data.get('accompanying_children_count', 1), key="accompanying_count")
+            children_text = get_text("자녀 수", "Number of Children")
+            count = st.number_input(children_text, min_value=1, max_value=10, value=st.session_state.form_data.get('accompanying_children_count', 1), key="accompanying_count")
             st.session_state.form_data['accompanying_children_count'] = count
     
     st.markdown("---")
@@ -1678,6 +1944,7 @@ def render_naturalization_type_selector():
 def render_naturalization_selection_summary():
     """귀화 유형 선택 요약 표시"""
     
+    lang = get_current_language()
     form_data = st.session_state.get('form_data', {})
     
     nat_type = form_data.get('naturalization_type')
@@ -1687,7 +1954,8 @@ def render_naturalization_selection_summary():
     child_count = form_data.get('accompanying_children_count', 0)
     
     if not nat_type or not nat_sub:
-        st.warning("⚠️ 귀화 유형과 세부 조건을 모두 선택해주세요.")
+        warning_text = get_text("⚠️ 귀화 유형과 세부 조건을 모두 선택해주세요.", "⚠️ Please select both naturalization type and conditions.")
+        st.warning(warning_text)
         return
     
     category = NATURALIZATION_TYPE_OPTIONS.get(nat_type, {})
@@ -1700,17 +1968,24 @@ def render_naturalization_selection_summary():
     if not sub_option:
         return
     
+    complete_text = get_text("✅ 선택 완료", "✅ Selection Complete")
+    type_label = get_text("귀화 유형:", "Naturalization Type:")
+    condition_label = get_text("세부 조건:", "Conditions:")
+    
+    cat_display = category.get('label_en', category['label']) if lang == "en" else category['label']
+    sub_display = sub_option.get('label_en', sub_option['label']) if lang == "en" else sub_option['label']
+    
     st.markdown(f"""
         <div style="background: linear-gradient(135deg, #ecfdf5, #d1fae5); border: 2px solid #34d399; border-radius: 12px; padding: 1.5rem;">
-            <div style="font-weight: 700; color: #065f46; font-size: 1rem; margin-bottom: 12px;">✅ 선택 완료</div>
+            <div style="font-weight: 700; color: #065f46; font-size: 1rem; margin-bottom: 12px;">{complete_text}</div>
             <div style="display: grid; gap: 8px;">
                 <div>
-                    <span style="color: #6b7280; font-size: 0.8rem;">귀화 유형:</span>
-                    <span style="color: #1e293b; font-weight: 600; margin-left: 8px;">{category['label']}</span>
+                    <span style="color: #6b7280; font-size: 0.8rem;">{type_label}</span>
+                    <span style="color: #1e293b; font-weight: 600; margin-left: 8px;">{cat_display}</span>
                 </div>
                 <div>
-                    <span style="color: #6b7280; font-size: 0.8rem;">세부 조건:</span>
-                    <span style="color: #1e293b; font-weight: 500; margin-left: 8px; font-size: 0.9rem;">{sub_option['label'][:60]}...</span>
+                    <span style="color: #6b7280; font-size: 0.8rem;">{condition_label}</span>
+                    <span style="color: #1e293b; font-weight: 500; margin-left: 8px; font-size: 0.9rem;">{sub_display[:60]}...</span>
                 </div>
     """, unsafe_allow_html=True)
     
@@ -1718,21 +1993,25 @@ def render_naturalization_selection_summary():
         merit_label = ""
         for opt in sub_option.get('sub_options', []):
             if opt['value'] == merit_type:
-                merit_label = opt['label']
+                merit_label = opt.get('label_en', opt['label']) if lang == "en" else opt['label']
                 break
         
+        merit_text = get_text("공로 유형:", "Merit Type:")
         st.markdown(f"""
                 <div>
-                    <span style="color: #6b7280; font-size: 0.8rem;">공로 유형:</span>
+                    <span style="color: #6b7280; font-size: 0.8rem;">{merit_text}</span>
                     <span style="color: #f59e0b; font-weight: 600; margin-left: 8px;">{merit_label}</span>
                 </div>
         """, unsafe_allow_html=True)
     
     if accompanying and child_count > 0:
+        accompanying_text = get_text("수반취득:", "Accompanying:")
+        children_desc = get_text(f"만 19세 미만 자녀 {child_count}명", f"{child_count} children under 19 years old")
+        
         st.markdown(f"""
                 <div>
-                    <span style="color: #6b7280; font-size: 0.8rem;">수반취득:</span>
-                    <span style="color: #3b82f6; font-weight: 600; margin-left: 8px;">만 19세 미만 자녀 {child_count}명</span>
+                    <span style="color: #6b7280; font-size: 0.8rem;">{accompanying_text}</span>
+                    <span style="color: #3b82f6; font-weight: 600; margin-left: 8px;">{children_desc}</span>
                 </div>
         """, unsafe_allow_html=True)
     

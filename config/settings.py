@@ -3759,14 +3759,17 @@ TABLE_ROWS_FIELDS = {
             "data_key": "household_members",
             "target_doc": "가족초청장",
             "label": "2. 초청인의 가족사항 (동거 가족)",
+            "label_en": "2. Inviter's Family Members (Household)",
             "min_rows": 1,
             "max_rows": 10,
             "columns": [
-                {"key": "relationship", "label": "관계", "type": "select", "options": ["배우자", "자녀", "부", "모", "형제/자매", "기타"]},
-                {"key": "name", "label": "성명", "type": "text", "required": True},
-                {"key": "nationality", "label": "국적", "type": "text"},
-                {"key": "birth_date", "label": "생년월일", "type": "date"},
-                {"key": "phone", "label": "연락처", "type": "text"},
+                {"key": "relationship", "label": "관계", "label_en": "Relationship", "type": "select", 
+                 "options": ["배우자", "자녀", "부", "모", "형제/자매", "기타"],
+                 "options_en": ["Spouse", "Child", "Father", "Mother", "Sibling", "Other"]},
+                {"key": "name", "label": "성명", "label_en": "Name", "type": "text", "required": True},
+                {"key": "nationality", "label": "국적", "label_en": "Nationality", "type": "text"},
+                {"key": "birth_date", "label": "생년월일", "label_en": "Date of Birth", "type": "date"},
+                {"key": "phone", "label": "연락처", "label_en": "Phone", "type": "text"},
             ]
         },
         
@@ -3775,15 +3778,20 @@ TABLE_ROWS_FIELDS = {
             "data_key": "invitation_history",
             "target_doc": "가족초청장",
             "label": "4. 초청 전력 (과거 초청 기록)",
-            "min_rows": 0,
+            "label_en": "4. Invitation History (Past Records)",
+            "min_rows": 1,
             "max_rows": 5,
             "columns": [
-                {"key": "relationship", "label": "관계", "type": "select", "options": ["부모", "배우자", "자녀", "기타"]},
-                {"key": "name", "label": "성명(영문)", "type": "text", "required": True}, # invitee_name -> name 으로 변경
-                {"key": "nationality", "label": "국적", "type": "text"},
-                {"key": "birth_date", "label": "생년월일", "type": "date"},
-                {"key": "invite_count", "label": "초청 횟수", "type": "number"},
-                {"key": "is_staying", "label": "현재 국내 체류 여부", "type": "select", "options": ["예", "아니오"]},
+                {"key": "relationship", "label": "관계", "label_en": "Relationship", "type": "select", 
+                 "options": ["부모", "배우자", "자녀", "기타"],
+                 "options_en": ["Parent", "Spouse", "Child", "Other"]},
+                {"key": "name", "label": "성명(영문)", "label_en": "Name (English)", "type": "text", "required": True},
+                {"key": "nationality", "label": "국적", "label_en": "Nationality", "type": "text"},
+                {"key": "birth_date", "label": "생년월일", "label_en": "Date of Birth", "type": "date"},
+                {"key": "invite_count", "label": "초청 횟수", "label_en": "Invitation Count", "type": "number"},
+                {"key": "is_staying", "label": "현재 국내 체류 여부", "label_en": "Currently in Korea", "type": "select", 
+                 "options": ["예", "아니오"],
+                 "options_en": ["Yes", "No"]},
             ]
         },
         
@@ -3792,20 +3800,22 @@ TABLE_ROWS_FIELDS = {
             "data_key": "invitee_family_members",
             "target_doc": "가족초청장",
             "label": "6. 피초청인 가족관계",
+            "label_en": "6. Invitee's Family Members",
             "min_rows": 1,
             "max_rows": 8,
             "columns": [
-                {"key": "relationship", "label": "관계", "type": "select", "options": ["배우자", "부", "모", "자녀", "형제/자매"]},
-                {"key": "name", "label": "성명", "type": "text", "required": True},
-                {"key": "nationality", "label": "국적", "type": "text"},
-                {"key": "residence", "label": "거주지", "type": "text"}, # 순서를 실제 문서와 맞춤
-                {"key": "birth_date", "label": "생년월일", "type": "date"},
-                {"key": "phone", "label": "연락처", "type": "text"},
+                {"key": "relationship", "label": "관계", "label_en": "Relationship", "type": "select", 
+                 "options": ["배우자", "부", "모", "자녀", "형제/자매"],
+                 "options_en": ["Spouse", "Father", "Mother", "Child", "Sibling"]},
+                {"key": "name", "label": "성명", "label_en": "Name", "type": "text", "required": True},
+                {"key": "nationality", "label": "국적", "label_en": "Nationality", "type": "text"},
+                {"key": "residence", "label": "거주지", "label_en": "Residence", "type": "text"},
+                {"key": "birth_date", "label": "생년월일", "label_en": "Date of Birth", "type": "date"},
+                {"key": "phone", "label": "연락처", "label_en": "Phone", "type": "text"},
             ]
         },
     }
 }
-
 def get_table_rows_fields(scenario_id: str) -> dict:
     """시나리오별 TABLE_ROWS 필드 반환"""
     return TABLE_ROWS_FIELDS.get(scenario_id, {})

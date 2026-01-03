@@ -444,13 +444,6 @@ LAYER2_VARIABLE_FIELDS = {
                         "type": "text",
                         "required": True
                     },
-                    {
-                        "data_key": "stay_purpose",
-                        "label": "체류목적",
-                        "label_en": "Stay Purpose",
-                        "type": "text",
-                        "required": True
-                    },
                 ]
             },
             {
@@ -659,13 +652,6 @@ LAYER2_VARIABLE_FIELDS = {
                         "data_key": "phone",
                         "label": "전 화번 호",
                         "label_en": "Phone",
-                        "type": "text",
-                        "required": True
-                    },
-                    {
-                        "data_key": "stay_purpose",
-                        "label": "체류목적",
-                        "label_en": "Stay Purpose",
                         "type": "text",
                         "required": True
                     },
@@ -1033,13 +1019,6 @@ LAYER2_VARIABLE_FIELDS = {
                         "data_key": "received_assistance",
                         "label": "4.1 이 초청장을 작성하는데 다른 사람의 도움을 받았",
                         "label_en": "Received Assistance",
-                        "type": "text",
-                        "required": True
-                    },
-                    {
-                        "data_key": "stay_purpose",
-                        "label": "체류목적",
-                        "label_en": "Stay Purpose",
                         "type": "text",
                         "required": True
                     },
@@ -2277,13 +2256,6 @@ LAYER2_VARIABLE_FIELDS = {
                         "type": "text",
                         "required": True
                     },
-                    {
-                        "data_key": "stay_purpose",
-                        "label": "체류목적",
-                        "label_en": "Stay Purpose",
-                        "type": "text",
-                        "required": True
-                    },
                 ]
             },
             {
@@ -3151,6 +3123,10 @@ LAYER2_VARIABLE_FIELDS = {
 # 📊 LAYER 3: Narrative Fields (서술형, AI 검토)
 # ======================================================================
 
+# ======================================================================
+# 📊 LAYER 3: Narrative Fields (서술형, AI 검토)
+# ======================================================================
+
 LAYER3_NARRATIVE_FIELDS = {
     "A": {
         "scenario_name": "구직 준비",
@@ -3160,11 +3136,23 @@ LAYER3_NARRATIVE_FIELDS = {
         "narrative_label_en": "Monthly Job Search Plan",
         "fields": [
             {
+                "data_key": "stay_purpose",
+                "label": "체류목적",
+                "label_en": "Purpose of Stay",
+                "hint": "한국에서의 체류 목적을 상세히 작성해주세요. (신원보증서용)",
+                "hint_en": "Please describe your purpose of stay in Korea in detail. (For Guarantor Letter)",
+                "placeholder": "예: 한국 IT 기업 취업을 목표로 구직 활동을 하고자 합니다.",
+                "placeholder_en": "e.g., I intend to seek employment at Korean IT companies.",
+                "min_chars": 30,
+                "required": True,
+                "anchor_text": "체류목적"
+            },
+            {
                 "data_key": "job_search_plan_month1",
                 "label": "1개월차 계획",
                 "label_en": "1st Month Plan",
                 "hint": "1번째 달의 구직 활동 계획을 상세히 작성해주세요.",
-                "hint_en": "1번째 달의 구직 활동 계획을 상세히 작성해주세요.",
+                "hint_en": "Please describe your job search plan for the 1st month in detail.",
                 "placeholder": "예: 이력서 작성, 기업 분석 및 지원 리스트업",
                 "placeholder_en": "",
                 "min_chars": 50,
@@ -3174,9 +3162,9 @@ LAYER3_NARRATIVE_FIELDS = {
             {
                 "data_key": "job_search_plan_month2",
                 "label": "2개월차 계획",
-                "label_en": "第二月 / 2nd month",
+                "label_en": "2nd Month Plan",
                 "hint": "2번째 달의 활동 계획을 작성해주세요.",
-                "hint_en": "2번째 달의 활동 계획을 작성해주세요.",
+                "hint_en": "Please describe your plan for the 2nd month.",
                 "placeholder": "",
                 "placeholder_en": "",
                 "min_chars": 50,
@@ -3186,9 +3174,9 @@ LAYER3_NARRATIVE_FIELDS = {
             {
                 "data_key": "job_search_plan_month3",
                 "label": "3개월차 계획",
-                "label_en": "第三月 / 3rd month",
+                "label_en": "3rd Month Plan",
                 "hint": "3번째 달의 활동 계획을 작성해주세요.",
-                "hint_en": "3번째 달의 활동 계획을 작성해주세요.",
+                "hint_en": "Please describe your plan for the 3rd month.",
                 "placeholder": "",
                 "placeholder_en": "",
                 "min_chars": 50,
@@ -3198,9 +3186,9 @@ LAYER3_NARRATIVE_FIELDS = {
             {
                 "data_key": "job_search_plan_month4",
                 "label": "4개월차 계획",
-                "label_en": "第四月 / 4th month",
+                "label_en": "4th Month Plan",
                 "hint": "4번째 달의 활동 계획을 작성해주세요.",
-                "hint_en": "4번째 달의 활동 계획을 작성해주세요.",
+                "hint_en": "Please describe your plan for the 4th month.",
                 "placeholder": "",
                 "placeholder_en": "",
                 "min_chars": 50,
@@ -3210,9 +3198,9 @@ LAYER3_NARRATIVE_FIELDS = {
             {
                 "data_key": "job_search_plan_month5",
                 "label": "5개월차 계획",
-                "label_en": "第五月 / 5th month",
+                "label_en": "5th Month Plan",
                 "hint": "5번째 달의 활동 계획을 작성해주세요.",
-                "hint_en": "5번째 달의 활동 계획을 작성해주세요.",
+                "hint_en": "Please describe your plan for the 5th month.",
                 "placeholder": "",
                 "placeholder_en": "",
                 "min_chars": 50,
@@ -3222,9 +3210,9 @@ LAYER3_NARRATIVE_FIELDS = {
             {
                 "data_key": "job_search_plan_month6",
                 "label": "6개월차 계획",
-                "label_en": "第六月 /6th month",
+                "label_en": "6th Month Plan",
                 "hint": "6번째 달의 활동 계획을 작성해주세요.",
-                "hint_en": "6번째 달의 활동 계획을 작성해주세요.",
+                "hint_en": "Please describe your plan for the 6th month.",
                 "placeholder": "",
                 "placeholder_en": "",
                 "min_chars": 50,
@@ -3235,6 +3223,29 @@ LAYER3_NARRATIVE_FIELDS = {
         "validation_prompt": """구체적인 월별 계획과 실현 가능성을 중점적으로 검토하세요.""",
         "danger_patterns": ['취업 확정', '내정', '채용 확정']
     },
+    "B": {
+        "scenario_name": "아르바이트",
+        "scenario_name_en": "Part-time Work",
+        "visa_type": "시간제 취업",
+        "narrative_label": "체류 목적",
+        "narrative_label_en": "Purpose of Stay",
+        "fields": [
+            {
+                "data_key": "stay_purpose",
+                "label": "체류목적",
+                "label_en": "Purpose of Stay",
+                "hint": "한국에서의 체류 목적을 상세히 작성해주세요. (신원보증서용)",
+                "hint_en": "Please describe your purpose of stay in Korea in detail. (For Guarantor Letter)",
+                "placeholder": "예: 대학교 학업을 병행하며 생활비 마련을 위해 시간제 취업을 하고자 합니다.",
+                "placeholder_en": "e.g., I intend to work part-time to cover living expenses while studying at university.",
+                "min_chars": 30,
+                "required": True,
+                "anchor_text": "체류목적"
+            },
+        ],
+        "validation_prompt": """학업과 아르바이트의 균형, 합법적인 취업 목적인지 검토하세요.""",
+        "danger_patterns": ['풀타임', '전일제', '불법']
+    },
     "C": {
         "scenario_name": "결혼 이민",
         "scenario_name_en": "Marriage Immigration",
@@ -3243,11 +3254,23 @@ LAYER3_NARRATIVE_FIELDS = {
         "narrative_label_en": "Marriage Background",
         "fields": [
             {
+                "data_key": "stay_purpose",
+                "label": "체류목적",
+                "label_en": "Purpose of Stay",
+                "hint": "한국에서의 체류 목적을 상세히 작성해주세요. (신원보증서용)",
+                "hint_en": "Please describe your purpose of stay in Korea in detail. (For Guarantor Letter)",
+                "placeholder": "예: 한국인 배우자와 결혼하여 가정을 이루고 함께 생활하고자 합니다.",
+                "placeholder_en": "e.g., I intend to live with my Korean spouse and build a family together.",
+                "min_chars": 30,
+                "required": True,
+                "anchor_text": "체류목적"
+            },
+            {
                 "data_key": "other_names_explanation",
                 "label": "1.4 과거에 다른 이름을 사용하였던 적이 있습니까?",
-                "label_en": "1.4 과거에 다른 이름을 사용하였던 적이 있습니까?",
-                "hint": "1.4 과거에 다른 이름을 사용하였던 적이 있습니까?",
-                "hint_en": "1.4 과거에 다른 이름을 사용하였던 적이 있습니까?",
+                "label_en": "1.4 Have you ever used other names in the past?",
+                "hint": "과거에 다른 이름을 사용한 적이 있다면 상세히 설명해주세요.",
+                "hint_en": "If you have used other names in the past, please explain in detail.",
                 "placeholder": "",
                 "placeholder_en": "",
                 "min_chars": 50,
@@ -3257,9 +3280,9 @@ LAYER3_NARRATIVE_FIELDS = {
             {
                 "data_key": "children_from_previous_marriage_details",
                 "label": "2.4 신청인은 과거 혼인관계에서 출생한 자녀가 있습니까?",
-                "label_en": "2.4 신청인은 과거 혼인관계에서 출생한 자녀가 있습니까?",
-                "hint": "2.4 신청인은 과거 혼인관계에서 출생한 자녀가 있습니까?",
-                "hint_en": "2.4 신청인은 과거 혼인관계에서 출생한 자녀가 있습니까?",
+                "label_en": "2.4 Does the applicant have children from a previous marriage?",
+                "hint": "과거 혼인관계에서 출생한 자녀가 있다면 상세히 설명해주세요.",
+                "hint_en": "If you have children from a previous marriage, please explain in detail.",
                 "placeholder": "",
                 "placeholder_en": "",
                 "min_chars": 50,
@@ -3268,10 +3291,10 @@ LAYER3_NARRATIVE_FIELDS = {
             },
             {
                 "data_key": "immigration_issues_details",
-                "label": "3.2 과거 한국 정부로부터 입국거부, 입국금지되거나 강제퇴거 또는 출국명령을 받은 적이",
-                "label_en": "3.2 과거 한국 정부로부터 입국거부, 입국금지되거나 강제퇴거 또는 출국명령을 받은 적이",
-                "hint": "3.2 과거 한국 정부로부터 입국거부, 입국금지되거나 강제퇴거 또는 출국명령을 받은 적이",
-                "hint_en": "3.2 과거 한국 정부로부터 입국거부, 입국금지되거나 강제퇴거 또는 출국명령을 받은 적이",
+                "label": "3.2 과거 한국 정부로부터 입국거부, 입국금지되거나 강제퇴거 또는 출국명령을 받은 적이 있습니까?",
+                "label_en": "3.2 Have you ever been denied entry, banned, deported, or ordered to leave by the Korean government?",
+                "hint": "과거 출입국 관련 문제가 있었다면 상세히 설명해주세요.",
+                "hint_en": "If you have had any immigration issues in the past, please explain in detail.",
                 "placeholder": "",
                 "placeholder_en": "",
                 "min_chars": 50,
@@ -3281,9 +3304,9 @@ LAYER3_NARRATIVE_FIELDS = {
             {
                 "data_key": "assistance_details",
                 "label": "4.1 이 초청장을 작성하는데 다른 사람의 도움을 받았습니까?",
-                "label_en": "4.1 이 초청장을 작성하는데 다른 사람의 도움을 받았습니까?",
-                "hint": "4.1 이 초청장을 작성하는데 다른 사람의 도움을 받았습니까?",
-                "hint_en": "4.1 이 초청장을 작성하는데 다른 사람의 도움을 받았습니까?",
+                "label_en": "4.1 Did you receive assistance from others in preparing this invitation letter?",
+                "hint": "초청장 작성에 도움을 받았다면 상세히 설명해주세요.",
+                "hint_en": "If you received assistance in preparing this invitation letter, please explain in detail.",
                 "placeholder": "",
                 "placeholder_en": "",
                 "min_chars": 50,
@@ -3298,72 +3321,24 @@ LAYER3_NARRATIVE_FIELDS = {
         "scenario_name": "가족 초청",
         "scenario_name_en": "Family Invitation",
         "visa_type": "F-1-5",
-        "narrative_label": "초청 사유",
-        "narrative_label_en": "Narrative Input",
+        "narrative_label": "체류 목적 및 초청 사유",
+        "narrative_label_en": "Purpose of Stay and Invitation Reason",
         "fields": [
             {
-                "data_key": "inviter_activity_status",
-                "label": "3.2.1. 초청인과 배우자가 직장생활 등 외부활동을 하고 있는지 기재하시기 바랍니다(외부",
-                "label_en": "3.2.1. 초청인과 배우자가 직장생활 등 외부활동을 하고 있는지 기재하시기 바랍니다(외부",
-                "hint": "3.2.1. 초청인과 배우자가 직장생활 등 외부활동을 하고 있는지 기재하시기 바랍니다(외부",
-                "hint_en": "3.2.1. 초청인과 배우자가 직장생활 등 외부활동을 하고 있는지 기재하시기 바랍니다(외부",
-                "placeholder": "",
-                "placeholder_en": "",
-                "min_chars": 50,
+                "data_key": "stay_purpose",
+                "label": "체류목적",
+                "label_en": "Purpose of Stay",
+                "hint": "피초청인의 한국 체류 목적을 상세히 작성해주세요. (신원보증서용)",
+                "hint_en": "Please describe the invitee's purpose of stay in Korea in detail. (For Guarantor Letter)",
+                "placeholder": "예: 자녀(초청인)의 출산 및 육아를 돕기 위해 일정 기간 한국에 체류하고자 합니다.",
+                "placeholder_en": "e.g., To assist the inviter (child) with childbirth and childcare for a certain period.",
+                "min_chars": 30,
                 "required": True,
-                "anchor_text": "3.2.1. 초청인과 배우자가 직장생활 등 외부활동을 하고 있는지 기재하시기 바랍니다(외부"
-            },
-            {
-                "data_key": "current_caregiving_status",
-                "label": "3.2.2. 현재 누가 어떤 방식으로 자녀를 양육(중증질환 등이 있는 가족 간병)하고 있는",
-                "label_en": "3.2.2. 현재 누가 어떤 방식으로 자녀를 양육(중증질환 등이 있는 가족 간병)하고 있는",
-                "hint": "3.2.2. 현재 누가 어떤 방식으로 자녀를 양육(중증질환 등이 있는 가족 간병)하고 있는",
-                "hint_en": "3.2.2. 현재 누가 어떤 방식으로 자녀를 양육(중증질환 등이 있는 가족 간병)하고 있는",
-                "placeholder": "",
-                "placeholder_en": "",
-                "min_chars": 50,
-                "required": True,
-                "anchor_text": "3.2.2. 현재 누가 어떤 방식으로 자녀를 양육(중증질환 등이 있는 가족 간병)하고 있는"
-            },
-            {
-                "data_key": "invitee_expected_role",
-                "label": "3.2.3. 피초청인이 입국하면 가정 내에서 어떤 역할을 맡게 될 것인지 기재하시기 바랍니",
-                "label_en": "3.2.3. 피초청인이 입국하면 가정 내에서 어떤 역할을 맡게 될 것인지 기재하시기 바랍니",
-                "hint": "3.2.3. 피초청인이 입국하면 가정 내에서 어떤 역할을 맡게 될 것인지 기재하시기 바랍니",
-                "hint_en": "3.2.3. 피초청인이 입국하면 가정 내에서 어떤 역할을 맡게 될 것인지 기재하시기 바랍니",
-                "placeholder": "",
-                "placeholder_en": "",
-                "min_chars": 50,
-                "required": True,
-                "anchor_text": "3.2.3. 피초청인이 입국하면 가정 내에서 어떤 역할을 맡게 될 것인지 기재하시기 바랍니"
-            },
-            {
-                "data_key": "invitee_support_plan",
-                "label": "3.3 위 초청 목적(사유)와 관련하여 피초청인(사증발급 신청인)이 입국하여 국내에 체류해",
-                "label_en": "3.3 위 초청 목적(사유)와 관련하여 피초청인(사증발급 신청인)이 입국하여 국내에 체류해",
-                "hint": "3.3 위 초청 목적(사유)와 관련하여 피초청인(사증발급 신청인)이 입국하여 국내에 체류해",
-                "hint_en": "3.3 위 초청 목적(사유)와 관련하여 피초청인(사증발급 신청인)이 입국하여 국내에 체류해",
-                "placeholder": "",
-                "placeholder_en": "",
-                "min_chars": 50,
-                "required": True,
-                "anchor_text": "3.3 위 초청 목적(사유)와 관련하여 피초청인(사증발급 신청인)이 입국하여 국내에 체류해"
-            },
-            {
-                "data_key": "additional_info",
-                "label": "‣ 이번 초청 건과 관련하여 사증발급 심사에 고려할 그 밖의 정보가 있다면 아래에 기재하시",
-                "label_en": "‣ 이번 초청 건과 관련하여 사증발급 심사에 고려할 그 밖의 정보가 있다면 아래에 기재하시",
-                "hint": "‣ 이번 초청 건과 관련하여 사증발급 심사에 고려할 그 밖의 정보가 있다면 아래에 기재하시",
-                "hint_en": "‣ 이번 초청 건과 관련하여 사증발급 심사에 고려할 그 밖의 정보가 있다면 아래에 기재하시",
-                "placeholder": "",
-                "placeholder_en": "",
-                "min_chars": 50,
-                "required": True,
-                "anchor_text": "‣ 이번 초청 건과 관련하여 사증발급 심사에 고려할 그 밖의 정보가 있다면 아래에 기재하시"
+                "anchor_text": "체류목적"
             },
         ],
-        "validation_prompt": """내용의 사실 관계와 논리적 흐름을 검토하세요.""",
-        "danger_patterns": ['허위', '거짓', '불법']
+        "validation_prompt": """체류 목적의 타당성을 검토하세요.""",
+        "danger_patterns": ['취업', '돈 벌러', '불법 체류']
     },
     "E": {
         "scenario_name": "전문 인력",
@@ -3373,11 +3348,23 @@ LAYER3_NARRATIVE_FIELDS = {
         "narrative_label_en": "Narrative Input",
         "fields": [
             {
+                "data_key": "stay_purpose",
+                "label": "체류목적",
+                "label_en": "Purpose of Stay",
+                "hint": "한국에서의 체류 목적을 상세히 작성해주세요. (신원보증서용)",
+                "hint_en": "Please describe your purpose of stay in Korea in detail. (For Guarantor Letter)",
+                "placeholder": "예: OO 분야 전문 기술을 활용하여 한국 기업에서 근무하고자 합니다.",
+                "placeholder_en": "e.g., I intend to work at a Korean company utilizing my expertise in OO field.",
+                "min_chars": 30,
+                "required": True,
+                "anchor_text": "체류목적"
+            },
+            {
                 "data_key": "employer_company_intro",
                 "label": "회사 및 사업(업무) 소개",
-                "label_en": "회사 및 사업(업무) 소개",
-                "hint": "회사 및 사업(업무) 소개",
-                "hint_en": "회사 및 사업(업무) 소개",
+                "label_en": "Company and Business Introduction",
+                "hint": "회사 및 사업(업무)에 대해 상세히 소개해주세요.",
+                "hint_en": "Please introduce the company and business in detail.",
                 "placeholder": "",
                 "placeholder_en": "",
                 "min_chars": 50,
@@ -3386,10 +3373,10 @@ LAYER3_NARRATIVE_FIELDS = {
             },
             {
                 "data_key": "employer_employment_reason",
-                "label": "1) 고용사유 (※ 외국인력 도입 업무와 관련한 전문인력부족 현황, 국내인력 채용노력 및 ",
-                "label_en": "1) 고용사유 (※ 외국인력 도입 업무와 관련한 전문인력부족 현황, 국내인력 채용노력 및 ",
-                "hint": "1) 고용사유 (※ 외국인력 도입 업무와 관련한 전문인력부족 현황, 국내인력 채용노력 및 ",
-                "hint_en": "1) 고용사유 (※ 외국인력 도입 업무와 관련한 전문인력부족 현황, 국내인력 채용노력 및 ",
+                "label": "1) 고용사유",
+                "label_en": "1) Reason for Employment",
+                "hint": "외국인력 도입 업무와 관련한 전문인력부족 현황, 국내인력 채용노력 등을 작성해주세요.",
+                "hint_en": "Please describe the shortage of professional workers and efforts to hire domestic workers.",
                 "placeholder": "",
                 "placeholder_en": "",
                 "min_chars": 50,
@@ -3398,10 +3385,10 @@ LAYER3_NARRATIVE_FIELDS = {
             },
             {
                 "data_key": "employer_tech_import_effect",
-                "label": "2) 기술도입 및 전문외국인력고용 효과  (※ 도입기술 분야, 기술 내용, 희소성, 전문성",
-                "label_en": "2) 기술도입 및 전문외국인력고용 효과  (※ 도입기술 분야, 기술 내용, 희소성, 전문성",
-                "hint": "2) 기술도입 및 전문외국인력고용 효과  (※ 도입기술 분야, 기술 내용, 희소성, 전문성",
-                "hint_en": "2) 기술도입 및 전문외국인력고용 효과  (※ 도입기술 분야, 기술 내용, 희소성, 전문성",
+                "label": "2) 기술도입 및 전문외국인력고용 효과",
+                "label_en": "2) Effect of Technology Import and Professional Foreign Worker Employment",
+                "hint": "도입기술 분야, 기술 내용, 희소성, 전문성 등을 작성해주세요.",
+                "hint_en": "Please describe the technology field, content, rarity, and expertise.",
                 "placeholder": "",
                 "placeholder_en": "",
                 "min_chars": 50,
@@ -3411,9 +3398,9 @@ LAYER3_NARRATIVE_FIELDS = {
             {
                 "data_key": "employer_utilization_plan",
                 "label": "3) 활용계획",
-                "label_en": "3) 활용계획",
-                "hint": "3) 활용계획",
-                "hint_en": "3) 활용계획",
+                "label_en": "3) Utilization Plan",
+                "hint": "전문 인력 활용 계획을 상세히 작성해주세요.",
+                "hint_en": "Please describe the utilization plan for the professional worker in detail.",
                 "placeholder": "",
                 "placeholder_en": "",
                 "min_chars": 50,
@@ -3423,9 +3410,9 @@ LAYER3_NARRATIVE_FIELDS = {
             {
                 "data_key": "employer_other_notes",
                 "label": "4) 기타사항",
-                "label_en": "4) 기타사항",
-                "hint": "4) 기타사항",
-                "hint_en": "4) 기타사항",
+                "label_en": "4) Other Notes",
+                "hint": "기타 참고 사항을 작성해주세요.",
+                "hint_en": "Please describe any other relevant information.",
                 "placeholder": "",
                 "placeholder_en": "",
                 "min_chars": 50,
@@ -3436,6 +3423,29 @@ LAYER3_NARRATIVE_FIELDS = {
         "validation_prompt": """내용의 사실 관계와 논리적 흐름을 검토하세요.""",
         "danger_patterns": ['허위', '거짓', '불법']
     },
+    "F": {
+        "scenario_name": "국적 귀화",
+        "scenario_name_en": "Naturalization",
+        "visa_type": "귀화",
+        "narrative_label": "체류 목적 및 귀화 사유",
+        "narrative_label_en": "Purpose of Stay and Naturalization Reason",
+        "fields": [
+            {
+                "data_key": "stay_purpose",
+                "label": "체류목적",
+                "label_en": "Purpose of Stay",
+                "hint": "한국에서의 체류 목적 및 귀화 사유를 상세히 작성해주세요. (신원보증서용)",
+                "hint_en": "Please describe your purpose of stay and reason for naturalization in detail. (For Guarantor Letter)",
+                "placeholder": "예: 한국에서 장기간 거주하며 한국 사회에 정착하여 대한민국 국민으로서 살아가고자 합니다.",
+                "placeholder_en": "e.g., I have resided in Korea for a long time and wish to settle and live as a Korean citizen.",
+                "min_chars": 50,
+                "required": True,
+                "anchor_text": "체류목적"
+            },
+        ],
+        "validation_prompt": """귀화 사유의 진정성과 한국 사회 정착 의지를 검토하세요.""",
+        "danger_patterns": ['허위', '거짓', '불법']
+    },
     "G": {
         "scenario_name": "긴급 의료",
         "scenario_name_en": "Medical Tourism",
@@ -3443,6 +3453,18 @@ LAYER3_NARRATIVE_FIELDS = {
         "narrative_label": "입국 사유서",
         "narrative_label_en": "Statement of Entry Purpose",
         "fields": [
+            {
+                "data_key": "stay_purpose",
+                "label": "체류목적",
+                "label_en": "Purpose of Stay",
+                "hint": "한국에서의 체류 목적(의료 목적)을 상세히 작성해주세요. (신원보증서용)",
+                "hint_en": "Please describe your purpose of stay (medical purpose) in Korea in detail. (For Guarantor Letter)",
+                "placeholder": "예: OO병원에서 치료를 받기 위해 한국에 체류하고자 합니다.",
+                "placeholder_en": "e.g., I intend to stay in Korea to receive treatment at OO Hospital.",
+                "min_chars": 30,
+                "required": True,
+                "anchor_text": "체류목적"
+            },
             {
                 "data_key": "purpose_of_entry",
                 "label": "입국 목적",
@@ -3472,7 +3494,6 @@ LAYER3_NARRATIVE_FIELDS = {
         "danger_patterns": ['불법 취업', '관광 목적', '돈 벌러']
     },
 }
-
 
 # ======================================================================
 # 📊 시나리오 정의

@@ -130,6 +130,23 @@ def render_profile_edit_form(user_data: dict):
                 placeholder="GILDONG"
             )
         
+        col1, col2 = st.columns(2)
+        with col1:
+            # 성명 표시 (읽기 전용)
+            full_name = f"{user_data.get('surname', '')} {user_data.get('given_name', '')}".strip()
+            st.text_input(
+                t('my_page.full_name'),
+                value=full_name if full_name else "-",
+                disabled=True,
+                help=t('my_page.full_name_help')
+            )
+        with col2:
+            chinese_name = st.text_input(
+                t('my_page.chinese_name'),
+                value=user_data.get('chinese_name', '') or '',
+                placeholder="洪吉童"
+            )
+        
         col1, col2, col3 = st.columns(3)
         with col1:
             birth_date_value = parse_date(user_data.get('birth_date'))
@@ -151,11 +168,19 @@ def render_profile_edit_form(user_data: dict):
                 placeholder="USA"
             )
         
-        alien_registration_no = st.text_input(
-            t('my_page.alien_reg_no'),
-            value=user_data.get('alien_registration_no', '') or '',
-            placeholder="000000-0000000"
-        )
+        col1, col2 = st.columns(2)
+        with col1:
+            alien_registration_no = st.text_input(
+                t('my_page.alien_reg_no'),
+                value=user_data.get('alien_registration_no', '') or '',
+                placeholder="000000-0000000"
+            )
+        with col2:
+            occupation = st.text_input(
+                t('my_page.occupation'),
+                value=user_data.get('occupation', '') or '',
+                placeholder=t('my_page.occupation_placeholder')
+            )
         
         st.markdown("---")
         
@@ -235,10 +260,12 @@ def render_profile_edit_form(user_data: dict):
                 update_data = {
                     'surname': surname.strip().upper(),
                     'given_name': given_name.strip().upper(),
+                    'chinese_name': chinese_name.strip() if chinese_name else None,
                     'birth_date': birth_date.isoformat() if birth_date else None,
                     'gender': gender,
                     'nationality': nationality.strip().upper(),
                     'alien_registration_no': alien_registration_no.strip() if alien_registration_no else None,
+                    'occupation': occupation.strip() if occupation else None,
                     'passport_no': passport_no.strip().upper(),
                     'passport_issue_date': passport_issue_date.isoformat() if passport_issue_date else None,
                     'passport_expiry_date': passport_expiry_date.isoformat() if passport_expiry_date else None,

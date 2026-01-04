@@ -55,6 +55,23 @@ def load_css():
         border-radius: 8px;
     }
     </style>
+    
+    <!-- 페이지 로드 시 스크롤 맨 위로 이동 -->
+    <script>
+        window.scrollTo(0, 0);
+        
+        // Streamlit 컨테이너도 스크롤 리셋
+        const mainContainer = window.parent.document.querySelector('section.main');
+        if (mainContainer) {
+            mainContainer.scrollTop = 0;
+        }
+        
+        // iframe 내부 스크롤도 리셋
+        const stApp = window.parent.document.querySelector('[data-testid="stAppViewContainer"]');
+        if (stApp) {
+            stApp.scrollTop = 0;
+        }
+    </script>
     """, unsafe_allow_html=True)
 
 

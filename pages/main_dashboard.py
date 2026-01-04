@@ -12,10 +12,14 @@ Fixed Issues:
 import streamlit as st
 from services.payment_service import PaymentService
 from utils.i18n import t, get_current_language
+from utils.scroll import scroll_to_top
 
 
 def render():
     """메인 대시보드 렌더링"""
+    
+    # 페이지 진입 시 스크롤 맨 위로
+    scroll_to_top()
     
     # 결제 콜백 처리
     handle_payment_callback()
@@ -54,86 +58,19 @@ def render():
     else:
         st.info(f"💡 {t('dashboard.free_info')}")
     
-    # 탭 상태 관리
-    if "dashboard_tab" not in st.session_state:
-        st.session_state.dashboard_tab = "keta"
-
     current_lang = get_current_language()
     
     # 탭 라벨 정의
     keta_label = "🛫 K-ETA"
     visa_label = "📋 Visa Documents" if current_lang == "en" else "📋 비자 서류"
     
-    # 라디오 버튼을 음영 탭 스타일로 변환하는 CSS
-    st.markdown("""
-        <style>
-            /* 라디오 버튼 컨테이너 */
-            div[data-testid="stRadio"] > div {
-                flex-direction: row !important;
-                gap: 0.5rem !important;
-            }
-            
-            /* 라디오 버튼 동그라미 숨기기 */
-            div[data-testid="stRadio"] label > div:first-child {
-                display: none !important;
-            }
-            
-            /* 각 탭 스타일 - 기본 */
-            div[data-testid="stRadio"] label {
-                padding: 0.6rem 1.25rem !important;
-                margin: 0 !important;
-                border: none !important;
-                background: transparent !important;
-                cursor: pointer !important;
-                border-radius: 0.5rem !important;
-            }
-            
-            /* 탭 텍스트 기본 스타일 */
-            div[data-testid="stRadio"] label p {
-                font-size: 0.9rem !important;
-                font-weight: 500 !important;
-                color: #64748b !important;
-            }
-            
-            /* 호버 효과 */
-            div[data-testid="stRadio"] label:hover {
-                background: #f1f5f9 !important;
-            }
-            
-            /* 선택된 탭 - 음영 배경 + 빨간 밑줄 */
-            div[data-testid="stRadio"] label[data-checked="true"] {
-                background: #fef2f2 !important;
-                border-bottom: 2px solid #dc2626 !important;
-                border-radius: 0.5rem 0.5rem 0 0 !important;
-            }
-            
-            div[data-testid="stRadio"] label[data-checked="true"] p {
-                color: #dc2626 !important;
-            }
-        </style>
-    """, unsafe_allow_html=True)
+    # Streamlit 기본 탭 사용
+    tab_keta, tab_visa = st.tabs([keta_label, visa_label])
     
-    # 탭 선택
-    def on_tab_change():
-        st.session_state.dashboard_tab = st.session_state.tab_radio
-    
-    selected_tab = st.radio(
-        "tab_selector",
-        options=["keta", "visa"],
-        index=0 if st.session_state.dashboard_tab == "keta" else 1,
-        format_func=lambda x: keta_label if x == "keta" else visa_label,
-        horizontal=True,
-        label_visibility="collapsed",
-        key="tab_radio",
-        on_change=on_tab_change
-    )
-    
-    st.markdown("<div style='height: 1rem;'></div>", unsafe_allow_html=True)
-    
-    # 선택된 탭에 따라 콘텐츠 렌더링
-    if st.session_state.dashboard_tab == "keta":
+    with tab_keta:
         render_keta_tab()
-    else:
+    
+    with tab_visa:
         render_scenario_list()
 
 

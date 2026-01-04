@@ -7,10 +7,14 @@ import streamlit as st
 from datetime import date, datetime
 from services.auth_service import AuthService, SessionManager
 from utils.i18n import t, get_current_language
+from utils.scroll import scroll_to_top
 
 
 def render():
     """마이페이지 렌더링"""
+
+    # 페이지 진입 시 스크롤 맨 위로
+    scroll_to_top()
     
     st.markdown(f"## 👤 {t('my_page.title')}")
     st.markdown(t('my_page.subtitle'))

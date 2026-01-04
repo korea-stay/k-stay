@@ -16,6 +16,7 @@ import streamlit as st
 from datetime import date, datetime
 from typing import Dict, List, Any, Optional, Tuple
 from utils.i18n import t, get_current_language
+from utils.scroll import scroll_to_top
 
 # 설정 파일에서 Layer 정의 임포트
 from config.settings import (
@@ -713,6 +714,9 @@ def render_phase2_table_rows_section(scenario_id: str, current_doc_name: str):
 
 def render():
     """시나리오 폼 페이지 렌더링"""
+
+    # 페이지 진입 시 스크롤 맨 위로
+    scroll_to_top()
     
     lang = get_current_language()
     

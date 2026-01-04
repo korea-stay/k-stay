@@ -8,10 +8,14 @@ import streamlit as st
 from datetime import datetime, date
 from services.auth_service import AuthService, SessionManager
 from utils.i18n import t, get_current_language
+from utils.scroll import scroll_to_top
 
 
 def render():
     """회원가입 페이지 렌더링"""
+
+    # 페이지 진입 시 스크롤 맨 위로
+    scroll_to_top()
     
     # 헤더
     st.markdown(f"""

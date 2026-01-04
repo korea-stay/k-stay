@@ -273,35 +273,21 @@ def render_welcome_message():
         </div>
     """, unsafe_allow_html=True)
 
-def render_user_message(content: str):
-    # 1. 고유 ID 생성 (메시지마다 다른 스타일 적용 충돌 방지)
-    import hashlib
-    msg_id = hashlib.md5(content.encode()).hexdigest()[:8]
-    
-    # 2. CSS Style 강제 주입 + HTML 구조
-    st.markdown(f"""
-        <style>
-            #msg-{msg_id} {{
-                color: #ffffff !important;
-            }}
-            #msg-{msg_id} * {{
-                color: #ffffff !important;
-                -webkit-text-fill-color: #ffffff !important;
-            }}
-        </style>
 
+def render_user_message(content: str):
+    """사용자 메시지 렌더링 (오른쪽, 파란색 그라데이션)"""
+    st.markdown(f"""
         <div style="display: flex; justify-content: flex-end; margin-bottom: 1rem;">
-            <div id="msg-{msg_id}" style="
-                background: linear-gradient(135deg, #1e40af 0%, #3730a3 100%);
+            <div style="
+                background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
+                color: white !important;
                 padding: 0.875rem 1.25rem;
                 border-radius: 20px 20px 4px 20px;
                 max-width: 75%;
                 font-size: 0.95rem;
                 line-height: 1.6;
-                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            ">
-                {content}
-            </div>
+                box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
+            ">{content}</div>
         </div>
     """, unsafe_allow_html=True)
 

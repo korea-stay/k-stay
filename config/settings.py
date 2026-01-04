@@ -557,6 +557,27 @@ LAYER2_VARIABLE_FIELDS = {
                         "required": True
                     },
                     {
+                        "data_key": "dob_year",
+                        "label": "생년월일 (년)",
+                        "label_en": "Date of Birth (Year)",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "dob_month",
+                        "label": "생년월일 (월)",
+                        "label_en": "Date of Birth (Month)",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
+                        "data_key": "dob_day",
+                        "label": "생년월일 (일)",
+                        "label_en": "Date of Birth (Day)",
+                        "type": "text",
+                        "required": True
+                    },
+                    {
                         "data_key": "school_name",
                         "label": "학교 이름",
                         "label_en": "School Name",

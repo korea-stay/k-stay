@@ -1125,7 +1125,7 @@ def render_document_tabs(docs: List[str], current_idx: int, doc_mapping: Dict, a
             
             progress_text = f"{filled}/{total}" if total > 0 else "0/0"
             check_mark = "✓ " if is_complete else ""
-            short_name = display_doc_name if len(display_doc_name) <= 10 else display_doc_name[:9] + "..."
+            short_name = display_doc_name if len(display_doc_name) <= 30 else display_doc_name[:9] + "..."
             
             st.markdown(f"""
                 <div style="background: {bg_color}; border: {border_style}; border-radius: 12px; padding: 12px 8px; text-align: center; opacity: {opacity}; {shadow}">

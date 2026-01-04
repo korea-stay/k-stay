@@ -81,7 +81,8 @@
     "error_invalid_email": "유효하지 않은 이메일 형식입니다.",
     "error_passport_expired": "여권이 만료되었거나 곧 만료됩니다.",
     "error_terms": "이용약관에 동의해주세요.",
-    "success": "회원가입이 완료되었습니다!"
+    "success": "회원가입이 완료되었습니다!",
+    "go_to_login": "로그인 페이지로 이동"
   },
   "sidebar": {
     "dashboard": "대시보드",

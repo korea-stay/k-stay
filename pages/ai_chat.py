@@ -12,7 +12,7 @@ from utils.scroll import scroll_to_top
 
 def render():
     """AI 채팅 페이지 렌더링"""
-
+    
     # 페이지 진입 시 스크롤 맨 위로
     scroll_to_top()
     
@@ -279,11 +279,11 @@ def render_welcome_message():
                     {t('ai_chat.welcome_ask')}
                 </p>
                 <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #f1f5f9;">
-                    <span style="background: #dbeafe; color: #1e40af; padding: 6px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 500;">🎓 D-2 유학</span>
-                    <span style="background: #ede9fe; color: #5b21b6; padding: 6px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 500;">📚 D-4 연수</span>
-                    <span style="background: #fce7f3; color: #9d174d; padding: 6px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 500;">💍 F-6 결혼</span>
-                    <span style="background: #d1fae5; color: #065f46; padding: 6px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 500;">🔍 D-10 구직</span>
-                    <span style="background: #fef3c7; color: #92400e; padding: 6px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 500;">🛫 K-ETA</span>
+                    <span style="background: #dbeafe; color: #1e40af; padding: 6px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 500;">🎓 {t('ai_chat.visa_d2')}</span>
+                    <span style="background: #ede9fe; color: #5b21b6; padding: 6px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 500;">📚 {t('ai_chat.visa_d4')}</span>
+                    <span style="background: #fce7f3; color: #9d174d; padding: 6px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 500;">💍 {t('ai_chat.visa_f6')}</span>
+                    <span style="background: #d1fae5; color: #065f46; padding: 6px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 500;">🔍 {t('ai_chat.visa_d10')}</span>
+                    <span style="background: #fef3c7; color: #92400e; padding: 6px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 500;">🛫 {t('ai_chat.visa_keta')}</span>
                 </div>
             </div>
         </div>

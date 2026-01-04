@@ -81,7 +81,8 @@
     "error_invalid_email": "Invalid email format.",
     "error_passport_expired": "Passport is expired or will expire soon.",
     "error_terms": "Please agree to the terms of service.",
-    "success": "Registration completed successfully!"
+    "success": "Registration completed successfully!",
+    "go_to_login": "Go to Login"
   },
   "sidebar": {
     "dashboard": "Dashboard",

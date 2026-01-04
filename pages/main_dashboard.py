@@ -20,7 +20,7 @@ def render():
     
     # 페이지 진입 시 스크롤 맨 위로
     scroll_to_top()
-    
+
     # 결제 콜백 처리
     handle_payment_callback()
     
@@ -41,7 +41,7 @@ def render():
             <h1 style="font-size: 2rem; font-weight: 700; color: white !important; margin: 0 0 0.5rem 0;">
                 {t('dashboard.welcome')}, {name}! 👋
             </h1>
-            <p style="color: rgba(255,255,255,0.9) !important; font-size: 1rem; margin: 0 0 1rem 0;">
+            <p style="color: rgba(255,255,255,0.9); font-size: 1rem; margin: 0 0 1rem 0;">
                 {t('dashboard.what_help')}
             </p>
             <div style="display: flex; gap: 2rem;">

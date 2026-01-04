@@ -7,10 +7,14 @@ Modern Chat UI Design with Real-time Response UX
 import streamlit as st
 from services.rag_service import RAGService
 from utils.i18n import t, get_current_language
+from utils.scroll import scroll_to_top
 
 
 def render():
     """AI 채팅 페이지 렌더링"""
+
+    # 페이지 진입 시 스크롤 맨 위로
+    scroll_to_top()
     
     # 커스텀 CSS (타이핑 애니메이션 포함)
     st.markdown("""
@@ -19,6 +23,18 @@ def render():
         .chat-container {
             max-width: 800px;
             margin: 0 auto;
+        }
+        
+        /* ★★★ 사용자 메시지 텍스트 색상 강제 (최우선) ★★★ */
+        .user-message-bubble,
+        .user-message-bubble * {
+            color: #ffffff !important;
+            -webkit-text-fill-color: #ffffff !important;
+        }
+        .user-message-bubble p {
+            color: #ffffff !important;
+            -webkit-text-fill-color: #ffffff !important;
+            margin: 0 !important;
         }
         
         /* 빠른 질문 버튼 스타일 */
@@ -275,19 +291,20 @@ def render_welcome_message():
 
 
 def render_user_message(content: str):
-    """사용자 메시지 렌더링 (오른쪽, 파란색 그라데이션)"""
+    """사용자 메시지 렌더링 (오른쪽, 파란색 배경 + 흰색 텍스트)"""
     st.markdown(f"""
         <div style="display: flex; justify-content: flex-end; margin-bottom: 1rem;">
-            <div style="
+            <div class="user-message-bubble" style="
                 background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
-                color: white !important;
                 padding: 0.875rem 1.25rem;
                 border-radius: 20px 20px 4px 20px;
                 max-width: 75%;
                 font-size: 0.95rem;
                 line-height: 1.6;
-                box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
-            ">{content}</div>
+                box-shadow: 0 2px 8px rgba(59, 130, 246, 0.25);
+            ">
+                <p style="color: #ffffff !important; -webkit-text-fill-color: #ffffff !important; margin: 0 !important; font-weight: 400;">{content}</p>
+            </div>
         </div>
     """, unsafe_allow_html=True)
 

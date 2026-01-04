@@ -6,11 +6,14 @@ Clean White/Blue Theme with i18n
 import streamlit as st
 from services.auth_service import AuthService, SessionManager
 from utils.i18n import t
+from utils.scroll import scroll_to_top
 
 
 def render():
     """로그인 페이지 렌더링"""
-    
+    # 페이지 진입 시 스크롤 맨 위로
+    scroll_to_top()
+
     # 로그인 폼 (컬럼 없이 바로 렌더링 - 상위에서 컬럼 처리함)
     with st.form("login_form"):
         st.markdown(f'<label style="font-size: 0.875rem; font-weight: 500; color: #334155;">{t("auth.email")}</label>', unsafe_allow_html=True)

@@ -1455,17 +1455,19 @@ Response Style:
         return full_answer, conversation_history, related_scenario
     
     def _detect_related_scenario(self, query: str, answer: str) -> dict:
-        """질문과 답변에서 관련 시나리오 감지"""
+        """질문과 답변에서 관련 시나리오 감지 - 질문 우선 매칭"""
         
-        # 시나리오 매핑 정의
+        # 시나리오 매핑 정의 (D-2 유학 추가, 우선순위 고려)
         scenario_mapping = {
+            # D-2 유학은 시나리오가 없으므로 버튼 표시 안 함
             "A": {
                 "id": "A",
                 "name_ko": "구직 준비",
                 "name_en": "Job Search Preparation",
                 "visa": "D-10",
                 "icon": "💼",
-                "keywords": ["d-10", "d10", "구직", "job search", "취업준비", "구직비자", "구직활동", "점수제"]
+                "keywords": ["d-10", "d10", "구직비자", "구직활동", "점수제", "job search visa"],
+                "exclude_keywords": ["d-2", "d2", "유학", "학사", "석사", "박사", "연수", "d-4", "d4"]  # D-2/D-4 질문시 제외
             },
             "B": {
                 "id": "B",
@@ -1473,7 +1475,8 @@ Response Style:
                 "name_en": "Part-time Work",
                 "visa": "시간제취업",
                 "icon": "⏰",
-                "keywords": ["아르바이트", "알바", "시간제", "part-time", "parttime", "part time", "유학생 취업", "시간제취업", "20시간"]
+                "keywords": ["아르바이트", "알바", "시간제취업", "part-time work", "20시간"],
+                "exclude_keywords": []
             },
             "C": {
                 "id": "C",
@@ -1481,7 +1484,8 @@ Response Style:
                 "name_en": "Marriage Immigration",
                 "visa": "F-6",
                 "icon": "💍",
-                "keywords": ["f-6", "f6", "결혼", "marriage", "결혼이민", "배우자", "spouse", "국민의 배우자"]
+                "keywords": ["f-6", "f6", "결혼이민", "결혼비자", "배우자비자", "spouse visa", "국민의 배우자"],
+                "exclude_keywords": []
             },
             "D": {
                 "id": "D",
@@ -1489,7 +1493,8 @@ Response Style:
                 "name_en": "Family Invitation",
                 "visa": "F-1-5",
                 "icon": "👨‍👩‍👧",
-                "keywords": ["f-1-5", "f1-5", "가족초청", "family invite", "부모초청", "초청장", "방문동거"]
+                "keywords": ["f-1-5", "f1-5", "가족초청", "family invitation", "부모초청", "초청장", "방문동거"],
+                "exclude_keywords": []
             },
             "E": {
                 "id": "E",
@@ -1497,7 +1502,8 @@ Response Style:
                 "name_en": "Professional Worker",
                 "visa": "E-7",
                 "icon": "🎓",
-                "keywords": ["e-7", "e7", "전문인력", "professional", "특정활동", "전문직"]
+                "keywords": ["e-7", "e7", "전문인력", "특정활동", "전문직비자"],
+                "exclude_keywords": []
             },
             "F": {
                 "id": "F",
@@ -1505,29 +1511,50 @@ Response Style:
                 "name_en": "Naturalization",
                 "visa": "귀화",
                 "icon": "🏛️",
-                "keywords": ["귀화", "naturalization", "국적취득", "citizenship", "한국국적", "시민권"]
+                "keywords": ["귀화", "naturalization", "국적취득", "citizenship", "한국국적", "시민권"],
+                "exclude_keywords": []
             }
         }
         
-        combined_text = (query + " " + answer).lower()
+        query_lower = query.lower()
         
-        # 각 시나리오별 매칭 점수 계산
+        # ★★★ 질문에서 D-2, D-4, K-ETA 관련 키워드가 있으면 시나리오 버튼 표시 안 함 ★★★
+        # (해당 비자는 시나리오가 없거나 별도 탭에서 처리)
+        no_scenario_keywords = ["d-2", "d2", "유학", "d-4", "d4", "연수", "k-eta", "keta", "전자여행", 
+                                "d-5", "d5", "취재", "d-6", "d6", "종교", "c-4", "c4", "단기취업"]
+        
+        for keyword in no_scenario_keywords:
+            if keyword in query_lower:
+                return None  # 해당 비자 질문시 시나리오 버튼 표시 안 함
+        
+        # 각 시나리오별 매칭 점수 계산 (질문에서만 매칭)
         best_match = None
         best_score = 0
         
         for scenario_id, scenario in scenario_mapping.items():
+            # 제외 키워드 체크 (질문에 제외 키워드가 있으면 스킵)
+            exclude_keywords = scenario.get("exclude_keywords", [])
+            should_exclude = False
+            for ex_kw in exclude_keywords:
+                if ex_kw in query_lower:
+                    should_exclude = True
+                    break
+            
+            if should_exclude:
+                continue
+            
+            # 점수 계산 (질문에서만)
             score = 0
             for keyword in scenario["keywords"]:
-                if keyword.lower() in combined_text:
-                    # 더 긴 키워드에 높은 점수
-                    score += len(keyword)
+                if keyword.lower() in query_lower:
+                    score += len(keyword) * 2  # 질문 매칭에 높은 가중치
             
             if score > best_score:
                 best_score = score
                 best_match = scenario
         
-        # 최소 점수 이상일 때만 반환 (너무 약한 매칭 방지)
-        if best_score >= 3 and best_match:
+        # 최소 점수 이상일 때만 반환 (질문에서 명확히 매칭되어야 함)
+        if best_score >= 6 and best_match:
             return best_match
         
         return None

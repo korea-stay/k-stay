@@ -9,10 +9,14 @@ from datetime import datetime
 from config.settings import SCENARIOS
 from services.document_storage_service import DocumentStorageService
 from utils.i18n import t
+from utils.scroll import scroll_to_top
 
 
 def render():
     """문서 미리보기 및 다운로드 페이지"""
+
+    # 페이지 진입 시 스크롤 맨 위로
+    scroll_to_top()
     
     scenario_id = st.session_state.get('selected_scenario')
     zip_bytes = st.session_state.get('generated_zip')

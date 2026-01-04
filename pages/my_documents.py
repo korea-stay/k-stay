@@ -9,7 +9,7 @@ from datetime import datetime
 from services.document_storage_service import DocumentStorageService
 from services.auth_service import AuthService
 from utils.i18n import t, get_current_language
-
+from utils.scroll import scroll_to_top
 
 # 시나리오 이름 번역 매핑
 SCENARIO_NAME_MAP = {
@@ -73,6 +73,9 @@ def translate_document_name(name: str) -> str:
 def render():
     """내 문서함 페이지 렌더링"""
     
+    # 페이지 진입 시 스크롤 맨 위로
+    scroll_to_top()
+
     user_id = st.session_state.get('user_id')
     user_email = st.session_state.get('user_email', '')
     

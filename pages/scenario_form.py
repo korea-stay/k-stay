@@ -16,6 +16,8 @@ import streamlit as st
 from datetime import date, datetime
 from typing import Dict, List, Any, Optional, Tuple
 from utils.i18n import t, get_current_language
+import time
+from services.ai_review_service import get_ai_review_service, ReviewType
 
 # 설정 파일에서 Layer 정의 임포트
 from config.settings import (
@@ -1263,244 +1265,565 @@ def save_current_form_data(sections: List[Dict], all_field_defs: Dict):
 # Phase 3: Narrative (서술형)
 # =============================================================================
 
+# =============================================================================
+# Phase 3: Narrative (서술형)
+# =============================================================================
+# =============================================================================
+# Phase 3: Narrative (서술형)
+# =============================================================================
+
+"""
+=============================================================================
+scenario_form.py Phase 3 - 모던 UI 버전 (Fix: Indentation Issue Final)
+=============================================================================
+"""
+
+import streamlit as st
+import time
+
+AUTO_REVIEW_INTERVAL = 30
+
+
 def render_phase3_narrative(scenario):
-    """Phase 3: 서술형 데이터 입력 + AI 검토"""
+    """Phase 3: 서술형 입력 + AI 검토"""
     
     lang = get_current_language()
     scenario_id = scenario.id
+    
     narrative_config = get_narrative_config(scenario_id)
     layer3_fields = get_layer3_fields(scenario_id)
-    danger_patterns = get_danger_patterns(scenario_id)
     
+    # -------------------------------------------------------------------------
+    # [Fix] 시나리오 변경 감지 및 데이터 초기화
+    # 다른 대시보드 항목(시나리오)으로 이동 시 이전 데이터가 남지 않도록 처리
+    # -------------------------------------------------------------------------
+    if 'phase3_scenario_id' not in st.session_state:
+        st.session_state.phase3_scenario_id = None
+        
+    # 이전에 작업하던 시나리오와 현재 시나리오가 다르면 데이터 리셋
+    if st.session_state.phase3_scenario_id != scenario_id:
+        st.session_state.narrative_data = {}
+        st.session_state.ai_review_result = None
+        st.session_state.phase3_scenario_id = scenario_id
+        st.session_state.last_review_time = time.time()
+        st.session_state.show_review_toast = False
+    # -------------------------------------------------------------------------
+
+    # 세션 초기화 (리셋 후에도 필요하므로 유지)
     if 'narrative_data' not in st.session_state:
         st.session_state.narrative_data = {}
+    if 'ai_review_result' not in st.session_state:
+        st.session_state.ai_review_result = None
+    if 'last_review_time' not in st.session_state:
+        st.session_state.last_review_time = time.time()
+    if 'show_review_toast' not in st.session_state:
+        st.session_state.show_review_toast = False
     
-    if 'ai_feedbacks' not in st.session_state:
-        st.session_state.ai_feedbacks = []
-    
-    narrative_label = narrative_config.get('narrative_label_en', narrative_config.get('narrative_label', 'Narrative')) if lang == "en" else narrative_config.get('narrative_label', '서술형 작성')
+    ai_service = get_ai_review_service()
     
     if not layer3_fields:
-        no_items_title = get_text("서술형 항목이 없습니다", "No Narrative Items")
-        no_items_desc = get_text("이 시나리오는 서술형 작성이 필요하지 않습니다.", "This scenario does not require narrative writing.")
-        
-        st.markdown(f"""
-            <div style="background: #f0fdf4; border: 2px solid #86efac; border-radius: 16px; padding: 2rem; text-align: center;">
-                <div style="font-size: 3rem; margin-bottom: 1rem;">✅</div>
-                <h3 style="color: #166534; margin: 0 0 0.5rem 0;">{no_items_title}</h3>
-                <p style="color: #15803d; margin: 0;">{no_items_desc}</p>
-            </div>
-        """, unsafe_allow_html=True)
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button(get_text("← Phase 2로 돌아가기", "← Back to Phase 2"), use_container_width=True):
-                st.session_state.form_step = 2
-                st.rerun()
-        with col2:
-            if st.button(get_text("결제하기 →", "Proceed to Payment →"), type="primary", use_container_width=True):
-                st.session_state.form_step = 4
-                st.rerun()
+        _render_no_narrative_required()
         return
     
-    guide_text = get_text(
-        "각 항목에 대해 상세히 작성해주세요. AI가 실시간으로 검토합니다.",
-        "Please write in detail for each item. AI will review in real-time."
-    )
+    # 30초 자동 검토
+    current_time = time.time()
+    if current_time - st.session_state.last_review_time >= AUTO_REVIEW_INTERVAL:
+        result = ai_service.review_narratives(
+            scenario_id=scenario_id,
+            narrative_data=st.session_state.narrative_data,
+            narrative_config=narrative_config,
+            force_refresh=True
+        )
+        if result:
+            st.session_state.ai_review_result = result
+            st.session_state.last_review_time = current_time
+            st.session_state.show_review_toast = True
+            st.rerun()
+    
+    if st.session_state.get('show_review_toast'):
+        st.toast(get_text("🤖 AI 자동 검토 완료!", "🤖 Auto review done!"), icon="✅")
+        st.session_state.show_review_toast = False
+    
+    # 글로벌 스타일 (들여쓰기 제거)
+    st.markdown("""
+<style>
+/* 카드 스타일 */
+.card {
+background: white;
+border-radius: 16px;
+padding: 24px;
+margin-bottom: 20px;
+box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+border: 1px solid #f0f0f0;
+}
+
+/* 필드 카드 */
+.field-card {
+background: #fafbfc;
+border-radius: 12px;
+padding: 20px;
+margin-bottom: 16px;
+border: 1px solid #e8eaed;
+transition: all 0.2s ease;
+}
+.field-card:hover {
+border-color: #667eea;
+box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+}
+
+/* 상태 뱃지 */
+.status-badge {
+display: inline-flex;
+align-items: center;
+gap: 6px;
+padding: 6px 12px;
+border-radius: 20px;
+font-size: 13px;
+font-weight: 600;
+}
+.status-danger { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+.status-caution { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
+.status-good { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+.status-pending { background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0; }
+
+/* 진행바 */
+.progress-container {
+background: #e5e7eb;
+border-radius: 10px;
+height: 8px;
+overflow: hidden;
+}
+.progress-bar {
+height: 100%;
+border-radius: 10px;
+transition: width 0.3s ease;
+}
+
+/* 피드백 패널 */
+.feedback-panel {
+background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+border-radius: 20px;
+padding: 24px;
+color: white;
+}
+
+/* 피드백 아이템 */
+.feedback-item {
+background: white;
+border-radius: 12px;
+padding: 16px;
+margin-bottom: 12px;
+border-left: 4px solid;
+}
+.feedback-danger { border-color: #ef4444; }
+.feedback-caution { border-color: #f59e0b; }
+.feedback-good { border-color: #22c55e; }
+
+/* 버튼 스타일 */
+.review-btn {
+background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+color: white;
+border: none;
+padding: 14px 28px;
+border-radius: 12px;
+font-weight: 600;
+font-size: 15px;
+cursor: pointer;
+width: 100%;
+transition: transform 0.2s, box-shadow 0.2s;
+}
+.review-btn:hover {
+transform: translateY(-2px);
+box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+}
+
+/* Q번호 뱃지 */
+.q-badge {
+background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+color: white;
+padding: 4px 12px;
+border-radius: 20px;
+font-size: 12px;
+font-weight: 700;
+margin-right: 10px;
+}
+
+/* 결과 카드 */
+.result-card {
+border-radius: 16px;
+padding: 24px;
+text-align: center;
+}
+.result-danger { background: linear-gradient(135deg, #fef2f2, #fee2e2); border: 2px solid #fecaca; }
+.result-caution { background: linear-gradient(135deg, #fffbeb, #fef3c7); border: 2px solid #fde68a; }
+.result-good { background: linear-gradient(135deg, #f0fdf4, #dcfce7); border: 2px solid #bbf7d0; }
+
+/* 통계 박스 */
+.stat-box {
+background: white;
+border-radius: 12px;
+padding: 16px;
+text-align: center;
+flex: 1;
+}
+.stat-number {
+font-size: 28px;
+font-weight: 800;
+}
+.stat-label {
+font-size: 12px;
+color: #6b7280;
+margin-top: 4px;
+}
+</style>
+""", unsafe_allow_html=True)
+    
+    # 헤더 (들여쓰기 제거)
+    narrative_label = narrative_config.get('narrative_label_en' if lang == "en" else 'narrative_label', '서술형 작성')
     
     st.markdown(f"""
-        <div style="background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%); border-radius: 16px; padding: 1.5rem; margin-bottom: 1.5rem; color: white;">
-            <div style="display: flex; align-items: center; gap: 12px;">
-                <span style="font-size: 2.5rem;">✍️</span>
-                <div>
-                    <h2 style="margin: 0; font-size: 1.4rem; font-weight: 700;">{narrative_label}</h2>
-                    <p style="margin: 4px 0 0 0; opacity: 0.9; font-size: 0.9rem;">{guide_text}</p>
-                </div>
-            </div>
-        </div>
-    """, unsafe_allow_html=True)
+<div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+border-radius: 20px; padding: 32px; margin-bottom: 28px;
+box-shadow: 0 10px 40px rgba(102, 126, 234, 0.3);">
+<div style="display: flex; justify-content: space-between; align-items: center;">
+<div>
+<h1 style="margin: 0; color: white; font-size: 28px; font-weight: 700;">
+✍️ {narrative_label}
+</h1>
+<p style="margin: 8px 0 0 0; color: rgba(255,255,255,0.85); font-size: 15px;">
+{get_text("각 항목을 상세히 작성해주세요", "Please write in detail for each item")}
+</p>
+</div>
+<div style="background: rgba(255,255,255,0.2); backdrop-filter: blur(10px);
+border-radius: 12px; padding: 12px 20px;">
+<span style="color: white; font-size: 14px;">🔄 {get_text("30초 자동 검토", "Auto review 30s")}</span>
+</div>
+</div>
+</div>
+""", unsafe_allow_html=True)
     
-    form_col, feedback_col = st.columns([2, 1])
+    # 2열 레이아웃
+    form_col, feedback_col = st.columns([3, 2])
     
     with form_col:
         for i, field in enumerate(layer3_fields):
-            render_narrative_field(i, field, danger_patterns)
+            _render_field_card(i, field, ai_service, lang)
         
         st.markdown("<br>", unsafe_allow_html=True)
-        
-        col_validate, _ = st.columns([1, 1])
-        with col_validate:
-            if st.button(get_text("🤖 AI 검토 요청", "🤖 Request AI Review"), use_container_width=True):
-                run_ai_validation(layer3_fields, danger_patterns)
-                st.rerun()
-        
-        st.markdown("<br>", unsafe_allow_html=True)
-        
-        col_back, col_next = st.columns(2)
-        
-        with col_back:
-            if st.button(get_text("← Phase 2로 돌아가기", "← Back to Phase 2"), use_container_width=True):
-                st.session_state.form_step = 2
-                st.rerun()
-        
-        with col_next:
-            if st.button(get_text("✓ 작성 완료 → 결제하기", "✓ Complete → Proceed to Payment"), use_container_width=True, type="primary"):
-                missing = validate_narrative_fields(layer3_fields)
-                if missing:
-                    error_text = get_text("필수 항목을 작성해주세요:", "Please complete required fields:")
-                    st.error(f"{error_text} {', '.join(missing)}")
-                else:
-                    st.session_state.form_step = 4
-                    st.rerun()
+        _render_navigation(layer3_fields)
     
     with feedback_col:
-        render_ai_feedback_panel(layer3_fields)
+        _render_feedback_panel_modern(layer3_fields, ai_service, narrative_config, lang)
 
 
-def render_narrative_field(index: int, field: Dict, danger_patterns: List[str]):
-    """서술형 필드 렌더링"""
-    
-    lang = get_current_language()
-    
+def _render_no_narrative_required():
+    st.success(get_text(
+        "✅ 이 시나리오는 서술형 작성이 필요하지 않습니다.",
+        "✅ No narrative required for this scenario."
+    ))
+    c1, c2 = st.columns(2)
+    with c1:
+        if st.button(get_text("← 이전", "← Back"), use_container_width=True):
+            st.session_state.form_step = 2
+            st.rerun()
+    with c2:
+        if st.button(get_text("다음 →", "Next →"), type="primary", use_container_width=True):
+            st.session_state.form_step = 4
+            st.rerun()
+
+
+def _render_field_card(index: int, field: dict, ai_service, lang: str):
+    """필드 카드 렌더링"""
     data_key = field['data_key']
-    label = field.get('label_en', field.get('label', data_key)) if lang == "en" else field.get('label', data_key)
-    label_sub = field.get('label', '') if lang == "en" else field.get('label_en', '')
-    hint = field.get('hint_en', field.get('hint', '')) if lang == "en" else field.get('hint', '')
-    placeholder = field.get('placeholder_en', field.get('placeholder', '')) if lang == "en" else field.get('placeholder', '')
+    label = field.get('label_en' if lang == "en" else 'label', data_key)
+    label_sub = field.get('label' if lang == "en" else 'label_en', '')
+    hint = field.get('hint_en' if lang == "en" else 'hint', '')
+    placeholder = field.get('placeholder_en' if lang == "en" else 'placeholder', '')
     min_chars = field.get('min_chars', 50)
     required = field.get('required', False)
     
-    current_value = st.session_state.narrative_data.get(data_key, '')
+    # 저장된 값 가져오기
+    saved_value = st.session_state.narrative_data.get(data_key, '')
     
+    # AI 검토 결과에서 상태
+    review_result = st.session_state.get('ai_review_result')
+    icon, color, bg, status_text = ai_service.get_field_status_for_display(data_key, review_result)
+    
+    if lang == 'en':
+        status_map = {'위험': 'Danger', '주의': 'Caution', '양호': 'Good', '검토 대기': 'Pending', '대기': 'Pending'}
+        status_text = status_map.get(status_text, status_text)
+    
+    # 상태별 스타일
+    status_class = {
+        '위험': 'danger', 'Danger': 'danger',
+        '주의': 'caution', 'Caution': 'caution', 
+        '양호': 'good', 'Good': 'good'
+    }.get(status_text, 'pending')
+    
+    req_mark = '<span style="color: #ef4444;">*</span>' if required else ''
+    
+    # 헤더 렌더링 (HTML 들여쓰기 제거)
     st.markdown(f"""
-        <div style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1rem; margin-bottom: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-            <div style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 8px;">
-                <span style="background: #7c3aed; color: white; font-size: 0.75rem; font-weight: 700; padding: 2px 8px; border-radius: 6px;">Q{index + 1}</span>
-                <div>
-                    <div style="font-weight: 600; color: #1e293b; font-size: 0.9rem;">{label} {'*' if required else ''}</div>
-                    <div style="color: #64748b; font-size: 0.75rem;">{label_sub}</div>
-                </div>
-            </div>
-    """, unsafe_allow_html=True)
+<div class="field-card">
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+<div style="display: flex; align-items: center;">
+<span class="q-badge">Q{index + 1}</span>
+<span style="font-size: 16px; font-weight: 600; color: #1f2937;">
+{label} {req_mark}
+</span>
+</div>
+<span class="status-badge status-{status_class}">
+{icon} {status_text}
+</span>
+</div>
+{f'<p style="font-size: 13px; color: #6b7280; margin: 0 0 8px 0;">{label_sub}</p>' if label_sub else ''}
+</div>
+""", unsafe_allow_html=True)
     
     if hint:
-        st.caption(f"💡 {hint}")
+        st.info(f"💡 {hint}")
     
-    answer_label = get_text("답변 입력", "Enter your answer")
-    answer = st.text_area(answer_label, value=current_value, height=120, key=f"narrative_{data_key}", placeholder=placeholder, label_visibility="collapsed")
+    # 텍스트 입력 (answer 받기)
+    answer = st.text_area(
+        label,
+        value=saved_value,
+        height=100,
+        key=f"narrative_{data_key}",
+        placeholder=placeholder,
+        label_visibility="collapsed"
+    )
     
+    # 데이터 업데이트 (즉시 동기화)
     st.session_state.narrative_data[data_key] = answer
     
+    # 최신 값으로 진행바 계산 (여기가 수정됨)
     char_count = len(answer)
-    color = "#22c55e" if char_count >= min_chars else "#f59e0b" if char_count > 0 else "#ef4444"
+    progress = min(char_count / min_chars, 1.0) if min_chars > 0 else 1.0
+    progress_pct = int(progress * 100)
     
-    min_chars_text = get_text(f"최소 {min_chars}자 이상 작성", f"Minimum {min_chars} characters")
-    chars_text = get_text("자", "chars")
+    # 진행바 색상
+    bar_color = '#22c55e' if progress_pct >= 100 else '#f59e0b' if progress_pct >= 50 else '#ef4444'
     
+    # 진행바 렌더링 (HTML 들여쓰기 제거)
     st.markdown(f"""
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
-                <div style="font-size: 0.7rem; color: #94a3b8;">{min_chars_text}</div>
-                <div style="font-size: 0.75rem; font-weight: 600; color: {color};">{char_count} / {min_chars} {chars_text}</div>
-            </div>
-        </div>
-    """, unsafe_allow_html=True)
+<div style="display: flex; justify-content: space-between; align-items: center; margin: 8px 0 20px 0;">
+<div style="flex: 1; margin-right: 16px;">
+<div class="progress-container">
+<div class="progress-bar" style="width: {progress_pct}%; background: {bar_color};"></div>
+</div>
+</div>
+<span style="font-size: 13px; font-weight: 600; color: {bar_color};">
+{char_count}/{min_chars}
+</span>
+</div>
+""", unsafe_allow_html=True)
 
 
-def run_ai_validation(fields: List[Dict], danger_patterns: List[str]):
-    """AI 검토 실행"""
+def _render_feedback_panel_modern(fields: list, ai_service, narrative_config, lang: str):
+    """모던 피드백 패널"""
     
-    lang = get_current_language()
-    feedbacks = []
-    
-    for field in fields:
-        data_key = field['data_key']
-        answer = st.session_state.narrative_data.get(data_key, '')
-        label = field.get('label_en', field.get('label', data_key)) if lang == "en" else field.get('label', data_key)
-        min_chars = field.get('min_chars', 50)
-        
-        short_label = label[:15] + '...' if len(label) > 15 else label
-        
-        if len(answer) == 0:
-            msg = get_text('아직 작성되지 않았습니다.', 'Not written yet.')
-            feedbacks.append({'field': short_label, 'type': 'error', 'message': msg})
-            continue
-        
-        if len(answer) < min_chars:
-            msg = get_text(f'내용이 부족합니다. ({len(answer)}/{min_chars}자)', f'Content insufficient. ({len(answer)}/{min_chars} chars)')
-            feedbacks.append({'field': short_label, 'type': 'warning', 'message': msg})
-            continue
-        
-        found_dangers = [p for p in danger_patterns if p in answer]
-        if found_dangers:
-            msg = get_text(f'위험 표현: "{found_dangers[0]}"', f'Risky expression: "{found_dangers[0]}"')
-            feedbacks.append({'field': short_label, 'type': 'error', 'message': msg})
-            continue
-        
-        msg = get_text('잘 작성되었습니다 ✓', 'Well written ✓')
-        feedbacks.append({'field': short_label, 'type': 'success', 'message': msg})
-    
-    st.session_state.ai_feedbacks = feedbacks
-
-
-def render_ai_feedback_panel(fields: List[Dict]):
-    """AI 피드백 패널"""
-    
-    lang = get_current_language()
-    feedbacks = st.session_state.get('ai_feedbacks', [])
-    
+    # 진행률 계산
     total = len(fields)
-    completed = sum(1 for f in fields if len(st.session_state.narrative_data.get(f['data_key'], '')) >= f.get('min_chars', 50))
-    progress = int((completed / total) * 100) if total > 0 else 0
-    progress_color = '#22c55e' if progress == 100 else '#3b82f6'
+    completed = sum(
+        1 for f in fields 
+        if len(st.session_state.narrative_data.get(f['data_key'], '')) >= f.get('min_chars', 50)
+    )
+    progress_pct = int((completed / total) * 100) if total > 0 else 0
     
-    with st.container():
-        progress_title = get_text("📊 작성 진행률", "📊 Writing Progress")
-        st.markdown(f"#### {progress_title}")
-        
-        completed_text = get_text("완료", "completed")
-        
+    # 진행률 섹션 (들여쓰기 제거)
+    st.markdown(f"""
+<div class="card">
+<h3 style="margin: 0 0 16px 0; font-size: 18px; color: #1f2937;">
+📊 {get_text("작성 진행률", "Progress")}
+</h3>
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+<span style="font-size: 14px; color: #6b7280;">{completed}/{total} {get_text("완료", "done")}</span>
+<span style="font-size: 24px; font-weight: 800; color: {'#22c55e' if progress_pct == 100 else '#667eea'};">
+{progress_pct}%
+</span>
+</div>
+<div class="progress-container">
+<div class="progress-bar" style="width: {progress_pct}%; background: linear-gradient(90deg, #667eea, #764ba2);"></div>
+</div>
+</div>
+""", unsafe_allow_html=True)
+    
+    # AI 검토 버튼 (들여쓰기 제거)
+    st.markdown(f"""
+<div class="card">
+<h3 style="margin: 0 0 16px 0; font-size: 18px; color: #1f2937;">
+🤖 {get_text("AI 검토", "AI Review")}
+</h3>
+</div>
+""", unsafe_allow_html=True)
+    
+    if ai_service.is_api_available():
+        if st.button(
+            get_text("🚀 AI 검토 요청", "🚀 Request AI Review"),
+            use_container_width=True,
+            type="primary"
+        ):
+            with st.spinner(get_text("AI 분석 중...", "AI analyzing...")):
+                result = ai_service.review_narratives(
+                    scenario_id=st.session_state.get('selected_scenario', ''),
+                    narrative_data=st.session_state.narrative_data,
+                    narrative_config=narrative_config,
+                    force_refresh=True
+                )
+                if result:
+                    st.session_state.ai_review_result = result
+                    st.session_state.last_review_time = time.time()
+                    st.rerun()
+    else:
+        st.warning(get_text("⚠️ API 키 필요", "⚠️ API key required"))
+    
+    # 검토 결과
+    result = st.session_state.get('ai_review_result')
+    
+    if result:
+        _render_review_result_modern(result, lang)
+    else:
+        # 대기 화면 (들여쓰기 제거)
         st.markdown(f"""
-            <div style="background: #e2e8f0; border-radius: 10px; height: 10px; overflow: hidden; margin-bottom: 8px;">
-                <div style="background: linear-gradient(90deg, #22c55e, #16a34a); height: 100%; width: {progress}%; border-radius: 10px;"></div>
-            </div>
-            <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: #64748b; margin-bottom: 16px;">
-                <span>{completed}/{total} {completed_text}</span>
-                <span style="font-weight: 600; color: {progress_color};">{progress}%</span>
-            </div>
-        """, unsafe_allow_html=True)
-        
-        st.markdown("---")
-        feedback_title = get_text("🤖 AI 피드백", "🤖 AI Feedback")
-        st.markdown(f"#### {feedback_title}")
-        
-        if feedbacks:
-            for fb in feedbacks:
-                fb_type = fb.get('type', 'info')
-                if fb_type == 'error':
-                    st.error(f"**{fb.get('field', '')}**: {fb.get('message', '')}")
-                elif fb_type == 'warning':
-                    st.warning(f"**{fb.get('field', '')}**: {fb.get('message', '')}")
-                elif fb_type == 'success':
-                    st.success(f"**{fb.get('field', '')}**: {fb.get('message', '')}")
-                else:
-                    st.info(f"**{fb.get('field', '')}**: {fb.get('message', '')}")
-        else:
-            click_text = get_text("'AI 검토 요청' 버튼을 클릭해주세요", "Click 'Request AI Review' button")
-            st.info(click_text)
+<div class="card" style="text-align: center; padding: 40px;">
+<div style="font-size: 48px; margin-bottom: 16px; opacity: 0.3;">🤖</div>
+<h4 style="margin: 0; color: #9ca3af;">{get_text("AI 검토 대기 중", "Waiting for AI Review")}</h4>
+<p style="margin: 8px 0 0 0; color: #d1d5db; font-size: 13px;">
+{get_text("버튼을 클릭하거나 30초 후 자동 검토", "Click button or wait 30s")}
+</p>
+</div>
+""", unsafe_allow_html=True)
 
 
-def validate_narrative_fields(fields: List[Dict]) -> List[str]:
-    """필수 서술형 필드 검증"""
+def _render_review_result_modern(result, lang: str):
+    """모던 검토 결과"""
+    danger_count = sum(1 for fb in result.feedbacks if fb.review_type.value == 'danger')
+    caution_count = sum(1 for fb in result.feedbacks if fb.review_type.value == 'caution')
+    good_count = sum(1 for fb in result.feedbacks if fb.review_type.value == 'good')
+    
+    status_key = result.overall_status.value
+    
+    # 상태별 스타일
+    if status_key == 'good':
+        result_class = 'good'
+        icon = '🟢'
+        title = get_text('양호', 'Good')
+        subtitle = get_text('문제가 없습니다!', 'No issues found!')
+        title_color = '#16a34a'
+    elif status_key == 'caution':
+        result_class = 'caution'
+        icon = '🟡'
+        title = get_text('주의', 'Caution')
+        subtitle = get_text('보완을 권장합니다', 'Improvement recommended')
+        title_color = '#d97706'
+    else:
+        result_class = 'danger'
+        icon = '🔴'
+        title = get_text('위험', 'Danger')
+        subtitle = get_text('수정이 필요합니다', 'Revision required')
+        title_color = '#dc2626'
+    
+    # 결과 카드 (들여쓰기 완벽 제거 - Flush Left)
+    st.markdown(f"""
+<div class="result-card result-{result_class}">
+<div style="font-size: 48px; margin-bottom: 8px;">{icon}</div>
+<h2 style="margin: 0; color: {title_color}; font-size: 28px; font-weight: 800;">{title}</h2>
+<p style="margin: 4px 0 16px 0; color: #6b7280; font-size: 14px;">{subtitle}</p>
+<div style="display: flex; gap: 12px; margin-top: 16px;">
+<div class="stat-box">
+<div class="stat-number" style="color: #ef4444;">{danger_count}</div>
+<div class="stat-label">{get_text('위험', 'Danger')}</div>
+</div>
+<div class="stat-box">
+<div class="stat-number" style="color: #f59e0b;">{caution_count}</div>
+<div class="stat-label">{get_text('주의', 'Caution')}</div>
+</div>
+<div class="stat-box">
+<div class="stat-number" style="color: #22c55e;">{good_count}</div>
+<div class="stat-label">{get_text('양호', 'Good')}</div>
+</div>
+</div>
+<p style="margin: 16px 0 0 0; font-size: 11px; color: #9ca3af;">
+🤖 AI | {result.reviewed_at}
+</p>
+</div>
+""", unsafe_allow_html=True)
+    
+    # 항목별 피드백 (들여쓰기 제거)
+    st.markdown(f"""
+<h3 style="margin: 24px 0 16px 0; font-size: 16px; color: #1f2937;">
+📋 {get_text("항목별 피드백", "Feedback by Item")}
+</h3>
+""", unsafe_allow_html=True)
+    
+    for fb in result.feedbacks:
+        _render_feedback_item_modern(fb, lang)
+
+
+def _render_feedback_item_modern(fb, lang: str):
+    """모던 피드백 아이템"""
+    label = fb.field_label_en if lang == 'en' else fb.field_label
+    msg = fb.message_en if lang == 'en' else fb.message
+    suggestions = fb.suggestions_en if lang == 'en' else fb.suggestions
+    status = fb.review_type.value
+    
+    icon_map = {'danger': '🔴', 'caution': '🟡', 'good': '🟢'}
+    icon = icon_map.get(status, '⚪')
+    
+    # 제안사항 HTML (들여쓰기 제거)
+    suggestions_html = ''
+    if suggestions:
+        items = ''.join([f'<li>{s}</li>' for s in suggestions[:2]])
+        suggestions_html = f"""
+<div style="background: #f8fafc; border-radius: 8px; padding: 12px; margin-top: 12px;">
+<div style="font-size: 12px; font-weight: 600; color: #64748b; margin-bottom: 6px;">
+💡 {get_text('개선 제안', 'Suggestions')}
+</div>
+<ul style="margin: 0; padding-left: 20px; font-size: 13px; color: #475569;">{items}</ul>
+</div>
+"""
+    
+    # 피드백 아이템 HTML (들여쓰기 제거)
+    st.markdown(f"""
+<div class="feedback-item feedback-{status}">
+<div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+<span style="font-size: 16px;">{icon}</span>
+<span style="font-weight: 600; color: #1f2937;">{label}</span>
+</div>
+<p style="margin: 0; font-size: 14px; color: #4b5563; line-height: 1.5;">{msg}</p>
+{suggestions_html}
+</div>
+""", unsafe_allow_html=True)
+
+
+def _render_navigation(fields: list):
+    """네비게이션"""
+    c1, c2 = st.columns(2)
+    with c1:
+        if st.button(get_text("← Phase 2로", "← Back to Phase 2"), use_container_width=True):
+            st.session_state.form_step = 2
+            st.rerun()
+    with c2:
+        if st.button(get_text("결제하기 →", "Payment →"), type="primary", use_container_width=True):
+            missing = validate_narrative_fields(fields)
+            if missing:
+                st.error(get_text(f"필수 미완료: {', '.join(missing)}", f"Required: {', '.join(missing)}"))
+            else:
+                st.session_state.form_step = 4
+                st.rerun()
+
+
+def validate_narrative_fields(fields: list) -> list:
+    lang = get_current_language()
     missing = []
-    for field in fields:
-        if field.get('required', False):
-            data_key = field['data_key']
-            min_chars = field.get('min_chars', 50)
-            answer = st.session_state.narrative_data.get(data_key, '')
-            if len(answer) < min_chars:
-                missing.append(field.get('label', data_key)[:20])
+    for f in fields:
+        if f.get('required', False):
+            key = f['data_key']
+            min_c = f.get('min_chars', 50)
+            label = f.get('label_en' if lang == 'en' else 'label', key)
+            if len(st.session_state.narrative_data.get(key, '')) < min_c:
+                missing.append(label[:15])
     return missing
-
 
 # =============================================================================
 # Phase 4: Payment - ★★★ NEW EMBEDDED CHECKOUT SYSTEM ★★★

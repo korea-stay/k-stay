@@ -13,7 +13,7 @@ from utils.scroll import scroll_to_top
 
 def render():
     """회원가입 페이지 렌더링"""
-
+    
     # 페이지 진입 시 스크롤 맨 위로
     scroll_to_top()
     
@@ -525,3 +525,17 @@ def render_step5_confirm():
                 st.rerun()
             else:
                 st.error(f"❌ {message}")
+                
+                # 이미 등록된 이메일인 경우 로그인 페이지로 이동 버튼 표시
+                if "이미 등록" in message or "already" in message.lower():
+                    st.markdown("<div style='height: 0.5rem;'></div>", unsafe_allow_html=True)
+                    
+                    if st.button(f"🔑 {t('signup.go_to_login')}", use_container_width=True):
+                        # 가입 데이터 정리
+                        if 'signup_data' in st.session_state:
+                            del st.session_state.signup_data
+                        if 'signup_step' in st.session_state:
+                            del st.session_state.signup_step
+                        
+                        st.session_state.auth_page = 'login'
+                        st.rerun()

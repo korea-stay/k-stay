@@ -252,5 +252,27 @@
     "network": "Network error occurred.",
     "unauthorized": "Login required.",
     "not_found": "Page not found."
+  },
+  "document_preview": {
+    "title": "🎉 Document Generation Complete!",
+    "subtitle": "Your {scenario} ({visa_type}) document package is ready.",
+    "no_document": "No generated documents found.",
+    "back_to_dashboard": "← Back to Dashboard",
+    "included_docs": "📦 Included Documents",
+    "cloud_saved": "✅ Documents saved to cloud.",
+    "local_saved": "💾 Documents saved locally. (Test Mode)",
+    "download_title": "📥 Download",
+    "download_btn": "📥 Download Document Package (ZIP)",
+    "filename": "Filename",
+    "no_file": "No file available for download.",
+    "view_my_documents": "📁 View in My Documents",
+    "go_to_dashboard": "🏠 Back to Dashboard",
+    "next_steps_title": "📋 Next Steps",
+    "next_step_1": "**Download**: Click the button above to download the ZIP file.",
+    "next_step_2": "**Extract**: Unzip the downloaded file.",
+    "next_step_3": "**Review**: Carefully review and edit each document.",
+    "next_step_4": "**Submit**: Book an appointment at Hi Korea (www.hikorea.go.kr) and submit your documents.",
+    "warning": "⚠️ **Warning**: These documents are AI-generated drafts. Please review carefully before submission and consult an expert if needed.",
+    "save_error": "Failed to save document"
   }
 }

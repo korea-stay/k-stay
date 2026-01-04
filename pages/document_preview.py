@@ -1,12 +1,14 @@
 """
 K-Stay Document Preview & Download Page
 문서 생성 완료 후 결과 페이지
+with i18n support
 """
 
 import streamlit as st
 from datetime import datetime
 from config.settings import SCENARIOS
 from services.document_storage_service import DocumentStorageService
+from utils.i18n import t
 
 
 def render():
@@ -16,8 +18,8 @@ def render():
     zip_bytes = st.session_state.get('generated_zip')
     
     if not scenario_id:
-        st.warning("생성된 문서가 없습니다.")
-        if st.button("← 대시보드로 돌아가기"):
+        st.warning(t('document_preview.no_document'))
+        if st.button(t('document_preview.back_to_dashboard')):
             st.session_state.current_page = 'dashboard'
             st.rerun()
         return
@@ -30,8 +32,11 @@ def render():
         save_document_to_db(user_id, scenario, zip_bytes)
     
     # 헤더
-    st.markdown("## 🎉 문서 생성 완료!")
-    st.markdown(f"**{scenario.name} ({scenario.visa_type})** 서류 패키지가 준비되었습니다.")
+    st.markdown(f"## {t('document_preview.title')}")
+    
+    # subtitle with scenario name and visa type
+    subtitle = t('document_preview.subtitle').replace('{scenario}', scenario.name).replace('{visa_type}', scenario.visa_type)
+    st.markdown(f"**{subtitle}**")
     
     st.markdown("---")
     
@@ -40,7 +45,7 @@ def render():
     
     with col1:
         # 포함된 문서 목록
-        st.markdown("### 📦 포함된 문서")
+        st.markdown(f"### {t('document_preview.included_docs')}")
         
         for i, doc in enumerate(scenario.required_docs, 1):
             st.markdown(f"{i}. {doc}")
@@ -50,19 +55,19 @@ def render():
         # 저장 상태
         storage_service = DocumentStorageService()
         if storage_service.is_connected():
-            st.success("✅ 문서가 클라우드에 저장되었습니다.")
+            st.success(t('document_preview.cloud_saved'))
         else:
-            st.info("💾 문서가 로컬에 저장되었습니다. (테스트 모드)")
+            st.info(t('document_preview.local_saved'))
     
     with col2:
-        st.markdown("### 📥 다운로드")
+        st.markdown(f"### {t('document_preview.download_title')}")
         
         if zip_bytes:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             filename = f"KStay_{scenario.visa_type}_{timestamp}.zip"
             
             st.download_button(
-                label="📥 서류 패키지 다운로드 (ZIP)",
+                label=t('document_preview.download_btn'),
                 data=zip_bytes,
                 file_name=filename,
                 mime="application/zip",
@@ -70,19 +75,19 @@ def render():
                 type="primary"
             )
             
-            st.caption(f"파일명: {filename}")
+            st.caption(f"{t('document_preview.filename')}: {filename}")
         else:
-            st.warning("다운로드 파일이 없습니다.")
+            st.warning(t('document_preview.no_file'))
         
         st.markdown("---")
         
         # 내 문서함으로 이동
-        if st.button("📁 내 문서함에서 보기", use_container_width=True):
+        if st.button(t('document_preview.view_my_documents'), use_container_width=True):
             st.session_state.current_page = 'my_documents'
             st.rerun()
         
         # 대시보드로 이동
-        if st.button("🏠 대시보드로 돌아가기", use_container_width=True):
+        if st.button(t('document_preview.go_to_dashboard'), use_container_width=True):
             reset_form_state()
             st.session_state.current_page = 'dashboard'
             st.rerun()
@@ -90,16 +95,17 @@ def render():
     # 안내사항
     st.markdown("---")
     
-    st.info("""
-**📋 다음 단계**
+    next_steps = f"""
+**{t('document_preview.next_steps_title')}**
 
-1. **다운로드**: 위 버튼을 클릭하여 ZIP 파일을 다운로드하세요.
-2. **압축 해제**: 다운로드한 파일의 압축을 해제하세요.
-3. **내용 확인**: 각 문서의 내용을 꼼꼼히 확인하고 수정하세요.
-4. **출입국관리사무소 방문**: 하이코리아(www.hikorea.go.kr)에서 방문 예약 후 서류를 제출하세요.
-    """)
+1. {t('document_preview.next_step_1')}
+2. {t('document_preview.next_step_2')}
+3. {t('document_preview.next_step_3')}
+4. {t('document_preview.next_step_4')}
+    """
+    st.info(next_steps)
     
-    st.warning("⚠️ **주의**: 본 문서는 AI가 생성한 초안입니다. 제출 전 반드시 내용을 확인하시고, 필요시 전문가의 검토를 받으세요.")
+    st.warning(t('document_preview.warning'))
 
 
 def save_document_to_db(user_id: str, scenario, zip_bytes: bytes):
@@ -123,7 +129,7 @@ def save_document_to_db(user_id: str, scenario, zip_bytes: bytes):
         st.session_state.document_saved = True
         st.session_state.saved_document_id = doc_id
     else:
-        st.error(f"문서 저장 실패: {msg}")
+        st.error(f"{t('document_preview.save_error')}: {msg}")
 
 
 def reset_form_state():

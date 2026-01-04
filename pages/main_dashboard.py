@@ -114,9 +114,9 @@ def render_scenario_list():
     
     col1, col2 = st.columns(2)
     with col1:
-        render_scenario_card("💼", "#fef3c7", t("scenarios.job_search"), "D-10", t("scenarios.job_search_desc"), 5, "A")
+        render_scenario_card("💼", "#fef3c7", t("scenarios.job_search"), "D-10", t("scenarios.job_search_desc"), 3, "A")
     with col2:
-        render_scenario_card("⏰", "#fce7f3", t("scenarios.part_time"), t("scenarios.part_time"), t("scenarios.part_time_desc"), 5, "B")
+        render_scenario_card("⏰", "#fce7f3", t("scenarios.part_time"), t("scenarios.part_time"), t("scenarios.part_time_desc"), 3, "B")
     
     st.markdown("<br>", unsafe_allow_html=True)
     
@@ -125,7 +125,7 @@ def render_scenario_list():
     
     col3, col4 = st.columns(2)
     with col3:
-        render_scenario_card("👨‍👩‍👧", "#d1fae5", t("scenarios.family_invite"), "F-1-5", t("scenarios.family_invite_desc"), 4, "D")
+        render_scenario_card("👨‍👩‍👧", "#d1fae5", t("scenarios.family_invite"), "F-1-5", t("scenarios.family_invite_desc"), 3, "D")
     with col4:
         render_scenario_card("🏥", "#e0f2fe", t("scenarios.medical"), "C-3-3/G-1-10", t("scenarios.medical_desc"), 3, "G")
     
@@ -136,7 +136,7 @@ def render_scenario_list():
     
     col5, col6 = st.columns(2)
     with col5:
-        render_scenario_card("🏛️", "#fef3c7", t("scenarios.naturalization"), t("scenarios.naturalization"), t("scenarios.naturalization_desc"), 4, "F")
+        render_scenario_card("🏛️", "#fef3c7", t("scenarios.naturalization"), t("scenarios.naturalization"), t("scenarios.naturalization_desc"), 2, "F")
     with col6:
         render_coming_soon_card()
 

@@ -1,6 +1,6 @@
 """
 K-Stay Login Page
-Clean White/Blue Theme with i18n
+간소화 버전 - app.py에서 CSS 처리
 """
 
 import streamlit as st
@@ -11,32 +11,35 @@ from utils.scroll import scroll_to_top
 
 def render():
     """로그인 페이지 렌더링"""
-    # 페이지 진입 시 스크롤 맨 위로
     scroll_to_top()
-
-    # 로그인 폼 (컬럼 없이 바로 렌더링 - 상위에서 컬럼 처리함)
-    with st.form("login_form"):
-        st.markdown(f'<label style="font-size: 0.875rem; font-weight: 500; color: #334155;">{t("auth.email")}</label>', unsafe_allow_html=True)
+    
+    # 로그인 폼
+    with st.form("login_form", clear_on_submit=False):
+        email_label = t("auth.email")
+        st.markdown(f"<p style='color: #334155; font-size: 0.875rem; font-weight: 600; margin-bottom: 0.5rem;'>📧 {email_label}</p>", unsafe_allow_html=True)
+        
         email = st.text_input(
-            t("auth.email"),
+            email_label,
             placeholder=t("auth.email_placeholder"),
             key="login_email",
             label_visibility="collapsed"
         )
         
-        st.markdown(f'<label style="font-size: 0.875rem; font-weight: 500; color: #334155; margin-top: 1rem; display: block;">{t("auth.password")}</label>', unsafe_allow_html=True)
+        password_label = t("auth.password")
+        st.markdown(f"<p style='color: #334155; font-size: 0.875rem; font-weight: 600; margin-bottom: 0.5rem; margin-top: 1rem;'>🔒 {password_label}</p>", unsafe_allow_html=True)
+        
         password = st.text_input(
-            t("auth.password"),
+            password_label,
             type="password",
             placeholder="••••••••",
             key="login_password",
             label_visibility="collapsed"
         )
         
-        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown("<div style='height: 0.75rem;'></div>", unsafe_allow_html=True)
         
         submitted = st.form_submit_button(
-            t("auth.login_btn"),
+            t('auth.login_btn'),
             use_container_width=True,
             type="primary"
         )
@@ -54,26 +57,12 @@ def render():
                     st.rerun()
                 else:
                     st.error(message)
+
     
-    # 테스트 계정 안내
-    st.markdown(f"""
-        <div style="
-            text-align: center;
-            padding: 1rem;
-            background: #f8fafc;
-            border-radius: 0.5rem;
-            margin-top: 1rem;
-            border: 1px solid #e2e8f0;
-        ">
-            <p style="color: #64748b; font-size: 0.8rem; margin: 0;">
-                {t("auth.test_account")}: <strong>admin</strong> / <strong>1234</strong>
-            </p>
-        </div>
-    """, unsafe_allow_html=True)
+    st.markdown("<div style='display: flex; align-items: center; margin: 1.5rem 0;'><div style='flex: 1; height: 1px; background: #e2e8f0;'></div><span style='padding: 0 1rem; color: #94a3b8; font-size: 0.8rem;'>또는</span><div style='flex: 1; height: 1px; background: #e2e8f0;'></div></div>", unsafe_allow_html=True)
     
-    st.markdown("<br>", unsafe_allow_html=True)
-    
-    if st.button(f"🚀 {t('auth.test_login')}", use_container_width=True):
+    test_login_text = t('auth.test_login')
+    if st.button(f"🚀 {test_login_text}", use_container_width=True, key="test_login_btn"):
         test_user = {
             'id': 'test-user-001',
             'email': 'test@kstay.com',
@@ -88,7 +77,10 @@ def render():
             'is_paid': True,
             'is_admin': False
         }
-        
         SessionManager.login_user(test_user)
         st.success(t("auth.login_success"))
         st.rerun()
+
+
+if __name__ == "__main__":
+    render()

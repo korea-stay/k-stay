@@ -378,7 +378,7 @@ def render_typing_indicator():
                 gap: 10px;
                 box-shadow: 0 2px 8px rgba(0,0,0,0.04);
             ">
-                <span style="font-size: 0.9rem; color: #64748b;">답변 생성 중</span>
+                <span style="font-size: 0.9rem; color: #64748b;">{t('ai_chat.generating')}</span>
                 <div class="typing-indicator">
                     <div class="typing-dot"></div>
                     <div class="typing-dot"></div>

@@ -1875,11 +1875,15 @@ def render_phase4_payment(scenario):
         for idx, doc_name in enumerate(scenario.required_docs):
             doc_info = DOCUMENT_FIELD_MAPPING.get(scenario.id, {}).get(doc_name, {})
             icon = doc_info.get('icon', '📄')
+            
+            # [수정] 문서명 영어 변환 적용 (get_doc_name 함수 사용)
+            display_doc_name = get_doc_name(doc_name)
+            
             with cols[idx % len(cols)]:
                 st.markdown(f"""
                     <div style="background: #f0fdf4; border: 1px solid #86efac; border-radius: 10px; padding: 1rem; text-align: center;">
                         <div style="font-size: 2rem;">{icon}</div>
-                        <div style="font-size: 0.8rem; color: #166534; font-weight: 500; margin-top: 4px;">{doc_name}</div>
+                        <div style="font-size: 0.8rem; color: #166534; font-weight: 500; margin-top: 4px;">{display_doc_name}</div>
                     </div>
                 """, unsafe_allow_html=True)
         
@@ -1898,7 +1902,6 @@ def render_phase4_payment(scenario):
         st.session_state.form_step = 3
         st.rerun()
 
-
 def render_payment_ui(scenario, payment_service: PaymentService):
     """결제 UI - Embedded Checkout 자동 로딩 + Redirect 지원"""
     
@@ -1906,36 +1909,7 @@ def render_payment_ui(scenario, payment_service: PaymentService):
     
     user_id = st.session_state.get('user_id', '')
     user_email = st.session_state.get('user_email', '')
-    
-    # 가격 정보
-    col1, col2 = st.columns([1, 1])
-    
-    with col1:
-        plan_text = get_text("Premium Plan", "Premium Plan")
-        payment_desc = get_text("일회성 결제 · 평생 이용", "One-time payment · Lifetime access")
-        
-        st.markdown(f"""
-            <div style="background: linear-gradient(135deg, #1e40af, #3b82f6); border-radius: 16px; padding: 2rem; text-align: center; color: white;">
-                <div style="font-size: 1rem; opacity: 0.9;">{plan_text}</div>
-                <div style="font-size: 3rem; font-weight: 700; margin: 0.5rem 0;">${scenario.price}</div>
-                <div style="opacity: 0.8;">{payment_desc}</div>
-            </div>
-        """, unsafe_allow_html=True)
-    
-    with col2:
-        benefits_title = get_text("✨ Premium 혜택", "✨ Premium Benefits")
-        benefit1 = get_text("AI 문서 자동 생성", "AI Document Auto-Generation")
-        benefit2 = get_text("전문가 수준 서류 작성", "Expert-Level Document Writing")
-        benefit3 = get_text("ZIP 패키지 다운로드", "ZIP Package Download")
-        benefit4 = get_text("무제한 수정 & 재생성", "Unlimited Edit & Regenerate")
-        
-        st.markdown(f"""
-            ### {benefits_title}
-            - ✅ **{benefit1}**
-            - ✅ **{benefit2}**
-            - ✅ **{benefit3}**
-            - ✅ **{benefit4}**
-        """)
+
     
     st.markdown("<br>", unsafe_allow_html=True)
     

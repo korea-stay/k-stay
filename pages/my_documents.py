@@ -18,7 +18,8 @@ SCENARIO_NAME_MAP = {
     "결혼 이민": "Marriage Immigration",
     "가족 초청": "Family Invitation",
     "전문 인력": "Professional Worker",
-    "국적 귀화": "Naturalization"
+    "국적 귀화": "Naturalization",
+    "긴급 의료": "Emergency Medical"
 }
 
 # 문서 이름 번역 매핑
@@ -44,7 +45,9 @@ DOCUMENT_NAME_MAP = {
     "불법체류 취업 방지 서약서": "Illegal Stay Prevention Pledge",
     "불법체류 취업 방지 서약서(F-1-5)": "Illegal Stay Prevention Pledge (F-1-5)",
     "유학생 시간제취업 요건 준수 확인서": "Student Part-time Work Compliance Certificate",
-    "유학생 시간제취업 요건 준수 확인서(제조업_국문)": "Student Part-time Work Certificate (Manufacturing)"
+    "유학생 시간제취업 요건 준수 확인서(제조업_국문)": "Student Part-time Work Certificate (Manufacturing)",
+    "치료예정서약서": "Medical Treatment Pledge",
+    "입국허가신청서": "Entry Permit Application",
 }
 
 

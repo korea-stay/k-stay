@@ -51,12 +51,6 @@ def render():
         </div>
     """, unsafe_allow_html=True)
     
-    # 결제 상태 표시
-    is_paid = st.session_state.get('is_paid', False)
-    if is_paid:
-        st.success(f"✅ {t('dashboard.premium_active')}")
-    else:
-        st.info(f"💡 {t('dashboard.free_info')}")
     
     current_lang = get_current_language()
     

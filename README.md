@@ -1,20 +1,112 @@
-# 🇰🇷 K-Stay: Korea Stay Assistant
+<div align="center">
 
-외국인을 위한 출입국 민원 서류 자동 생성 플랫폼
+# 🇰🇷 K-Stay
+**Foreigner Visa Document Automation Platform**
+<br/>
+<em>"외국인의 복잡한 행정 서류, AI가 완벽하게 자동화합니다."</em>
 
-![K-Stay Banner](https://via.placeholder.com/1200x400/0A1628/C9A227?text=K-Stay+Korea+Stay+Assistant)
+<br/>
 
-## 📋 프로젝트 개요
+<img src="https://img.shields.io/badge/Python-3.9+-3776AB?style=flat-square&logo=python&logoColor=white"/>
+<img src="https://img.shields.io/badge/Streamlit-FF4B4B?style=flat-square&logo=streamlit&logoColor=white"/>
+<img src="https://img.shields.io/badge/Supabase-3ECF8E?style=flat-square&logo=supabase&logoColor=white"/>
+<img src="https://img.shields.io/badge/OpenAI-GPT--5-412991?style=flat-square&logo=openai&logoColor=white"/>
+<img src="https://img.shields.io/badge/Stripe-Payment-008CDD?style=flat-square&logo=stripe&logoColor=white"/>
+<img src="https://img.shields.io/badge/LangChain-RAG-000000?style=flat-square"/>
+<img src="https://img.shields.io/badge/License-MIT-green?style=flat-square"/>
 
-K-Stay는 한국에 체류하는 외국인들이 출입국 관련 민원 서류를 쉽게 작성할 수 있도록 도와주는 AI 기반 플랫폼입니다.
+<br/>
+<br/>
 
-### 핵심 기능
-- 🔐 **3계층 데이터 구조**: 불변정보 / 가변정보 / AI 검토 정보 분리
-- 📄 **6가지 시나리오**: D-10 구직, 시간제 취업, F-6 결혼이민, 가족초청, E-7 전문인력, 귀화
-- 🤖 **AI 문서 검토**: 실시간 사연 검증 및 개선 제안
-- 📦 **ZIP 패키지 생성**: 시나리오별 필수 서류 일괄 생성
+[🌐 Official Website ](https://k-stay.streamlit.app/) 
 
----
+</div>
+
+<br/>
+
+## 📝 프로젝트 소개 (Overview)
+
+**K-Stay**는 한국에 체류하는 외국인을 위한 **출입국 민원 서류 자동 생성 플랫폼**입니다.
+복잡한 [별지 제34호 통합신청서 등의 서류]와 각종 사유서(구직활동계획서, 결혼배경진술서 등)를 하이코리아(HiKorea) 공식 양식에 맞춰 **자동 작성**하여 **ZIP 패키지**로 제공합니다.
+
+### 🎯 Core Goals
+* **One-Click Form**: 불변 정보(이름, 여권 등)는 가입 시 1회만 입력, 이후 모든 서류에 자동 매핑.
+* **AI Active Validator**: 단순 입력이 아닌, AI가 "사유서"의 논리를 검토하고 "반려 위험 표현"을 능동적으로 교정.
+* **Golden Six Scenarios**: 가장 수요가 높은 6가지 핵심 비자 시나리오(D-10, F-6 등) 완벽 대응.
+
+<br/>
+
+## 🏗 데이터 아키텍처 (Data Architecture)
+
+K-Stay는 데이터의 성격에 따라 3계층(Layer)으로 분리하여 처리합니다.
+
+```mermaid
+graph LR
+    User[User Input] --> A[Data Layer]
+
+    subgraph "Data Structuring"
+        A1(Layer 1: Universal Fact<br/>Immutable)
+        A2(Layer 2: Variable Fact<br/>Scenario-based)
+    end
+    
+    subgraph "AI Processing"
+        B1(Layer 3: Narrative<br/>Drafting)
+        B2(RAG Validator<br/>Legal Check)
+    end
+
+    subgraph "Output"
+        C1[Application Form]
+    end
+
+    A --> A1 & A2
+    A1 & A2 --> B1
+    B1 --> B2
+    B2 --> C1
+```
+
+| Layer | Type | Definition | AI Role |
+| :--- | :--- | :--- | :--- |
+| **Layer 1** | **Universal Fact** | 성명, 여권번호, 국적 등 평생 변하지 않는 **불변 정보** | ❌ (DB 매핑) |
+| **Layer 2** | **Variable Fact** | 시나리오별(취업, 결혼 등) 달라지는 **상황 정보** | ❌ (Form 입력) |
+| **Layer 3** | **Narrative** | 구직 계획, 초청 사유 등 설득이 필요한 **정성적 사연** | ✅ **Active Review** |
+
+<br/>
+
+## 🛠 기술 스택 (Tech Stack)
+
+### Frontend & Application
+* **Framework**: [Streamlit](https://streamlit.io/) (빠른 프로토타이핑 및 인터랙티브 웹앱 구현)
+* **Language**: Python 3.9+
+
+### Backend & Database
+* **BaaS**: [Supabase](https://supabase.com/) (Auth, PostgreSQL, Storage)
+* **User Data**: `users` (Universal Fact), `signatures` (서명 이미지)
+* **Vector DB**: Pinecone / FAISS (법령 및 매뉴얼 RAG 검색용)
+
+### AI & Logic
+* **LLM**: OpenAI GPT-5 (Narrative 생성 및 검토)
+* **Doc Processing**: `python-docx` (Word 템플릿 파싱 및 데이터 주입)
+* **RAG Engine**: LangChain (하이코리아 매뉴얼, 출입국관리법 기반 질의응답)
+
+### Payment
+* **Gateway**: [Stripe](https://stripe.com/) (구독 및 단건 결제 처리, Webhook 연동)
+
+<br/>
+
+
+
+## 🗂 지원 시나리오 (Golden Six)
+
+| Track | Scenario | Code | Key Documents (Auto-Generated) |
+| :--- | :--- | :--- | :--- |
+| **High Volume** | **구직 준비** | `D-10` | 구직활동계획서, 통합신청서, 거주숙소제공확인서 |
+| | **아르바이트** | `Part-Time` | 시간제취업확인서, 요건준수확인서 |
+| **High Margin** | **결혼 이민** | `F-6` | 결혼배경진술서(러브스토리), 배우자초청장 |
+| | **가족 초청** | `F-1-5` | 가족초청장, 불법취업방지서약서 |
+| **Recurring** | **전문 인력** | `E-7` | 고용사유서(필수성 증명), 사증발급인정신청서 |
+| | **국적 귀화** | `Nat` | 귀화동기서, 귀화추천서 |
+
+<br/>
 
 ## 🚀 빠른 시작
 
@@ -164,25 +256,6 @@ STRIPE_CANCEL_URL = "https://your-app.streamlit.app/?payment=cancel"
 2. [Streamlit Cloud](https://streamlit.io/cloud)에서 새 앱 배포
 3. Settings > Secrets에 모든 API 키 입력
 4. Reboot 후 확인
-
----
-
-## 📊 데이터 3계층 구조
-
-### Layer 1: Universal Fact (불변 정보)
-- 회원가입 시 1회 입력
-- 성명, 생년월일, 여권번호 등
-- AI 개입 ❌
-
-### Layer 2: Variable Fact (가변 정보)
-- 시나리오별 폼 입력
-- 근무처, 학교, 소득 등
-- AI 개입 ❌
-
-### Layer 3: Narrative (사연 정보)
-- AI가 적극적으로 검토
-- 구직계획, 결혼배경, 귀화동기 등
-- AI 개입 ✅ (검증 + 제안 + 생성)
 
 ---
 

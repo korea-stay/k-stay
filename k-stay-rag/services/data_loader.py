@@ -93,13 +93,15 @@ def main():
     print("=" * 60)
     
     # 환경변수 확인
-    required_vars = ["OPENAI_API_KEY", "SUPABASE_URL", "SUPABASE_KEY"]
+    # required_vars = ["OPENAI_API_KEY", "SUPABASE_URL", "SUPABASE_KEY"]
+    required_vars = ["GEMINI_API_KEY", "SUPABASE_URL", "SUPABASE_KEY"]
     missing = [var for var in required_vars if not os.getenv(var)]
     
     if missing:
         print(f"\n❌ 필수 환경변수가 없습니다: {', '.join(missing)}")
         print("\n.env 파일에 다음을 추가하세요:")
-        print("  OPENAI_API_KEY=sk-...")
+        # print("  OPENAI_API_KEY=sk-...")
+        print("  GEMINI_API_KEY=AIza...")
         print("  SUPABASE_URL=https://xxx.supabase.co")
         print("  SUPABASE_KEY=eyJ...")
         return

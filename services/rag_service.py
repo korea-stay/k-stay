@@ -1,6 +1,6 @@
 """
 RAG (Retrieval-Augmented Generation) 서비스
-OpenAI API + Supabase pgvector 기반
+Gemini API + Supabase pgvector 기반 (OpenAI → Gemini 전환)
 키워드/패턴 검색 우선 방식
 K-ETA 로컬 fallback 포함
 """
@@ -9,8 +9,9 @@ import os
 import json
 from typing import List, Dict, Optional, Tuple
 from dataclasses import dataclass
-from openai import OpenAI
+# from openai import OpenAI
 from supabase import create_client, Client
+from services.llm_client import GeminiClient
 
 # Streamlit secrets 사용 시도
 try:
@@ -92,44 +93,52 @@ class RAGService:
     
     def __init__(
         self,
-        openai_api_key: str = None,
+        gemini_api_key: str = None,
         supabase_url: str = None,
         supabase_key: str = None,
-        embedding_model: str = "text-embedding-3-small",
-        chat_model: str = "gpt-4o-mini",
+        embedding_model: str = None,  # 기본: gemini-embedding-001
+        chat_model: str = None,       # 기본: gemini-3.5-flash-lite
         max_context_chunks: int = 5
     ):
-        self.openai_client = OpenAI(
-            api_key=openai_api_key or get_secret("OPENAI_API_KEY")
+        # self.openai_client = OpenAI(
+        #     api_key=openai_api_key or get_secret("OPENAI_API_KEY")
+        # )
+        self.embedding_dimension = 1536
+        self.llm = GeminiClient(
+            api_key=gemini_api_key,
+            chat_model=chat_model,
+            embedding_model=embedding_model,
+            embedding_dim=self.embedding_dimension
         )
-        
+
         self.supabase: Client = create_client(
             supabase_url or get_secret("SUPABASE_URL"),
             supabase_key or get_secret("SUPABASE_KEY")
         )
-        
-        self.embedding_model = embedding_model
-        self.chat_model = chat_model
+
+        self.embedding_model = self.llm.embedding_model
+        self.chat_model = self.llm.chat_model
         self.max_context_chunks = max_context_chunks
-        self.embedding_dimension = 1536
-    
+
     # ==================== 임베딩 ====================
-    
-    def create_embedding(self, text: str) -> List[float]:
+
+    def create_embedding(self, text: str, task_type: str = "RETRIEVAL_DOCUMENT") -> List[float]:
         """텍스트 임베딩 생성"""
-        response = self.openai_client.embeddings.create(
-            model=self.embedding_model,
-            input=text
-        )
-        return response.data[0].embedding
-    
+        # response = self.openai_client.embeddings.create(
+        #     model=self.embedding_model,
+        #     input=text
+        # )
+        # return response.data[0].embedding
+        return self.llm.embed([text], task_type=task_type)[0]
+
     def create_embeddings_batch(self, texts: List[str]) -> List[List[float]]:
         """배치 임베딩 생성"""
-        response = self.openai_client.embeddings.create(
-            model=self.embedding_model,
-            input=texts
-        )
-        return [item.embedding for item in response.data]
+        # response = self.openai_client.embeddings.create(
+        #     model=self.embedding_model,
+        #     input=texts
+        # )
+        # return [item.embedding for item in response.data]
+        return self.llm.embed(texts, task_type="RETRIEVAL_DOCUMENT")
     
     # ==================== 벡터 저장 ====================
     
@@ -152,7 +161,7 @@ class RAGService:
                 "embedding": embedding
             }
             
-            self.supabase.table("visa_documents").upsert(data).execute()
+            self.supabase.table("visa_documents").upsert(data, on_conflict="chunk_id").execute()
             return True
             
         except Exception as e:
@@ -1189,15 +1198,18 @@ class RAGService:
         
         messages.append({"role": "user", "content": user_message})
         
-        response = self.openai_client.chat.completions.create(
-            model=self.chat_model,
-            messages=messages,
-            temperature=0.3,
-            max_tokens=1500
-        )
-        
-        answer = response.choices[0].message.content
-        tokens_used = response.usage.total_tokens
+        # response = self.openai_client.chat.completions.create(
+        #     model=self.chat_model,
+        #     messages=messages,
+        #     temperature=0.3,
+        #     max_tokens=1500
+        # )
+        #
+        # answer = response.choices[0].message.content
+        # tokens_used = response.usage.total_tokens
+        result = self.llm.chat(messages, temperature=0.3, max_tokens=1500)
+        answer = result.text
+        tokens_used = result.total_tokens
         
         return RAGResponse(
             answer=answer,
@@ -1208,16 +1220,22 @@ class RAGService:
     def _translate_query_to_korean(self, query: str) -> str:
         """영어 쿼리를 한국어로 번역 (RAG 검색용)"""
         try:
-            response = self.openai_client.chat.completions.create(
-                model=self.chat_model,
-                messages=[
+            # response = self.openai_client.chat.completions.create(
+            #     model=self.chat_model,
+            #     messages=[...],
+            #     temperature=0.1,
+            #     max_tokens=200
+            # )
+            # translated = response.choices[0].message.content.strip()
+            result = self.llm.chat(
+                [
                     {"role": "system", "content": "Translate the following English query to Korean. Keep visa codes (D-2, D-10, F-6, E-7, etc.) as is. Return only the Korean translation, nothing else."},
                     {"role": "user", "content": query}
                 ],
                 temperature=0.1,
                 max_tokens=200
             )
-            translated = response.choices[0].message.content.strip()
+            translated = result.text.strip()
             return translated if translated else query
         except:
             return query
@@ -1297,17 +1315,18 @@ Keep your response to 1-2 sentences. Respond in English."""
         if conversation_history:
             messages = [messages[0]] + conversation_history[-4:] + [messages[-1]]
         
-        response = self.openai_client.chat.completions.create(
-            model=self.chat_model,
-            messages=messages,
-            temperature=0.7,
-            max_tokens=150
-        )
-        
+        # response = self.openai_client.chat.completions.create(
+        #     model=self.chat_model,
+        #     messages=messages,
+        #     temperature=0.7,
+        #     max_tokens=150
+        # )
+        result = self.llm.chat(messages, temperature=0.7, max_tokens=150)
+
         return RAGResponse(
-            answer=response.choices[0].message.content,
+            answer=result.text,
             sources=[],  # 참고자료 없음
-            tokens_used=response.usage.total_tokens
+            tokens_used=result.total_tokens
         )
     
     def _build_context(self, search_results: List[SearchResult]) -> str:
@@ -1365,17 +1384,21 @@ Response Style:
         titles_text = "\n".join([f"{i+1}. {t}" for i, t in enumerate(titles)])
         
         try:
-            response = self.openai_client.chat.completions.create(
-                model=self.chat_model,
-                messages=[
+            # response = self.openai_client.chat.completions.create(
+            #     model=self.chat_model,
+            #     messages=[...],
+            #     temperature=0.1,
+            #     max_tokens=200
+            # )
+            # result = response.choices[0].message.content.strip()
+            result = self.llm.chat(
+                [
                     {"role": "system", "content": "Translate the following Korean titles to English. Keep visa codes (D-2, D-10, F-6, etc.) as is. Return only the translated titles, one per line, numbered."},
                     {"role": "user", "content": titles_text}
                 ],
                 temperature=0.1,
                 max_tokens=200
-            )
-            
-            result = response.choices[0].message.content.strip()
+            ).text.strip()
             # 번역된 결과 파싱
             translated = []
             for line in result.split("\n"):

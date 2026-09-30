@@ -25,7 +25,8 @@ def get_secret(key: str, default: str = "") -> str:
 
 SUPABASE_URL = get_secret("SUPABASE_URL")
 SUPABASE_KEY = get_secret("SUPABASE_KEY")
-OPENAI_API_KEY = get_secret("OPENAI_API_KEY")
+# OPENAI_API_KEY = get_secret("OPENAI_API_KEY")
+GEMINI_API_KEY = get_secret("GEMINI_API_KEY")
 
 # ======================================================================
 # 🏷️ data_key → Label 매핑 (UI 표시용)

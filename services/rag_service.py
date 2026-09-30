@@ -1223,7 +1223,12 @@ class RAGService:
             return self._pattern_retrieve(query, language, top_k)
 
         # 1) 후속 질문이면 대화 맥락을 반영한 독립 질문으로 재작성
-        search_query = self._rewrite_query(query, conversation_history) if conversation_history else query
+        #    질문에 비자가 이미 명시돼 있으면 재작성 생략 (LLM 호출 1회 절약)
+        # search_query = self._rewrite_query(query, conversation_history) if conversation_history else query
+        if conversation_history and not self._detect_visas(query):
+            search_query = self._rewrite_query(query, conversation_history)
+        else:
+            search_query = query
 
         # 2) 비자 감지 (재작성된 질문 기준) → 해당 비자 청크만 남김
         visa_filter = self._detect_visas(search_query)

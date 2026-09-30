@@ -111,10 +111,24 @@ class RAGService:
             print(f"저장 오류: {e}")
             return False
     
+    def _build_embedding_text(self, chunk: Dict) -> str:
+        """임베딩용 텍스트 - 비자명·분류·제목·키워드를 붙여 청크만으로도 어떤 비자인지 알 수 있게 함
+        예) [D-2 유학] 시간제취업 > 시간제취업 근무장소 변경 / {content} / 키워드: ..."""
+        visa = " ".join(v for v in (chunk.get("visa_type"), chunk.get("visa_name")) if v)
+        header = " > ".join(v for v in (chunk.get("category"), chunk.get("title")) if v)
+        if visa:
+            header = f"[{visa}] {header}"
+        
+        parts = [header, chunk["content"]]
+        if chunk.get("keywords"):
+            parts.append(f"키워드: {', '.join(chunk['keywords'])}")
+        return "\n".join(p for p in parts if p)
+    
     def store_chunks_batch(self, chunks: List[Dict]) -> int:
-        """배치로 청크 저장"""
+        """배치로 청크 저장 (content는 원문 그대로 저장, 임베딩은 보강 텍스트로 생성)"""
         stored_count = 0
-        texts = [chunk["content"] for chunk in chunks]
+        # texts = [chunk["content"] for chunk in chunks]
+        texts = [self._build_embedding_text(chunk) for chunk in chunks]
         embeddings = self.create_embeddings_batch(texts)
         
         for chunk, embedding in zip(chunks, embeddings):
@@ -122,6 +136,8 @@ class RAGService:
                 chunk_id=chunk["id"],
                 content=chunk["content"],
                 metadata={
+                    "visa_type": chunk.get("visa_type", ""),
+                    "visa_name": chunk.get("visa_name", ""),
                     "category": chunk.get("category", ""),
                     "subcategory": chunk.get("subcategory", ""),
                     "title": chunk.get("title", ""),

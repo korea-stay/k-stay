@@ -27,7 +27,9 @@ class KnowledgeBaseLoader:
         with open(file_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
         
-        chunks = data.get("chunks", [])
+        # 파일 단위 비자 정보를 각 청크에 붙여 임베딩 텍스트·metadata에 반영
+        visa_info = {"visa_type": data.get("visa_type", ""), "visa_name": data.get("visa_name", "")}
+        chunks = [{**chunk, **visa_info} for chunk in data.get("chunks", [])]
         print(f"📚 {len(chunks)}개 청크 로드됨: {file_path}")
         return chunks
     

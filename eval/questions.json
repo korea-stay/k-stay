@@ -1,0 +1,53 @@
+[
+  {"id": "d10-01", "visa": "D-10", "q": "D-10 비자가 뭐야?", "expected": ["d10_overview"]},
+  {"id": "d10-02", "visa": "D-10", "q": "구직비자 점수제 대상이 누구야?", "expected": ["d10_1_eligibility_points"]},
+  {"id": "d10-03", "visa": "D-10", "q": "구직비자 받으려면 몇 점 이상 필요해?", "expected": ["d10_1_eligibility_points", "d10_1_points_basic"]},
+  {"id": "d10-04", "visa": "D-10", "q": "D-10-1 제출서류 알려줘", "expected": ["d10_1_documents_points", "d10_1_documents_exemption"]},
+  {"id": "d10-05", "visa": "D-10", "q": "구직비자로 최대 얼마나 있을 수 있어?", "expected": ["d10_stay_period", "d10_1_stay_period_detail"]},
+  {"id": "d10-06", "visa": "D-10", "q": "구직비자 중에 알바 할 수 있어?", "expected": ["d10_1_parttime"]},
+  {"id": "d10-07", "visa": "D-10", "q": "나이 32살이면 구직비자 점수 몇 점 받아?", "expected": ["d10_1_points_basic"]},
+  {"id": "d10-08", "visa": "D-10", "q": "한국에서 창업 준비하려면 어떤 비자 받아야 돼?", "expected": ["d10_2_activity", "d10_2_eligibility"]},
+  {"id": "d10-09", "visa": "D-10", "q": "구직비자로 인턴 해도 돼?", "expected": ["d10_intern_activity", "d10_3_activity"]},
+
+  {"id": "d2-01", "visa": "D-2", "q": "유학생 알바 몇 시간까지 돼?", "expected": ["d2_parttime_hours"]},
+  {"id": "d2-02", "visa": "D-2", "q": "토픽 없으면 아르바이트 시간 제한 있어?", "expected": ["d2_parttime_hours", "d2_parttime_criteria"]},
+  {"id": "d2-03", "visa": "D-2", "q": "유학생이 배달 알바 해도 돼?", "expected": ["d2_parttime_restricted"]},
+  {"id": "d2-04", "visa": "D-2", "q": "유학생인데 학교 옮기고 싶으면 어떻게 해?", "expected": ["d2_school_change_principle", "d2_school_change_documents"]},
+  {"id": "d2-05", "visa": "D-2", "q": "유학비자 연장 서류", "expected": ["d2_extension_documents"]},
+  {"id": "d2-06", "visa": "D-2", "q": "휴학하면 유학비자 연장 돼?", "expected": ["d2_extension_leave_restriction"]},
+  {"id": "d2-07", "visa": "D-2", "q": "시간제취업 허가 안 받고 일하면 어떻게 돼?", "expected": ["d2_parttime_violation"]},
+  {"id": "d2-08", "visa": "D-2", "q": "유학생 외국인등록 할 때 뭐 내야 돼?", "expected": ["d2_registration_documents"]},
+  {"id": "d2-09", "visa": "D-2", "q": "관광비자로 들어왔는데 유학비자로 바꿀 수 있어?", "expected": ["d2_status_change_short_term", "d2_status_change_principle"]},
+
+  {"id": "f6-01", "visa": "F-6", "q": "결혼비자 소득 기준이 얼마야?", "expected": ["f6_income_requirement", "f6_income_calculation"]},
+  {"id": "f6-02", "visa": "F-6", "q": "한국어 못해도 결혼비자 받을 수 있어?", "expected": ["f6_communication_requirement", "f6_communication_exemption"]},
+  {"id": "f6-03", "visa": "F-6", "q": "국제결혼안내프로그램 꼭 들어야 해?", "expected": ["f6_international_marriage_program"]},
+  {"id": "f6-04", "visa": "F-6", "q": "한국인 남편이랑 이혼하면 비자 어떻게 돼?", "expected": ["f6_3_divorce_extension", "f6_3_definition", "f6_3_status_change"]},
+  {"id": "f6-05", "visa": "F-6", "q": "결혼비자 연장하려면?", "expected": ["f6_1_extension", "f6_1_initial_extension"]},
+  {"id": "f6-06", "visa": "F-6", "q": "배우자 비자 신청할 때 기본 서류 뭐 필요해?", "expected": ["f6_required_documents_basic"]},
+  {"id": "f6-07", "visa": "F-6", "q": "이혼했는데 한국인 사이에서 낳은 아이를 키우고 있으면 체류 가능해?", "expected": ["f6_2_definition", "f6_2_status_change", "f6_2_extension"]},
+
+  {"id": "c4-01", "visa": "C-4", "q": "계절근로 비자가 뭐야?", "expected": ["c4_seasonal_work", "c4_overview"]},
+  {"id": "c4-02", "visa": "C-4", "q": "단기취업 비자 근무처 바꿀 수 있어?", "expected": ["c4_seasonal_workplace_change", "c4_other_workplace_change"]},
+  {"id": "c4-03", "visa": "C-4", "q": "C-4 연장 서류", "expected": ["c4_extension_documents"]},
+
+  {"id": "d4-01", "visa": "D-4", "q": "어학연수 비자 연장 조건", "expected": ["d4_extension_language_principle", "d4_extension_language_documents"]},
+  {"id": "d4-02", "visa": "D-4", "q": "어학당 다니다가 다른 학교로 옮기면 신고해야 돼?", "expected": ["d4_institution_change"]},
+  {"id": "d4-03", "visa": "D-4", "q": "D-4 비자로 아르바이트 할 수 있어?", "expected": ["d4_activity_restriction"]},
+
+  {"id": "d5-01", "visa": "D-5", "q": "외국 언론사 기자로 한국에 파견됐는데 무슨 비자야?", "expected": ["d5_overview", "d5_eligibility"]},
+  {"id": "d6-01", "visa": "D-6", "q": "선교사 비자 연장 서류", "expected": ["d6_extension_documents"]},
+
+  {"id": "keta-01", "visa": "K-ETA", "q": "K-ETA 수수료 얼마야?", "expected": ["keta_overview_002"]},
+  {"id": "keta-02", "visa": "K-ETA", "q": "제주도 갈 때도 K-ETA 필요해?", "expected": ["keta_faq_002"]},
+  {"id": "keta-03", "visa": "K-ETA", "q": "K-ETA 거절당하면 어떡해?", "expected": ["keta_faq_007"]},
+  {"id": "keta-04", "visa": "K-ETA", "q": "환승만 하는데 K-ETA 받아야 돼?", "expected": ["keta_faq_003"]},
+
+  {"id": "en-01", "visa": "D-2", "lang": "en", "q": "What documents do I need to extend my student visa?", "expected": ["d2_extension_documents"]},
+  {"id": "en-02", "visa": "F-6", "lang": "en", "q": "How much income is required for a marriage visa?", "expected": ["f6_income_requirement", "f6_income_calculation"]},
+  {"id": "en-03", "visa": "K-ETA", "lang": "en", "q": "Do I need a K-ETA if I'm only transiting through Korea?", "expected": ["keta_faq_003"]},
+
+  {"id": "follow-01", "visa": "D-10", "history": ["D-10 구직비자 알려줘"], "q": "그럼 서류는 뭐 필요해?", "expected": ["d10_1_documents_points", "d10_1_documents_exemption", "d10_2_documents", "d10_3_documents", "d10_t_documents"]},
+  {"id": "follow-02", "visa": "D-2", "history": ["유학생 시간제취업 알려줘"], "q": "신청할 때 뭐 내야 돼?", "expected": ["d2_parttime_documents"]},
+  {"id": "follow-03", "visa": "F-6", "history": ["결혼이민 비자 궁금해"], "q": "연장은 어떻게 해?", "expected": ["f6_1_extension", "f6_1_initial_extension"]}
+]

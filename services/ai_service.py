@@ -1,6 +1,6 @@
 """
 K-Stay AI Service
-OpenAI 기반 AI 기능 처리
+Gemini 기반 AI 기능 처리 (OpenAI → Gemini 전환)
 """
 
 import streamlit as st
@@ -8,7 +8,8 @@ from typing import Optional, Dict, List, Tuple
 import json
 
 # OpenAI 클라이언트
-from openai import OpenAI
+# from openai import OpenAI
+from services.llm_client import GeminiClient
 
 # RAGService는 별도 파일에서 임포트
 from services.rag_service import RAGService
@@ -16,16 +17,18 @@ from services.rag_service import RAGService
 
 class AIService:
     """AI 서비스 클래스"""
-    
+
     def __init__(self):
-        """OpenAI 클라이언트 초기화"""
+        """Gemini 클라이언트 초기화"""
         try:
-            self.client = OpenAI(api_key=st.secrets.get("OPENAI_API_KEY", ""))
-            self.model = "gpt-4o-mini"
+            # self.client = OpenAI(api_key=st.secrets.get("OPENAI_API_KEY", ""))
+            # self.model = "gpt-4o-mini"
+            self.client = GeminiClient()
+            self.model = self.client.chat_model
         except Exception as e:
-            print(f"OpenAI 초기화 오류: {e}")
+            print(f"Gemini 초기화 오류: {e}")
             self.client = None
-            self.model = "gpt-4o-mini"
+            self.model = None
     
     def validate_narrative(self, narrative: str, validation_prompt: str, scenario_context: Dict) -> Dict:
         """
@@ -45,16 +48,21 @@ class AIService:
 }}
 '''
                 
-                response = self.client.chat.completions.create(
-                    model=self.model,
-                    messages=[
+                # response = self.client.chat.completions.create(
+                #     model=self.model,
+                #     messages=[...],
+                #     response_format={"type": "json_object"}
+                # )
+                # return json.loads(response.choices[0].message.content)
+                result = self.client.chat(
+                    [
                         {"role": "system", "content": system_prompt},
                         {"role": "user", "content": f"다음 내용을 검토해주세요:\n\n{narrative}"}
                     ],
-                    response_format={"type": "json_object"}
+                    json_mode=True
                 )
-                
-                return json.loads(response.choices[0].message.content)
+
+                return json.loads(result.text)
             
             # 폴백: 규칙 기반 검증
             issues = []
@@ -104,16 +112,21 @@ class AIService:
 4. 한국어 존댓말 사용
 '''
                 
-                response = self.client.chat.completions.create(
-                    model=self.model,
-                    messages=[
+                # response = self.client.chat.completions.create(
+                #     model=self.model,
+                #     messages=[...],
+                #     max_tokens=2000
+                # )
+                # return response.choices[0].message.content
+                result = self.client.chat(
+                    [
                         {"role": "system", "content": system_prompt},
                         {"role": "user", "content": formatted_prompt}
                     ],
                     max_tokens=2000
                 )
-                
-                return response.choices[0].message.content
+
+                return result.text
             
             # 폴백
             return f"""
@@ -161,14 +174,16 @@ class AIService:
                 
                 messages.append({"role": "user", "content": user_message})
                 
-                response = self.client.chat.completions.create(
-                    model=self.model,
-                    messages=messages,
-                    max_tokens=1500,
-                    temperature=0.3
-                )
-                
-                return response.choices[0].message.content
+                # response = self.client.chat.completions.create(
+                #     model=self.model,
+                #     messages=messages,
+                #     max_tokens=1500,
+                #     temperature=0.3
+                # )
+                # return response.choices[0].message.content
+                result = self.client.chat(messages, max_tokens=1500, temperature=0.3)
+
+                return result.text
             
             # 폴백: 키워드 기반 응답
             return self._fallback_response(user_message)
@@ -177,7 +192,7 @@ class AIService:
             return f"죄송합니다. 응답 생성 중 오류가 발생했습니다: {str(e)}"
     
     def _fallback_response(self, user_message: str) -> str:
-        """OpenAI 연결 실패 시 폴백 응답"""
+        """Gemini 연결 실패 시 폴백 응답"""
         user_lower = user_message.lower()
         
         if "d-10" in user_lower or "구직" in user_lower:

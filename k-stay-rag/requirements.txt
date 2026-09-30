@@ -1,7 +1,10 @@
 # K-Stay RAG 시스템 의존성
 
 # OpenAI
-openai>=1.0.0
+# openai>=1.0.0
+
+# Gemini
+google-genai>=1.0.0
 
 # Supabase
 supabase>=2.0.0

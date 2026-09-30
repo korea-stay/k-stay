@@ -1,16 +1,18 @@
 """
 RAG (Retrieval-Augmented Generation) 서비스
-OpenAI API + Supabase pgvector 기반
+Gemini API + Supabase pgvector 기반 (OpenAI → Gemini 전환)
 키워드/패턴 검색 우선 방식
 K-ETA 로컬 fallback 포함
 """
 
 import os
+import re
 import json
 from typing import List, Dict, Optional, Tuple
 from dataclasses import dataclass
-from openai import OpenAI
+# from openai import OpenAI
 from supabase import create_client, Client
+from services.llm_client import GeminiClient
 
 # Streamlit secrets 사용 시도
 try:
@@ -72,6 +74,46 @@ def _load_keta_chunks() -> List[Dict]:
         _KETA_CHUNKS_CACHE = []
         return []
 
+# ==================== 벡터 검색 설정 ====================
+
+# 비자 필터 적용 시 후보를 top_k의 몇 배까지 가져올지
+VECTOR_CANDIDATE_MULTIPLIER = 4
+# 이 유사도 미만 청크는 제외
+VECTOR_MIN_SIMILARITY = 0.0
+
+# 비자 코드 감지 (대문자·공백 제거 후 매칭) - 키는 metadata.visa_type 값
+VISA_CODE_PATTERNS = {
+    "D-10": r"(?<![A-Z])D-?10(?!\d)",
+    "D-2": r"(?<![A-Z])D-?2(?!\d)",
+    "D-4": r"(?<![A-Z])D-?4(?!\d)",
+    "D-5": r"(?<![A-Z])D-?5(?!\d)",
+    "D-6": r"(?<![A-Z])D-?6(?!\d)",
+    "F-6": r"(?<![A-Z])F-?6(?!\d)",
+    "C-4": r"(?<![A-Z])C-?4(?!\d)",
+    "K-ETA": r"K-?ETA",
+}
+
+# 비자 코드가 없을 때 비자 이름으로 감지
+VISA_NAME_ALIASES = {
+    "D-10": ["구직비자", "구직 비자", "구직활동", "job seeking", "job-seeking"],
+    "D-2": ["유학", "student visa", "international student"],
+    "D-4": ["어학연수", "어학당", "일반연수", "language course", "language school"],
+    "D-5": ["취재", "기자", "journalist"],
+    "D-6": ["종교", "선교", "성직자", "religious", "missionary"],
+    "F-6": ["결혼", "배우자", "혼인", "marriage", "spouse"],
+    "C-4": ["단기취업", "계절근로", "seasonal work"],
+    "K-ETA": ["전자여행허가", "무비자", "무사증"],
+}
+
+QUERY_REWRITE_PROMPT = """당신은 한국 비자 상담 챗봇의 검색 질의 재작성기입니다.
+대화 이력과 마지막 사용자 질문을 보고, 이전 대화 없이도 이해되는 한국어 검색 질문 한 문장으로 바꾸세요.
+
+규칙:
+- 대화에서 다루던 비자 종류가 있으면 비자 코드와 이름을 반드시 포함하세요 (예: "D-10 구직비자 제출서류").
+- 마지막 질문이 이미 독립적이면 의미를 바꾸지 말고 한국어로만 옮기세요.
+- 영어 질문은 한국어로 번역하되 비자 코드(D-2, F-6 등)는 그대로 두세요.
+- 재작성된 질문 한 문장만 출력하세요. 설명이나 따옴표는 붙이지 마세요."""
+
 @dataclass
 class SearchResult:
     """검색 결과"""
@@ -92,44 +134,54 @@ class RAGService:
     
     def __init__(
         self,
-        openai_api_key: str = None,
+        gemini_api_key: str = None,
         supabase_url: str = None,
         supabase_key: str = None,
-        embedding_model: str = "text-embedding-3-small",
-        chat_model: str = "gpt-4o-mini",
-        max_context_chunks: int = 5
+        embedding_model: str = None,  # 기본: gemini-embedding-001
+        chat_model: str = None,       # 기본: gemini-3.5-flash-lite
+        max_context_chunks: int = 5,
+        search_mode: str = None       # "vector"(기본) | "pattern"(기존 규칙 기반)
     ):
-        self.openai_client = OpenAI(
-            api_key=openai_api_key or get_secret("OPENAI_API_KEY")
+        # self.openai_client = OpenAI(
+        #     api_key=openai_api_key or get_secret("OPENAI_API_KEY")
+        # )
+        self.embedding_dimension = 1536
+        self.llm = GeminiClient(
+            api_key=gemini_api_key,
+            chat_model=chat_model,
+            embedding_model=embedding_model,
+            embedding_dim=self.embedding_dimension
         )
-        
+
         self.supabase: Client = create_client(
             supabase_url or get_secret("SUPABASE_URL"),
             supabase_key or get_secret("SUPABASE_KEY")
         )
-        
-        self.embedding_model = embedding_model
-        self.chat_model = chat_model
+
+        self.embedding_model = self.llm.embedding_model
+        self.chat_model = self.llm.chat_model
         self.max_context_chunks = max_context_chunks
-        self.embedding_dimension = 1536
-    
+        self.search_mode = search_mode or get_secret("RAG_SEARCH_MODE", "vector")
+
     # ==================== 임베딩 ====================
-    
-    def create_embedding(self, text: str) -> List[float]:
+
+    def create_embedding(self, text: str, task_type: str = "RETRIEVAL_DOCUMENT") -> List[float]:
         """텍스트 임베딩 생성"""
-        response = self.openai_client.embeddings.create(
-            model=self.embedding_model,
-            input=text
-        )
-        return response.data[0].embedding
-    
+        # response = self.openai_client.embeddings.create(
+        #     model=self.embedding_model,
+        #     input=text
+        # )
+        # return response.data[0].embedding
+        return self.llm.embed([text], task_type=task_type)[0]
+
     def create_embeddings_batch(self, texts: List[str]) -> List[List[float]]:
         """배치 임베딩 생성"""
-        response = self.openai_client.embeddings.create(
-            model=self.embedding_model,
-            input=texts
-        )
-        return [item.embedding for item in response.data]
+        # response = self.openai_client.embeddings.create(
+        #     model=self.embedding_model,
+        #     input=texts
+        # )
+        # return [item.embedding for item in response.data]
+        return self.llm.embed(texts, task_type="RETRIEVAL_DOCUMENT")
     
     # ==================== 벡터 저장 ====================
     
@@ -152,17 +204,31 @@ class RAGService:
                 "embedding": embedding
             }
             
-            self.supabase.table("visa_documents").upsert(data).execute()
+            self.supabase.table("visa_documents").upsert(data, on_conflict="chunk_id").execute()
             return True
             
         except Exception as e:
             print(f"저장 오류: {e}")
             return False
     
+    def _build_embedding_text(self, chunk: Dict) -> str:
+        """임베딩용 텍스트 - 비자명·분류·제목·키워드를 붙여 청크만으로도 어떤 비자인지 알 수 있게 함
+        예) [D-2 유학] 시간제취업 > 시간제취업 근무장소 변경 / {content} / 키워드: ..."""
+        visa = " ".join(v for v in (chunk.get("visa_type"), chunk.get("visa_name")) if v)
+        header = " > ".join(v for v in (chunk.get("category"), chunk.get("title")) if v)
+        if visa:
+            header = f"[{visa}] {header}"
+        
+        parts = [header, chunk["content"]]
+        if chunk.get("keywords"):
+            parts.append(f"키워드: {', '.join(chunk['keywords'])}")
+        return "\n".join(p for p in parts if p)
+    
     def store_chunks_batch(self, chunks: List[Dict]) -> int:
-        """배치로 청크 저장"""
+        """배치로 청크 저장 (content는 원문 그대로 저장, 임베딩은 보강 텍스트로 생성)"""
         stored_count = 0
-        texts = [chunk["content"] for chunk in chunks]
+        # texts = [chunk["content"] for chunk in chunks]
+        texts = [self._build_embedding_text(chunk) for chunk in chunks]
         embeddings = self.create_embeddings_batch(texts)
         
         for chunk, embedding in zip(chunks, embeddings):
@@ -170,6 +236,8 @@ class RAGService:
                 chunk_id=chunk["id"],
                 content=chunk["content"],
                 metadata={
+                    "visa_type": chunk.get("visa_type", ""),
+                    "visa_name": chunk.get("visa_name", ""),
                     "category": chunk.get("category", ""),
                     "subcategory": chunk.get("subcategory", ""),
                     "title": chunk.get("title", ""),
@@ -1138,7 +1206,104 @@ class RAGService:
         for i, r in enumerate(results[:3], 1):
             title = r.metadata.get("title", r.chunk_id) if r.metadata else r.chunk_id
             print(f"  [{i}] {title}")
-    
+
+    # ==================== 벡터 검색 (질문 재작성 + 비자 필터) ====================
+
+    def retrieve(
+        self,
+        query: str,
+        conversation_history: List[Dict] = None,
+        language: str = "ko",
+        top_k: int = None
+    ) -> List[SearchResult]:
+        """검색 진입점 - search_mode에 따라 벡터 검색 또는 기존 패턴 검색"""
+        top_k = top_k or self.max_context_chunks
+
+        if self.search_mode == "pattern":
+            return self._pattern_retrieve(query, language, top_k)
+
+        # 1) 후속 질문이면 대화 맥락을 반영한 독립 질문으로 재작성
+        search_query = self._rewrite_query(query, conversation_history) if conversation_history else query
+
+        # 2) 비자 감지 (재작성된 질문 기준) → 해당 비자 청크만 남김
+        visa_filter = self._detect_visas(search_query)
+
+        print(f"\n🔍 벡터 검색: '{search_query}' (비자 필터: {sorted(visa_filter) or '없음'})")
+        try:
+            results = self._vector_search(search_query, top_k, visa_filter)
+        except Exception as e:
+            # 임베딩 한도 초과·장애 시 기존 패턴 검색으로 대체
+            print(f"  ⚠️ 벡터 검색 실패, 패턴 검색으로 대체: {str(e)[:120]}")
+            return self._pattern_retrieve(search_query, language, top_k)
+
+        self._print_results(results)
+        return results
+
+    def _pattern_retrieve(self, query: str, language: str, top_k: int) -> List[SearchResult]:
+        """기존 방식: 영어는 번역 후 규칙 기반 검색 (대화 이력 미사용)"""
+        search_query = self._translate_query_to_korean(query) if language == "en" else query
+        return self.search_similar(search_query, top_k)
+
+    def _vector_search(self, query: str, top_k: int, visa_filter: set = None) -> List[SearchResult]:
+        """질문 임베딩 → match_visa_documents RPC → 비자 필터"""
+        embedding = self.create_embedding(query, task_type="RETRIEVAL_QUERY")
+        # 필터로 걸러질 것을 감안해 넉넉히 가져옴
+        match_count = top_k * VECTOR_CANDIDATE_MULTIPLIER if visa_filter else top_k
+        response = self.supabase.rpc("match_visa_documents", {
+            "query_embedding": embedding,
+            "match_threshold": VECTOR_MIN_SIMILARITY,
+            "match_count": match_count
+        }).execute()
+
+        results = [
+            SearchResult(
+                chunk_id=row["chunk_id"],
+                content=row["content"],
+                metadata=row["metadata"] or {},
+                similarity=row["similarity"]
+            )
+            for row in response.data
+        ]
+
+        if visa_filter:
+            filtered = [r for r in results if r.metadata.get("visa_type") in visa_filter]
+            # 필터 결과가 없으면 비자 감지가 틀렸을 수 있으므로 필터 없이 반환
+            if filtered:
+                results = filtered
+
+        return results[:top_k]
+
+    def _detect_visas(self, text: str) -> set:
+        """질문에 언급된 비자 코드 감지 (비자 코드 우선, 없으면 비자 이름)"""
+        normalized = text.upper().replace(" ", "")
+        found = {visa for visa, pattern in VISA_CODE_PATTERNS.items() if re.search(pattern, normalized)}
+        if found:
+            return found
+        lowered = text.lower()
+        return {visa for visa, names in VISA_NAME_ALIASES.items() if any(name in lowered for name in names)}
+
+    def _rewrite_query(self, query: str, conversation_history: List[Dict]) -> str:
+        """대화 이력을 반영해 후속 질문을 독립적인 한국어 검색 질문으로 재작성"""
+        history_lines = []
+        for msg in conversation_history[-6:]:
+            speaker = "사용자" if msg.get("role") == "user" else "상담AI"
+            content = (msg.get("content") or "").replace("\n", " ")
+            history_lines.append(f"{speaker}: {content[:200]}")
+
+        try:
+            rewritten = self.llm.chat(
+                [
+                    {"role": "system", "content": QUERY_REWRITE_PROMPT},
+                    {"role": "user", "content": "대화 이력:\n" + "\n".join(history_lines) + f"\n\n마지막 질문: {query}"}
+                ],
+                temperature=0.0,
+                max_tokens=100
+            ).text.strip()
+            return rewritten or query
+        except Exception as e:
+            print(f"  ⚠️ 질문 재작성 실패, 원문 사용: {e}")
+            return query
+
     # ==================== RAG 응답 생성 ====================
     
     def generate_response(
@@ -1154,13 +1319,15 @@ class RAGService:
         if self._is_greeting_or_smalltalk(query):
             return self._generate_greeting_response(query, conversation_history, language)
         
-        # 영어 쿼리일 경우 한국어로 번역 후 검색 (RAG 데이터가 한국어이므로)
-        search_query = query
-        if language == "en":
-            search_query = self._translate_query_to_korean(query)
-        
+        # # 영어 쿼리일 경우 한국어로 번역 후 검색 (RAG 데이터가 한국어이므로)
+        # search_query = query
+        # if language == "en":
+        #     search_query = self._translate_query_to_korean(query)
+        #
+        # if search_results is None:
+        #     search_results = self.search_similar(search_query)
         if search_results is None:
-            search_results = self.search_similar(search_query)
+            search_results = self.retrieve(query, conversation_history, language)
         
         context = self._build_context(search_results)
         system_prompt = self._get_system_prompt(language)
@@ -1189,15 +1356,18 @@ class RAGService:
         
         messages.append({"role": "user", "content": user_message})
         
-        response = self.openai_client.chat.completions.create(
-            model=self.chat_model,
-            messages=messages,
-            temperature=0.3,
-            max_tokens=1500
-        )
-        
-        answer = response.choices[0].message.content
-        tokens_used = response.usage.total_tokens
+        # response = self.openai_client.chat.completions.create(
+        #     model=self.chat_model,
+        #     messages=messages,
+        #     temperature=0.3,
+        #     max_tokens=1500
+        # )
+        #
+        # answer = response.choices[0].message.content
+        # tokens_used = response.usage.total_tokens
+        result = self.llm.chat(messages, temperature=0.3, max_tokens=1500)
+        answer = result.text
+        tokens_used = result.total_tokens
         
         return RAGResponse(
             answer=answer,
@@ -1208,16 +1378,22 @@ class RAGService:
     def _translate_query_to_korean(self, query: str) -> str:
         """영어 쿼리를 한국어로 번역 (RAG 검색용)"""
         try:
-            response = self.openai_client.chat.completions.create(
-                model=self.chat_model,
-                messages=[
+            # response = self.openai_client.chat.completions.create(
+            #     model=self.chat_model,
+            #     messages=[...],
+            #     temperature=0.1,
+            #     max_tokens=200
+            # )
+            # translated = response.choices[0].message.content.strip()
+            result = self.llm.chat(
+                [
                     {"role": "system", "content": "Translate the following English query to Korean. Keep visa codes (D-2, D-10, F-6, E-7, etc.) as is. Return only the Korean translation, nothing else."},
                     {"role": "user", "content": query}
                 ],
                 temperature=0.1,
                 max_tokens=200
             )
-            translated = response.choices[0].message.content.strip()
+            translated = result.text.strip()
             return translated if translated else query
         except:
             return query
@@ -1297,17 +1473,18 @@ Keep your response to 1-2 sentences. Respond in English."""
         if conversation_history:
             messages = [messages[0]] + conversation_history[-4:] + [messages[-1]]
         
-        response = self.openai_client.chat.completions.create(
-            model=self.chat_model,
-            messages=messages,
-            temperature=0.7,
-            max_tokens=150
-        )
-        
+        # response = self.openai_client.chat.completions.create(
+        #     model=self.chat_model,
+        #     messages=messages,
+        #     temperature=0.7,
+        #     max_tokens=150
+        # )
+        result = self.llm.chat(messages, temperature=0.7, max_tokens=150)
+
         return RAGResponse(
-            answer=response.choices[0].message.content,
+            answer=result.text,
             sources=[],  # 참고자료 없음
-            tokens_used=response.usage.total_tokens
+            tokens_used=result.total_tokens
         )
     
     def _build_context(self, search_results: List[SearchResult]) -> str:
@@ -1365,17 +1542,21 @@ Response Style:
         titles_text = "\n".join([f"{i+1}. {t}" for i, t in enumerate(titles)])
         
         try:
-            response = self.openai_client.chat.completions.create(
-                model=self.chat_model,
-                messages=[
+            # response = self.openai_client.chat.completions.create(
+            #     model=self.chat_model,
+            #     messages=[...],
+            #     temperature=0.1,
+            #     max_tokens=200
+            # )
+            # result = response.choices[0].message.content.strip()
+            result = self.llm.chat(
+                [
                     {"role": "system", "content": "Translate the following Korean titles to English. Keep visa codes (D-2, D-10, F-6, etc.) as is. Return only the translated titles, one per line, numbered."},
                     {"role": "user", "content": titles_text}
                 ],
                 temperature=0.1,
                 max_tokens=200
-            )
-            
-            result = response.choices[0].message.content.strip()
+            ).text.strip()
             # 번역된 결과 파싱
             translated = []
             for line in result.split("\n"):

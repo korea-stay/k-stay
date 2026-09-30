@@ -96,7 +96,7 @@ def main():
         ⚠️ AI 서비스를 시작할 수 없습니다.
         
         환경변수를 확인해주세요:
-        - OPENAI_API_KEY
+        - GEMINI_API_KEY
         - SUPABASE_URL  
         - SUPABASE_KEY
         

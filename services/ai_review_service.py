@@ -1,6 +1,6 @@
 """
 AI Review Service for K-Stay Narrative Fields
-OpenAI GPT API를 활용한 서술형 답변 검토 서비스
+Gemini API를 활용한 서술형 답변 검토 서비스 (OpenAI → Gemini 전환)
 
 변경사항:
 - 병렬 처리(ThreadPoolExecutor) 도입으로 검토 속도 대폭 개선
@@ -52,28 +52,40 @@ class OverallReview:
 
 
 class AIReviewService:
-    """OpenAI GPT 기반 서술형 검토 서비스 (AI 전용)"""
-    
+    """Gemini 기반 서술형 검토 서비스 (AI 전용)"""
+
     def __init__(self):
         self.api_key = self._get_api_key()
         # 속도와 비용을 고려하여 gpt-4o-mini 권장 (존재하지 않는 모델명일 경우 에러 발생 가능하므로 수정)
-        self.model = "gpt-4o-mini" 
+        # self.model = "gpt-4o-mini"
+        self.model = None  # GeminiClient 기본 모델 사용 (GEMINI_CHAT_MODEL)
         self._cache = {}
         self._client = None
-        
+
     def _get_api_key(self) -> str:
-        try:
-            if hasattr(st, 'secrets') and 'OPENAI_API_KEY' in st.secrets:
-                return st.secrets['OPENAI_API_KEY']
-        except Exception:
-            pass
-        return os.getenv('OPENAI_API_KEY', '')
-    
+        # try:
+        #     if hasattr(st, 'secrets') and 'OPENAI_API_KEY' in st.secrets:
+        #         return st.secrets['OPENAI_API_KEY']
+        # except Exception:
+        #     pass
+        # return os.getenv('OPENAI_API_KEY', '')
+        for key in ('GEMINI_API_KEY', 'GOOGLE_API_KEY'):
+            try:
+                if hasattr(st, 'secrets') and key in st.secrets:
+                    return st.secrets[key]
+            except Exception:
+                pass
+            if os.getenv(key):
+                return os.getenv(key)
+        return ''
+
     def _get_client(self):
         if self._client is None and self.api_key:
             try:
-                from openai import OpenAI
-                self._client = OpenAI(api_key=self.api_key)
+                # from openai import OpenAI
+                # self._client = OpenAI(api_key=self.api_key)
+                from services.llm_client import GeminiClient
+                self._client = GeminiClient(api_key=self.api_key, chat_model=self.model)
             except Exception:
                 return None
         return self._client
@@ -234,17 +246,23 @@ class AIReviewService:
         user_content = f"작성 내용:\n{answer if answer else '(미작성)'}\n\n현재 글자수: {len(answer)}자"
 
         try:
-            response = client.chat.completions.create(
-                model=self.model,
-                messages=[
+            # response = client.chat.completions.create(
+            #     model=self.model,
+            #     messages=[...],
+            #     temperature=0.7,
+            #     response_format={"type": "json_object"}
+            # )
+            # result = json.loads(response.choices[0].message.content)
+            response = client.chat(
+                [
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_content}
                 ],
                 temperature=0.7,
-                response_format={"type": "json_object"}
+                json_mode=True
             )
-            
-            result = json.loads(response.choices[0].message.content)
+
+            result = json.loads(response.text)
             
             status_map = {
                 'danger': ReviewType.DANGER,

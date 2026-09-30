@@ -27,7 +27,9 @@ class KnowledgeBaseLoader:
         with open(file_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
         
-        chunks = data.get("chunks", [])
+        # 파일 단위 비자 정보를 각 청크에 붙여 임베딩 텍스트·metadata에 반영
+        visa_info = {"visa_type": data.get("visa_type", ""), "visa_name": data.get("visa_name", "")}
+        chunks = [{**chunk, **visa_info} for chunk in data.get("chunks", [])]
         print(f"📚 {len(chunks)}개 청크 로드됨: {file_path}")
         return chunks
     
@@ -93,13 +95,15 @@ def main():
     print("=" * 60)
     
     # 환경변수 확인
-    required_vars = ["OPENAI_API_KEY", "SUPABASE_URL", "SUPABASE_KEY"]
+    # required_vars = ["OPENAI_API_KEY", "SUPABASE_URL", "SUPABASE_KEY"]
+    required_vars = ["GEMINI_API_KEY", "SUPABASE_URL", "SUPABASE_KEY"]
     missing = [var for var in required_vars if not os.getenv(var)]
     
     if missing:
         print(f"\n❌ 필수 환경변수가 없습니다: {', '.join(missing)}")
         print("\n.env 파일에 다음을 추가하세요:")
-        print("  OPENAI_API_KEY=sk-...")
+        # print("  OPENAI_API_KEY=sk-...")
+        print("  GEMINI_API_KEY=AIza...")
         print("  SUPABASE_URL=https://xxx.supabase.co")
         print("  SUPABASE_KEY=eyJ...")
         return

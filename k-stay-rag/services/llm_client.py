@@ -167,7 +167,8 @@ class GeminiClient:
                     )
                 )
             except errors.APIError as e:
-                if e.code != 429 or attempt == EMBED_MAX_RETRIES:
+                # 일일 한도(PerDay) 초과는 기다려도 풀리지 않으므로 바로 실패
+                if e.code != 429 or "PerDay" in str(e) or attempt == EMBED_MAX_RETRIES:
                     raise
                 print(f"  ⏳ 임베딩 요청 한도 초과, {EMBED_RETRY_WAIT_SECONDS}초 후 재시도 ({attempt + 1}/{EMBED_MAX_RETRIES})")
                 time.sleep(EMBED_RETRY_WAIT_SECONDS)

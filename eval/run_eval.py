@@ -2,7 +2,12 @@
 RAG 검색 평가 스크립트
 eval/questions.json의 질문으로 검색 방식별 성능을 비교
 
-실행: python eval/run_eval.py [--modes pattern vector] [--top-k 5]
+실행: python eval/run_eval.py [--modes pattern vector pipeline] [--top-k 5]
+
+방식
+- pattern  : 기존 규칙 기반 검색 (search_similar)
+- vector   : 질문 그대로 벡터 검색 (재작성·필터 없음)
+- pipeline : 챗봇 검색 경로 (retrieve) - 질문 재작성 + 비자 필터 + 벡터 검색
 
 지표
 - Hit@1 / Hit@k : 정답 청크가 1위 / 상위 k개 안에 있는 비율
@@ -62,9 +67,19 @@ def search_vector(rag: RAGService, item: dict, top_k: int) -> list:
     return [row["chunk_id"] for row in response.data]
 
 
+def search_pipeline(rag: RAGService, item: dict, top_k: int) -> list:
+    """챗봇 검색 경로(rag.retrieve): 질문 재작성(대화 이력) + 비자 필터 + 벡터 검색"""
+    history = [{"role": "user", "content": h} for h in item.get("history", [])]
+    rag.search_mode = "vector"
+    with contextlib.redirect_stdout(io.StringIO()):
+        results = rag.retrieve(item["q"], history or None, item.get("lang", "ko"), top_k)
+    return [r.chunk_id for r in results]
+
+
 SEARCH_MODES = {
     "pattern": search_pattern,
     "vector": search_vector,
+    "pipeline": search_pipeline,
 }
 
 

@@ -6,6 +6,7 @@ K-ETA 로컬 fallback 포함
 """
 
 import os
+import re
 import json
 from typing import List, Dict, Optional, Tuple
 from dataclasses import dataclass
@@ -73,6 +74,46 @@ def _load_keta_chunks() -> List[Dict]:
         _KETA_CHUNKS_CACHE = []
         return []
 
+# ==================== 벡터 검색 설정 ====================
+
+# 비자 필터 적용 시 후보를 top_k의 몇 배까지 가져올지
+VECTOR_CANDIDATE_MULTIPLIER = 4
+# 이 유사도 미만 청크는 제외
+VECTOR_MIN_SIMILARITY = 0.0
+
+# 비자 코드 감지 (대문자·공백 제거 후 매칭) - 키는 metadata.visa_type 값
+VISA_CODE_PATTERNS = {
+    "D-10": r"(?<![A-Z])D-?10(?!\d)",
+    "D-2": r"(?<![A-Z])D-?2(?!\d)",
+    "D-4": r"(?<![A-Z])D-?4(?!\d)",
+    "D-5": r"(?<![A-Z])D-?5(?!\d)",
+    "D-6": r"(?<![A-Z])D-?6(?!\d)",
+    "F-6": r"(?<![A-Z])F-?6(?!\d)",
+    "C-4": r"(?<![A-Z])C-?4(?!\d)",
+    "K-ETA": r"K-?ETA",
+}
+
+# 비자 코드가 없을 때 비자 이름으로 감지
+VISA_NAME_ALIASES = {
+    "D-10": ["구직비자", "구직 비자", "구직활동", "job seeking", "job-seeking"],
+    "D-2": ["유학", "student visa", "international student"],
+    "D-4": ["어학연수", "어학당", "일반연수", "language course", "language school"],
+    "D-5": ["취재", "기자", "journalist"],
+    "D-6": ["종교", "선교", "성직자", "religious", "missionary"],
+    "F-6": ["결혼", "배우자", "혼인", "marriage", "spouse"],
+    "C-4": ["단기취업", "계절근로", "seasonal work"],
+    "K-ETA": ["전자여행허가", "무비자", "무사증"],
+}
+
+QUERY_REWRITE_PROMPT = """당신은 한국 비자 상담 챗봇의 검색 질의 재작성기입니다.
+대화 이력과 마지막 사용자 질문을 보고, 이전 대화 없이도 이해되는 한국어 검색 질문 한 문장으로 바꾸세요.
+
+규칙:
+- 대화에서 다루던 비자 종류가 있으면 비자 코드와 이름을 반드시 포함하세요 (예: "D-10 구직비자 제출서류").
+- 마지막 질문이 이미 독립적이면 의미를 바꾸지 말고 한국어로만 옮기세요.
+- 영어 질문은 한국어로 번역하되 비자 코드(D-2, F-6 등)는 그대로 두세요.
+- 재작성된 질문 한 문장만 출력하세요. 설명이나 따옴표는 붙이지 마세요."""
+
 @dataclass
 class SearchResult:
     """검색 결과"""
@@ -98,7 +139,8 @@ class RAGService:
         supabase_key: str = None,
         embedding_model: str = None,  # 기본: gemini-embedding-001
         chat_model: str = None,       # 기본: gemini-3.5-flash-lite
-        max_context_chunks: int = 5
+        max_context_chunks: int = 5,
+        search_mode: str = None       # "vector"(기본) | "pattern"(기존 규칙 기반)
     ):
         # self.openai_client = OpenAI(
         #     api_key=openai_api_key or get_secret("OPENAI_API_KEY")
@@ -119,6 +161,7 @@ class RAGService:
         self.embedding_model = self.llm.embedding_model
         self.chat_model = self.llm.chat_model
         self.max_context_chunks = max_context_chunks
+        self.search_mode = search_mode or get_secret("RAG_SEARCH_MODE", "vector")
 
     # ==================== 임베딩 ====================
 
@@ -1163,7 +1206,104 @@ class RAGService:
         for i, r in enumerate(results[:3], 1):
             title = r.metadata.get("title", r.chunk_id) if r.metadata else r.chunk_id
             print(f"  [{i}] {title}")
-    
+
+    # ==================== 벡터 검색 (질문 재작성 + 비자 필터) ====================
+
+    def retrieve(
+        self,
+        query: str,
+        conversation_history: List[Dict] = None,
+        language: str = "ko",
+        top_k: int = None
+    ) -> List[SearchResult]:
+        """검색 진입점 - search_mode에 따라 벡터 검색 또는 기존 패턴 검색"""
+        top_k = top_k or self.max_context_chunks
+
+        if self.search_mode == "pattern":
+            return self._pattern_retrieve(query, language, top_k)
+
+        # 1) 후속 질문이면 대화 맥락을 반영한 독립 질문으로 재작성
+        search_query = self._rewrite_query(query, conversation_history) if conversation_history else query
+
+        # 2) 비자 감지 (재작성된 질문 기준) → 해당 비자 청크만 남김
+        visa_filter = self._detect_visas(search_query)
+
+        print(f"\n🔍 벡터 검색: '{search_query}' (비자 필터: {sorted(visa_filter) or '없음'})")
+        try:
+            results = self._vector_search(search_query, top_k, visa_filter)
+        except Exception as e:
+            # 임베딩 한도 초과·장애 시 기존 패턴 검색으로 대체
+            print(f"  ⚠️ 벡터 검색 실패, 패턴 검색으로 대체: {str(e)[:120]}")
+            return self._pattern_retrieve(search_query, language, top_k)
+
+        self._print_results(results)
+        return results
+
+    def _pattern_retrieve(self, query: str, language: str, top_k: int) -> List[SearchResult]:
+        """기존 방식: 영어는 번역 후 규칙 기반 검색 (대화 이력 미사용)"""
+        search_query = self._translate_query_to_korean(query) if language == "en" else query
+        return self.search_similar(search_query, top_k)
+
+    def _vector_search(self, query: str, top_k: int, visa_filter: set = None) -> List[SearchResult]:
+        """질문 임베딩 → match_visa_documents RPC → 비자 필터"""
+        embedding = self.create_embedding(query, task_type="RETRIEVAL_QUERY")
+        # 필터로 걸러질 것을 감안해 넉넉히 가져옴
+        match_count = top_k * VECTOR_CANDIDATE_MULTIPLIER if visa_filter else top_k
+        response = self.supabase.rpc("match_visa_documents", {
+            "query_embedding": embedding,
+            "match_threshold": VECTOR_MIN_SIMILARITY,
+            "match_count": match_count
+        }).execute()
+
+        results = [
+            SearchResult(
+                chunk_id=row["chunk_id"],
+                content=row["content"],
+                metadata=row["metadata"] or {},
+                similarity=row["similarity"]
+            )
+            for row in response.data
+        ]
+
+        if visa_filter:
+            filtered = [r for r in results if r.metadata.get("visa_type") in visa_filter]
+            # 필터 결과가 없으면 비자 감지가 틀렸을 수 있으므로 필터 없이 반환
+            if filtered:
+                results = filtered
+
+        return results[:top_k]
+
+    def _detect_visas(self, text: str) -> set:
+        """질문에 언급된 비자 코드 감지 (비자 코드 우선, 없으면 비자 이름)"""
+        normalized = text.upper().replace(" ", "")
+        found = {visa for visa, pattern in VISA_CODE_PATTERNS.items() if re.search(pattern, normalized)}
+        if found:
+            return found
+        lowered = text.lower()
+        return {visa for visa, names in VISA_NAME_ALIASES.items() if any(name in lowered for name in names)}
+
+    def _rewrite_query(self, query: str, conversation_history: List[Dict]) -> str:
+        """대화 이력을 반영해 후속 질문을 독립적인 한국어 검색 질문으로 재작성"""
+        history_lines = []
+        for msg in conversation_history[-6:]:
+            speaker = "사용자" if msg.get("role") == "user" else "상담AI"
+            content = (msg.get("content") or "").replace("\n", " ")
+            history_lines.append(f"{speaker}: {content[:200]}")
+
+        try:
+            rewritten = self.llm.chat(
+                [
+                    {"role": "system", "content": QUERY_REWRITE_PROMPT},
+                    {"role": "user", "content": "대화 이력:\n" + "\n".join(history_lines) + f"\n\n마지막 질문: {query}"}
+                ],
+                temperature=0.0,
+                max_tokens=100
+            ).text.strip()
+            return rewritten or query
+        except Exception as e:
+            print(f"  ⚠️ 질문 재작성 실패, 원문 사용: {e}")
+            return query
+
     # ==================== RAG 응답 생성 ====================
     
     def generate_response(
@@ -1179,13 +1319,15 @@ class RAGService:
         if self._is_greeting_or_smalltalk(query):
             return self._generate_greeting_response(query, conversation_history, language)
         
-        # 영어 쿼리일 경우 한국어로 번역 후 검색 (RAG 데이터가 한국어이므로)
-        search_query = query
-        if language == "en":
-            search_query = self._translate_query_to_korean(query)
-        
+        # # 영어 쿼리일 경우 한국어로 번역 후 검색 (RAG 데이터가 한국어이므로)
+        # search_query = query
+        # if language == "en":
+        #     search_query = self._translate_query_to_korean(query)
+        #
+        # if search_results is None:
+        #     search_results = self.search_similar(search_query)
         if search_results is None:
-            search_results = self.search_similar(search_query)
+            search_results = self.retrieve(query, conversation_history, language)
         
         context = self._build_context(search_results)
         system_prompt = self._get_system_prompt(language)

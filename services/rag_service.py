@@ -74,6 +74,14 @@ def _load_keta_chunks() -> List[Dict]:
         _KETA_CHUNKS_CACHE = []
         return []
 
+# ==================== 답변 생성 설정 ====================
+
+# 답변 최대 출력 토큰 (기존 1500 → 간결한 답변 지침과 함께 축소)
+ANSWER_MAX_TOKENS = 1000
+# LLM에 넣을 최근 대화 메시지 수 / 이전 답변 최대 글자 수
+HISTORY_MAX_MESSAGES = 6
+HISTORY_ASSISTANT_MAX_CHARS = 400
+
 # ==================== 벡터 검색 설정 ====================
 
 # 비자 필터 적용 시 후보를 top_k의 몇 배까지 가져올지
@@ -1223,7 +1231,12 @@ class RAGService:
             return self._pattern_retrieve(query, language, top_k)
 
         # 1) 후속 질문이면 대화 맥락을 반영한 독립 질문으로 재작성
-        search_query = self._rewrite_query(query, conversation_history) if conversation_history else query
+        #    질문에 비자가 이미 명시돼 있으면 재작성 생략 (LLM 호출 1회 절약)
+        # search_query = self._rewrite_query(query, conversation_history) if conversation_history else query
+        if conversation_history and not self._detect_visas(query):
+            search_query = self._rewrite_query(query, conversation_history)
+        else:
+            search_query = query
 
         # 2) 비자 감지 (재작성된 질문 기준) → 해당 비자 청크만 남김
         visa_filter = self._detect_visas(search_query)
@@ -1334,8 +1347,9 @@ class RAGService:
         messages = [{"role": "system", "content": system_prompt}]
         
         if conversation_history:
-            messages.extend(conversation_history[-6:])
-        
+            # messages.extend(conversation_history[-6:])
+            messages.extend(self._trim_history(conversation_history, HISTORY_MAX_MESSAGES))
+
         if search_results:
             user_message = f"""참고 자료:
 {context}
@@ -1365,7 +1379,8 @@ class RAGService:
         #
         # answer = response.choices[0].message.content
         # tokens_used = response.usage.total_tokens
-        result = self.llm.chat(messages, temperature=0.3, max_tokens=1500)
+        # result = self.llm.chat(messages, temperature=0.3, max_tokens=1500)
+        result = self.llm.chat(messages, temperature=0.3, max_tokens=ANSWER_MAX_TOKENS)
         answer = result.text
         tokens_used = result.total_tokens
         
@@ -1404,38 +1419,52 @@ class RAGService:
         
         # 비자 관련 키워드 (이게 있으면 무조건 비자 질문)
         visa_keywords = ["비자", "visa", "체류", "자격", "f-6", "f6", "d-10", "d10", "d-2", "d2", "c-4", "c4",
+                        "d-4", "d4", "d-5", "d5", "d-6", "d6", "k-eta", "keta", "전자여행",
                         "유학", "유학생", "구직", "결혼", "이민", "서류", "신청", "연장", "변경",
-                        "학교", "대학", "아르바이트", "취업", "근무", "허가", "등록", "외국인"]
-        
+                        "학교", "대학", "아르바이트", "알바", "시간제", "취업", "근무", "허가", "등록", "외국인",
+                        "연수", "어학", "취재", "종교", "계절근로", "단기취업", "하이코리아"]
+
         has_visa_keyword = any(kw in q for kw in visa_keywords)
         if has_visa_keyword:
             return False
-        
-        # 인사/잡담/일상 패턴
-        greetings = ["하이", "안녕", "헬로", "hello", "hi", "hey", "반가워", "ㅎㅇ", "ㅎㅎ", "ㅋㅋ", "안뇽"]
-        small_talk = ["뭐해", "뭐하니", "심심", "고마워", "감사", "잘가", "바이", "bye", "굿", "good", 
-                     "네", "응", "오케이", "ok", "알겠어", "ㅇㅋ", "잘했어", "좋아", "멋져"]
-        everyday = ["배고", "졸려", "졸리", "피곤", "힘들", "지쳐", 
+
+        # 인사/잡담/일상 패턴 (문장 안에 포함되면 잡담)
+        greetings = ["안녕", "헬로", "hello", "반가워", "ㅎㅇ", "ㅎㅎ", "ㅋㅋ", "안뇽"]
+        small_talk = ["뭐해", "뭐하니", "심심", "고마워", "감사", "잘가",
+                     "오케이", "알겠어", "잘했어", "좋아", "멋져"]
+        everyday = ["배고", "졸려", "졸리", "피곤", "힘들", "지쳐",
                    "뭐먹", "밥먹", "점심", "저녁", "아침", "간식", "커피", "음식", "맛집",
                    "날씨", "덥다", "춥다", "비온다", "눈온다", "화창", "흐림",
-                   "ㅠㅠ", "ㅜㅜ", "ㅋㅋㅋ", "ㅎㅎㅎ", "ㄱㅅ", "ㄴㄴ", "ㅇㅇ",
+                   "ㅠㅠ", "ㅜㅜ", "ㅋㅋㅋ", "ㅎㅎㅎ",
                    "재미없", "심심하", "놀자", "놀아", "영화", "게임", "음악", "노래"]
-        
+        # 짧아서 다른 단어 안에 섞이기 쉬운 말 (예: "which"의 "hi", "알바 되나요 네?"의 "네")
+        # → 메시지 전체가 이런 말로만 이루어졌을 때만 잡담으로 봄
+        short_words = {"하이", "hi", "hey", "바이", "bye", "굿", "good", "네", "응", "ok", "ㅇㅋ",
+                       "ㄱㅅ", "ㄴㄴ", "ㅇㅇ"}
+
         all_patterns = greetings + small_talk + everyday
-        
+        tokens = re.findall(r"[0-9a-z가-힣ㄱ-ㅎㅏ-ㅣ]+", q)
+
         # 짧은 메시지이고 일상 패턴 포함
         if len(q) <= 20:
             for pattern in all_patterns:
                 if pattern in q:
                     return True
-        
-        # 아주 짧고 비자 키워드 없는 입력 (오타, 의미없는 입력)
-        if len(q) <= 10 and not has_visa_keyword:
-            # 한글 자음/모음만 있거나 의미없는 짧은 입력
-            meaningful_chars = sum(1 for c in q if c.isalnum())
-            if meaningful_chars <= 6:
+            if tokens and all(tok in short_words for tok in tokens):
                 return True
-        
+
+        # # 아주 짧고 비자 키워드 없는 입력 (오타, 의미없는 입력)
+        # if len(q) <= 10 and not has_visa_keyword:
+        #     # 한글 자음/모음만 있거나 의미없는 짧은 입력
+        #     meaningful_chars = sum(1 for c in q if c.isalnum())
+        #     if meaningful_chars <= 6:
+        #         return True
+        # → "몇 시간 돼?" 같은 짧은 후속 질문까지 잡담으로 판정되어 변경
+        # 의미없는 입력: 완성된 한글 글자도, 2글자 이상 영문/숫자 단어도 없음 (예: "ㅁㄴㅇㄹ", "?")
+        has_word = re.search(r"[가-힣]", q) or any(len(tok) >= 2 and tok.isascii() for tok in tokens)
+        if not has_word:
+            return True
+
         return False
     
     def _generate_greeting_response(self, query: str, conversation_history: List[Dict] = None, language: str = "ko") -> RAGResponse:
@@ -1471,7 +1500,8 @@ Keep your response to 1-2 sentences. Respond in English."""
         ]
         
         if conversation_history:
-            messages = [messages[0]] + conversation_history[-4:] + [messages[-1]]
+            # messages = [messages[0]] + conversation_history[-4:] + [messages[-1]]
+            messages = [messages[0]] + self._trim_history(conversation_history, 4) + [messages[-1]]
         
         # response = self.openai_client.chat.completions.create(
         #     model=self.chat_model,
@@ -1487,6 +1517,18 @@ Keep your response to 1-2 sentences. Respond in English."""
             tokens_used=result.total_tokens
         )
     
+    def _trim_history(self, conversation_history: List[Dict], max_messages: int) -> List[Dict]:
+        """LLM에 넣을 대화 이력 축약 - 최근 N개만, 이전 답변은 참고자료 목록 제거 후 앞부분만"""
+        trimmed = []
+        for msg in conversation_history[-max_messages:]:
+            content = msg.get("content") or ""
+            if msg.get("role") == "assistant":
+                content = content.split("\n\n📚")[0]
+                if len(content) > HISTORY_ASSISTANT_MAX_CHARS:
+                    content = content[:HISTORY_ASSISTANT_MAX_CHARS] + " …(이하 생략)"
+            trimmed.append({"role": msg.get("role"), "content": content})
+        return trimmed
+
     def _build_context(self, search_results: List[SearchResult]) -> str:
         """검색 결과로 컨텍스트 구성"""
         if not search_results:
@@ -1517,6 +1559,9 @@ Response Style:
 - Use friendly and easy-to-understand language.
 - Provide specific guidance on required documents, procedures, and timelines.
 - Emphasize important notes when necessary.
+- Be concise: focus on what was asked and aim for about 15 lines or fewer.
+- Do not start with a greeting or self-introduction; answer directly.
+- If the materials cover several sub-types, explain the one that matches the question and mention the others in one line.
 - IMPORTANT: Respond in English."""
         else:
             return """당신은 한국 비자 및 체류자격 전문 상담 AI입니다.
@@ -1530,6 +1575,9 @@ Response Style:
 - 친절하고 이해하기 쉬운 언어를 사용합니다.
 - 필요한 서류, 절차, 기간 등을 구체적으로 안내합니다.
 - 중요한 주의사항이 있으면 강조합니다.
+- 질문에 필요한 핵심만 간결하게 답하고, 15줄 이내를 목표로 합니다.
+- "안녕하세요" 같은 인사말이나 자기소개로 시작하지 말고 바로 답합니다.
+- 자료가 여러 세부 유형을 다루면 질문에 해당하는 유형 위주로 설명하고, 나머지는 한 줄로만 언급합니다.
 - 답변은 한국어로 합니다."""
     
     # ==================== 대화 관리 ====================
@@ -1735,7 +1783,9 @@ Response Style:
                 best_match = scenario
         
         # 최소 점수 이상일 때만 반환 (질문에서 명확히 매칭되어야 함)
-        if best_score >= 6 and best_match:
+        # if best_score >= 6 and best_match:
+        # → 2글자 키워드("알바", "귀화" = 4점)가 단독으로 매칭되지 않아 4점으로 완화
+        if best_score >= 4 and best_match:
             return best_match
         
         return None

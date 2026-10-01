@@ -50,6 +50,9 @@ class ChatResult:
     """채팅 응답"""
     text: str
     total_tokens: int
+    prompt_tokens: int = 0   # 입력 토큰
+    output_tokens: int = 0   # 출력 토큰 (답변, thinking 제외)
+    thought_tokens: int = 0  # thinking 토큰
 
 
 class GeminiClient:
@@ -116,8 +119,13 @@ class GeminiClient:
             config=types.GenerateContentConfig(**config_kwargs)
         )
         usage = response.usage_metadata
-        total_tokens = (usage.total_token_count or 0) if usage else 0
-        return ChatResult(text=response.text or "", total_tokens=total_tokens)
+        return ChatResult(
+            text=response.text or "",
+            total_tokens=(usage.total_token_count or 0) if usage else 0,
+            prompt_tokens=(usage.prompt_token_count or 0) if usage else 0,
+            output_tokens=(usage.candidates_token_count or 0) if usage else 0,
+            thought_tokens=(usage.thoughts_token_count or 0) if usage else 0
+        )
 
     def _build_thinking_config(self) -> Optional[types.ThinkingConfig]:
         if not self.thinking_level:
